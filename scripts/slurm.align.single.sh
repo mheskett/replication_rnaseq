@@ -16,6 +16,7 @@ srun STAR \
   --readFilesIn $fq1 \
   --outFileNamePrefix $out_pref \
   --outSAMtype BAM Unsorted \
+  --outSAMmapqUnique 60 \
   --outSAMstrandField intronMotif \
   --quantMode GeneCounts TranscriptomeSAM \
   --outSAMattributes NH HI NM MD jM jI \

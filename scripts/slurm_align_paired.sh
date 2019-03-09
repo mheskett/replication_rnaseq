@@ -15,6 +15,7 @@ srun STAR \
   --genomeDir /home/groups/Spellmandata/heskett/tools/refdata-cellranger-GRCh38-3.0.0/star/ \
   --readFilesIn $fq1 $fq2 \
   --outFileNamePrefix $out_pref \
+  --outSAMmapqUnique 60 \
   --outSAMtype BAM Unsorted \
   --outSAMstrandField intronMotif \
   --quantMode GeneCounts TranscriptomeSAM \
