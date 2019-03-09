@@ -6,6 +6,9 @@ b=$(basename $input) ## removes /path/to/file
 filename=${b%.*} ### removes file extension
 random=$RANDOM
 
+### with STAR, used base max map quality score of 60 instead of default 255
+### fix misencoded scores to convert from illumina 1.5 to 1.9
+### could add base recalibration
 
 gatk AddOrReplaceReadGroups --java-options "-Xmx30G" -I=$input -O=$out_dir/$filename.rg.sorted.bam \
   --RGID=1 --RGLB=lib1 --RGPL=illumina --RGPU=unit1 --RGSM=$filename -SO=coordinate
