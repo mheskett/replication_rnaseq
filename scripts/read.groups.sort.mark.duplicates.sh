@@ -13,7 +13,7 @@ random=$RANDOM
 gatk AddOrReplaceReadGroups --java-options "-Xmx30G" -I=$input -O=$out_dir/$filename.rg.sorted.bam \
   --RGID=1 --RGLB=lib1 --RGPL=illumina --RGPU=unit1 --RGSM=$filename -SO=coordinate
 
-gatk FixMisencodedBaseQualityReads -I $filename.rg.sorted.bam -O $out_dir/$filename.rg.sorted.fix.bam
+gatk FixMisencodedBaseQualityReads -I $out_dir/$filename.rg.sorted.bam -O $out_dir/$filename.rg.sorted.fix.bam
 
 gatk MarkDuplicates --java-options "-Xmx30G" -I=$out_dir/$filename.rg.sorted.fix.bam -O=$out_dir/$filename.rg.sorted.markdup.bam \
   --METRICS_FILE=$filename.metrics.txt --ASSUME_SORT_ORDER=coordinate --REMOVE_DUPLICATES=true --CREATE_INDEX=true
@@ -21,11 +21,13 @@ gatk MarkDuplicates --java-options "-Xmx30G" -I=$out_dir/$filename.rg.sorted.fix
 gatk SplitNCigarReads --java-options "-Xmx30G" -I $out_dir/$filename.rg.sorted.markdup.bam -O $out_dir/$filename.rg.sorted.markdup.splitn.bam \
   -R /home/groups/Spellmandata/heskett/refs/hg38.10x.nochr.fa 
 
+gatk BaseRecalibrator 
 # make sure VCF and bam are sorted in the same way with matching contigs etc
 
 #/home/exacloud/lustre1/SpellmanLab/heskett/facets/inst/extcode/snp-pileup -q30 -Q30 -r2 /home/groups/Spellmandata/heskett/refs/dbsnp.146.hg38.nochr.vcf \
 #  $out_dir/$filename.snp.counts.txt $out_dir/$filename.rg.sorted.markdup.splitn.bam
 
 rm $out_dir/$filename.rg.sorted.bam
-rm $out_dir/filename.rg.sorted.markdup.bam
+rm $out_dir/$filename.rg.sorted.markdup.bam
+rm $out_dir/$filename.rg.sorted.fix.bam
 
