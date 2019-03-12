@@ -21,9 +21,12 @@ gatk MarkDuplicates --java-options "-Xmx30G" -I=$out_dir/$filename.rg.sorted.fix
 gatk SplitNCigarReads --java-options "-Xmx30G" -I $out_dir/$filename.rg.sorted.markdup.bam -O $out_dir/$filename.rg.sorted.markdup.splitn.bam \
   -R /home/groups/Spellmandata/heskett/refs/hg38.10x.nochr.fa 
 
-gatk BaseRecalibrator 
-# make sure VCF and bam are sorted in the same way with matching contigs etc
+gatk BaseRecalibrator --known-sites /home/groups/Spellmandata/heskett/refs/dbsnp.146.hg38.nochr.sorted.vcf -R /home/groups/Spellmandata/heskett/refs/hg38.10x.nochr.fa \
+  -I $out_dir/$filename.rg.sorted.markdup.splitn.bam -O $out_dir/$filename.recal.table
 
+gatk ApplyBQSR -bqsr-recal-file $out_dir/$filename.recal.table -I $out_dir/$filename.rg.sorted.markdup.splitn.bam -O $out_dir/$filename.final.bam
+
+# make sure VCF and bam are sorted in the same way with matching contigs etc
 #/home/exacloud/lustre1/SpellmanLab/heskett/facets/inst/extcode/snp-pileup -q30 -Q30 -r2 /home/groups/Spellmandata/heskett/refs/dbsnp.146.hg38.nochr.vcf \
 #  $out_dir/$filename.snp.counts.txt $out_dir/$filename.rg.sorted.markdup.splitn.bam
 
