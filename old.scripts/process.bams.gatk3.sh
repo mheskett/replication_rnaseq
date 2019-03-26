@@ -44,4 +44,4 @@ bedtools intersect -wa -wb -a $out_dir/$filename.bed -b /home/groups/Spellmandat
 
 ######## python script to arrange the haplotypes
 
-
+python /home/groups/Spellmandata/heskett/replication.rnaseq/scripts/haplotyping.py --bed $out_dir/$filename.overlap.platinum.bed --out_directory $out_dir
