@@ -37,3 +37,11 @@ java -Xmx30g -jar /home/groups/Spellmandata/heskett/tools/gatk3.5/GenomeAnalysis
 #########
 
 gatk VariantsToTable -V $out_dir/$filename.hcgatk3.vcf -F CHROM -F POS -F REF -F ALT -GF GT -GF AD -O $out_dir/$filename.table
+
+tail -n +2 $out_dir/$filename.table | awk 'OFS="\t"{split($6,a,",");print $1,$2-1,$2,$3,$4,a[1],a[2]}' | grep -Fv \. | > $out_dir/$filename.bed
+
+bedtools intersect -wa -wb -a $out_dir/$filename.bed -b /home/groups/Spellmandata/heskett/replication.rnaseq/platinum.genome/NA12878.nochr.bed > $out_dir/$filename.overlap.platinum.bed
+
+######## python script to arrange the haplotypes
+
+
