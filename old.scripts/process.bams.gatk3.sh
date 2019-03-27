@@ -15,7 +15,6 @@ gatk MarkDuplicates --java-options "-Xmx30G" -I=$out_dir/$filename.rg.sorted.bam
 #########
 java -Xmx30g -jar /home/groups/Spellmandata/heskett/tools/gatk3.5/GenomeAnalysisTK.jar \
 -T SplitNCigarReads -R /home/groups/Spellmandata/heskett/refs/hg38.10x.nochr.fa -I $out_dir/$filename.rg.sorted.markdup.bam \
-  -o $out_dir/$filename.split.bam \
   -rf ReassignOneMappingQuality \
   -RMQF 255 \
   -RMQT 60 \
@@ -23,11 +22,14 @@ java -Xmx30g -jar /home/groups/Spellmandata/heskett/tools/gatk3.5/GenomeAnalysis
   --fix_misencoded_quality_scores
 
 ######### gatk3
+# should actually use the NA12878 platinum vcf file here if applicable
+#   -L /home/groups/Spellmandata/heskett/refs/dbsnp.146.hg38.nochr.sorted.noM.vcf 
+# not going to use above, but could make a proper interval list. can make bed file
 
 java -Xmx30g -jar /home/groups/Spellmandata/heskett/tools/gatk3.5/GenomeAnalysisTK.jar \
   -T HaplotypeCaller -R /home/groups/Spellmandata/heskett/refs/hg38.10x.nochr.fa \
   -I $out_dir/$filename.split.bam --genotyping_mode DISCOVERY \
-  -L /home/groups/Spellmandata/heskett/refs/dbsnp.146.hg38.nochr.sorted.noM.vcf \
+  -L /home/groups/Spellmandata/heskett/replication.rnaseq/platinum.genome/NA12878.nochr.het.padding.bed \
   --output_mode EMIT_ALL_CONFIDENT_SITES \
   -o $out_dir/$filename.hcgatk3.vcf \
   -stand_call_conf 10.0 \
