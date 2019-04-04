@@ -8,9 +8,26 @@ import re
 import seaborn as sns
 import scipy.stats
 import matplotlib.pyplot as plt
+import pybedtools
 
 ### Separate script for window version since this is a totally different procedure and windows are made on command line?
 ### Or, use pybedtools to make windows within this script, but then must provide the reference genome location
+
+def get_windows(length): #ezpz
+	a=pybedtools.BedTool()
+
+	b = pybedtools.BedTool(arguments.df)
+	windows=a.window_maker(g="/Users/mike/replication_rnaseq/scripts/hg38.10x.nochr.fa.fai",
+						w=length,s=length/2)
+	
+	c = pybedtools.BedTool()
+	window_read_counts = c.map(a=windows,b=b,c=[6,7],o="sum")
+	df =  window_read_counts.to_dataframe(names=["chrom","start","stop",
+										"hap1_reads","hap2_reads"])
+
+	df = df[(df["hap1_reads"]!=".") & (df["hap2_reads"]!=".")]
+	return df
+
 if __name__ == "__main__":
 	
 	parser = argparse.ArgumentParser(description="scripts to combine samples")
@@ -26,25 +43,34 @@ if __name__ == "__main__":
 		metavar="[out directory]",
 		required=True,
 		help="full path to output results")
+
+	parser.add_argument("--window_size",
+		type=int,
+		metavar="[window_size]",
+		required=False,
+		default=100000,
+		help="full path to output results")
 	
 	arguments = parser.parse_args()
-
+	print(get_windows(length=arguments.window_size))
 	chromosomes = ["1","2","3","4","5","6","7","8","9","10","11","12",
 	"13","14","15","16","17","18","19","20","21","22","X"]
 
-	# df = pd.read_table(arguments.df, # for original data
-	# 					header=None,
-	# 					names=["chrom","start","stop","hap1","hap2","hap1_reads","hap2_reads"],
-	# 					dtype={"chrom":str,"start":int,"stop":int,"hap1":str,"hap2":str,"hap1_reads":int,"hap2_reads":int})
-
-	df = pd.read_table(arguments.df, # for window
+	df = pd.read_table(arguments.df, # for original data
 						header=None,
-						names=["chrom","start","stop","hap1_reads","hap2_reads"],
-						dtype={"chrom":str,"start":int,"stop":int,"hap1_reads":int,"hap2_reads":int})
+						names=["chrom","start","stop","hap1","hap2","hap1_reads","hap2_reads"],
+						dtype={"chrom":str,"start":int,"stop":int,"hap1":str,"hap2":str,"hap1_reads":int,"hap2_reads":int})
+
+	# df = pd.read_table(arguments.df, # for window
+	# 					header=None,
+	# 					names=["chrom","start","stop","hap1_reads","hap2_reads"],
+	# 					dtype={"chrom":str,"start":int,"stop":int,"hap1_reads":int,"hap2_reads":int})
 
 	# df["hap1_reads_log"] = np.log2(df["hap1_reads"]+1)
 	# df["hap2_reads_log"] = np.log2(df["hap2_reads"]+1)
+    
 
+    ## for binomial pval analysis
 	# df["binom_pval"] = df.apply(lambda row: scipy.stats.binom_test(row["hap1_reads"],row["hap1_reads"]+row["hap2_reads"],
 	# 	p=0.5,
 	# 	alternative="two-sided"), # v slow for some reason 
@@ -52,7 +78,7 @@ if __name__ == "__main__":
 	df = df[df["hap1_reads"]+df["hap2_reads"] >= 15] # not required for window version, this is filtering
 	df["hap1_logR"] = np.log2((df["hap1_reads"] / (df["hap1_reads"]+df["hap2_reads"])) / 0.5 )
 	df["hap2_logR"] = np.log2((df["hap2_reads"] / (df["hap1_reads"]+df["hap2_reads"])) / 0.5 )
-	print(df)
+	#print(df)
 	f, ax = plt.subplots(1,len(chromosomes),sharex=False,
 											sharey=False,
 											figsize=(14,1))
@@ -70,13 +96,13 @@ if __name__ == "__main__":
 		colors2 = [[0,1,0,abs(x)**3] for x in y2]
 		ax[i].scatter(x1,y1,# range on x.size here for ultra smooth TM
 			 		s=4,
-					#lw=0.1,
-					#edgecolor="black",
+					lw=0.1,
+					edgecolor="black",
 					c=colors1)
 		ax[i].scatter(x2,y2,# range on x.size here for ultra smooth TM
 			 		s=4,
-					#lw=0.1,
-					#edgecolor="black",
+					lw=0.1,
+					edgecolor="black",
 					c=colors2)
 		ax[i].set(xlabel=chromosomes[i]) # x axis labels or no
 		ax[i].set_xticks([])
