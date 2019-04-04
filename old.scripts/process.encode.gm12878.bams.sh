@@ -39,9 +39,10 @@ java -Xmx30g -jar /home/groups/Spellmandata/heskett/tools/gatk3.5/GenomeAnalysis
   -stand_call_conf 10.0 -stand_emit_conf 20.0 -ip 100 -dontUseSoftClippedBases
 
 #### BP resolution version
+### should somehow remove INDELs that don't get called properly?
 
 gatk VariantsToTable -V $out_dir/$filename.bp.res.vcf -F CHROM -F POS -F REF -F ALT -GF GT -GF AD -O $out_dir/$filename.table
 
-tail -n +2 $out_dir/$filename.table | awk '$4!="<NON_REF>"{print $0}' | awk 'OFS="\t"{print $1,$2-1,$2,$3,$4,$5,$6}' | grep -Fv \. | grep -v NA > $out_dir/$filename.bed
+tail -n +2 $out_dir/$filename.table  | awk 'OFS="\t"{print $1,$2-1,$2,$3,$4,$5,$6}' | grep -Fv \. | grep -v NA > $out_dir/$filename.bed
 
 bedtools intersect -wa -wb -a $out_dir/$filename.bed -b /home/groups/Spellmandata/heskett/replication.rnaseq/platinum.genome/NA12878.nochr.bed > $out_dir/$filename.overlap.platinum.bed

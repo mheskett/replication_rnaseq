@@ -28,13 +28,13 @@ java -Xmx30g -jar /home/groups/Spellmandata/heskett/tools/gatk3.5/GenomeAnalysis
 #  -R /home/groups/Spellmandata/heskett/replication.rnaseq/platinum.genome/NA12878.nochr.het.bed \
 #  --ff SECONDARY -o $out_dir/$filename.pileup.vcf $out_dir/$filename.split.bam
 
-######### gatk3 haplotype caller
-## caveat is that it wont output sites that are perfectly monoallelic reference which could be many
-# should actually use the NA12878 platinum vcf file here if applicable
-#   -L /home/groups/Spellmandata/heskett/refs/dbsnp.146.hg38.nochr.sorted.noM.vcf 
-# not going to use above, but could make a proper interval list. can make bed file
+############# BP resolution mode for GM12878...
+### BP res mode outputs a record for every site, regardless of whether there is a "call"
+### if there is a call, gatk will list the allele
+### if there is not a call, bu still reads supporting an alt allele, there will be a <NON_REF>
+### in gm12878 <NON_REF> alleles are sequencing errors or SNPs
 
-############# BP resolution mode
+### Use -L dbsnp file from human genome for other
 java -Xmx30g -jar /home/groups/Spellmandata/heskett/tools/gatk3.5/GenomeAnalysisTK.jar \
   -T HaplotypeCaller -R /home/groups/Spellmandata/heskett/refs/hg38.10x.nochr.fa \
   -I $out_dir/$filename.split.bam --genotyping_mode DISCOVERY \
@@ -43,23 +43,22 @@ java -Xmx30g -jar /home/groups/Spellmandata/heskett/tools/gatk3.5/GenomeAnalysis
   -stand_call_conf 10.0 -stand_emit_conf 20.0 -ip 100 -dontUseSoftClippedBases
 
 #########
-#gatk VariantsToTable -V $out_dir/$filename.bp.res.vcf -F CHROM -F POS -F REF -F ALT -GF GT -GF AD -O $out_dir/$filename.table
+#### BP resolution version
 
-#tail -n +2 $out_dir/$filename.table | awk 'OFS="\t"{split($6,a,",");print $1,$2-1,$2,$3,$4,a[1],a[2]}' | grep -Fv \. | grep -v NA > $out_dir/$filename.bed
+gatk VariantsToTable -V $out_dir/$filename.bp.res.vcf -F CHROM -F POS -F REF -F ALT -GF GT -GF AD -O $out_dir/$filename.table
 
-#bedtools intersect -wa -wb -a $out_dir/$filename.bed -b /home/groups/Spellmandata/heskett/replication.rnaseq/platinum.genome/NA12878.nochr.bed > $out_dir/$filename.overlap.platinum.bed
+tail -n +2 $out_dir/$filename.table | awk 'OFS="\t"{split($4,a,",");print $1,$2-1,$2,$3,a[1],a[2],$6}' 
 
-######## python script to arrange the haplotypes
+#| awk '$7!="0,0"{print $0}'| awk '$7!="0,0,0"{print $0}' \
+#  | awk '{split($5,a,","); print $1,$2,$3,$4,a[1],a[2],$6,$7}' | awk '{split($8,a,",");print $1,$2,$3,$4,$5,$6,$7,a[1],a[2]}'| awk grep -Fv \. | grep -v NA > $out_dir/$filename.bed
+
+bedtools intersect -wa -wb -a $out_dir/$filename.bed -b /home/groups/Spellmandata/heskett/replication.rnaseq/platinum.genome/NA12878.nochr.het.bed > $out_dir/$filename.overlap.platinum.bed
 
 #python /home/groups/Spellmandata/heskett/replication.rnaseq/scripts/haplotyping.py --bed $out_dir/$filename.overlap.platinum.bed --out_directory $out_dir
 
 
-
-
-#### BP resolution version
-
-#gatk VariantsToTable -V $out_dir/$filename.bp.res.vcf -F CHROM -F POS -F REF -F ALT -GF GT -GF AD -O $out_dir/$filename.table
-
-tail -n +2 $out_dir/$filename.table | awk '$4!="<NON_REF>"{print $0}' | awk 'OFS="\t"{print $1,$2-1,$2,$3,$4,$5,$6}' | grep -Fv \. | grep -v NA > $out_dir/$filename.bed
-
-bedtools intersect -wa -wb -a $out_dir/$filename.bed -b /home/groups/Spellmandata/heskett/replication.rnaseq/platinum.genome/NA12878.nochr.bed > $out_dir/$filename.overlap.platinum.bed
+# remove intermediate files
+rm $out_dir/$filename.table
+rm $out_dir/$filename.rg.sorted.markdup.bam
+rm $out_dir/$filename.rg.sorted.bam
+rm $out_dir/$filename.bed
