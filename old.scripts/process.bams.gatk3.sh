@@ -47,10 +47,8 @@ java -Xmx30g -jar /home/groups/Spellmandata/heskett/tools/gatk3.5/GenomeAnalysis
 
 gatk VariantsToTable -V $out_dir/$filename.bp.res.vcf -F CHROM -F POS -F REF -F ALT -GF GT -GF AD -O $out_dir/$filename.table
 
-tail -n +2 $out_dir/$filename.table | awk 'OFS="\t"{split($4,a,",");print $1,$2-1,$2,$3,a[1],a[2],$6}' 
-
-#| awk '$7!="0,0"{print $0}'| awk '$7!="0,0,0"{print $0}' \
-#  | awk '{split($5,a,","); print $1,$2,$3,$4,a[1],a[2],$6,$7}' | awk '{split($8,a,",");print $1,$2,$3,$4,$5,$6,$7,a[1],a[2]}'| awk grep -Fv \. | grep -v NA > $out_dir/$filename.bed
+tail -n +2 $out_dir/$filename.table | awk 'OFS="\t"{split($4,a,",");print $1,$2-1,$2,$3,$4,$6}' | awk '$6!="0,0"{print $0}' | awk '$6!="0,0,0"{print $0}' \
+  | grep -Fv \. | grep -v NA > $out_dir/$filename.bed
 
 bedtools intersect -wa -wb -a $out_dir/$filename.bed -b /home/groups/Spellmandata/heskett/replication.rnaseq/platinum.genome/NA12878.nochr.het.bed > $out_dir/$filename.overlap.platinum.bed
 
