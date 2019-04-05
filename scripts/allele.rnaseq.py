@@ -12,7 +12,7 @@ import pybedtools
 
 ### Separate script for window version since this is a totally different procedure and windows are made on command line?
 ### Or, use pybedtools to make windows within this script, but then must provide the reference genome location
-
+### Windowed version requires a PERFECTLY haplotype resolved genome...
 def get_windows(length,bed_file): #ezpz
 	a=pybedtools.BedTool()
 
@@ -26,10 +26,19 @@ def get_windows(length,bed_file): #ezpz
 										"hap1_reads","hap2_reads"])
 
 	df = df[(df["hap1_reads"]!=".") & (df["hap2_reads"]!=".")]
+	df["hap1_reads"] = df["hap1_reads"].astype(int)
+	df["hap2_reads"] = df["hap2_reads"].astype(int)
+	df["chrom"] = df["chrom"].astype(str)
 	return df
 
 chromosomes = ["1","2","3","4","5","6","7","8","9","10","11","12",
 				"13","14","15","16","17","18","19","20","21","22","X"]
+
+centromere = {"1":"124535434", "2":"95326171", "3":"93504854", "4":"52660117",
+"5":"49405641", "6":"61830166", "7":"61054331", "8":"46838887", "9":"50367679",
+"X":"61632012", "Y":"13104553", "10":"42254935", "11":"54644205", "12":"37856694",
+"13":"19000000","14":"19000000","15":"20000000","16":"38335801","17":"25263006",
+"18":"18460898","19":"27681782","20":"29369569","21":"14288129","22":"16000000"}
 
 
 if __name__ == "__main__":
@@ -52,14 +61,11 @@ if __name__ == "__main__":
 		help="window size for window analysis")
 	parser.add_argument("--binomial_test",
 		action="store_true",
-		metavar="[binom test?]",
 		required=False,
 		help="use binomial test instead of log ratio")
 	parser.add_argument("--windows",
-		metavar="[windows?]",
 		action="store_true",
 		required=False,
-		default=100000,
 		help="use windows instead of single snps")
 
 	arguments = parser.parse_args()
@@ -69,9 +75,8 @@ if __name__ == "__main__":
 							names=["chrom","start","stop","hap1","hap2","hap1_reads","hap2_reads"],
 							dtype={"chrom":str,"start":int,"stop":int,"hap1":str,"hap2":str,"hap1_reads":int,"hap2_reads":int})
 		df = df[df["hap1_reads"]+df["hap2_reads"] >= 10] # min 15 reads per site
-
 	if arguments.windows:
-		df = get_windows(length=arguments.window_size,bed_file=agruments.df)
+		df = get_windows(length=arguments.window_size,bed_file=arguments.df)
 		df = df[df["hap1_reads"]+df["hap2_reads"] >= 30] # for windows
 
 	if not arguments.binomial_test:
@@ -112,7 +117,7 @@ if __name__ == "__main__":
 			ax[i].set_ylim([-1.05,1.05]) # for all plots
 		#ax[i].axvline(x=int(centromere[chromosomes[i]]),linestyle = "--", lw = 0.5,color="black")
 		f.subplots_adjust(wspace=0, hspace=0)
-		#plt.show()
+		plt.show()
 
 
 	if arguments.binomial_test:
@@ -128,7 +133,7 @@ if __name__ == "__main__":
 
 			x1 = df[(df["chrom"]==chromosomes[i])]["start"] # this is for read ratios
 			y1 = -np.log10(df[(df["chrom"]==chromosomes[i])]["binom_pval"])
-			colors = ['red' if val >= 2 else 'blue' for val in y ] for log p val
+			colors = ['red' if val >= 2 else 'blue' for val in y1 ]
 			ax[i].scatter(x1,y1,
 				 		s=4,
 						lw=0.1,
@@ -148,3 +153,4 @@ if __name__ == "__main__":
 			ax[i].set_ylim([0,8]) # for all plots
 			ax[i].axvline(x=int(centromere[chromosomes[i]]),linestyle = "--", lw = 0.5,color="black")
 		f.subplots_adjust(wspace=0, hspace=0)
+		plt.show()
