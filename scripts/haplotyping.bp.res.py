@@ -44,9 +44,13 @@ if __name__ == "__main__":
         #print(tmp)
     # now do the switcheroo
       if (tmp[3] == tmp[10]) and (tmp[4] == tmp[11] or tmp[4] == "<NON_REF>"):
-        result += [tmp] # no need to keep showing NA17878 columns here
-      if (tmp[3] == tmp[11]) and (tmp[4] == tmp[10] or tmp[4] == "<NON_REF>"):
-        result += [[ tmp[0],tmp[1],tmp[2],tmp[4],tmp[3],tmp[6],tmp[5],tmp[7],tmp[8],tmp[9],tmp[10],tmp[11]]]
+        result += [ [tmp[0],tmp[1],tmp[2],tmp[3],tmp[4],tmp[5],tmp[6]] ] # no need to keep showing NA17878 columns here
+      if (tmp[3] == tmp[11]) and (tmp[4] == tmp[10] or tmp[4] == "<NON_REF>"): # debug with line below
+        result += [ [tmp[0],tmp[1],tmp[2],tmp[4],tmp[3],tmp[6],tmp[5]] ]#tmp[7],tmp[8],tmp[9],tmp[10],tmp[11]]]
 
+    #print(result)
+    with open(arguments.out_directory+os.path.basename(arguments.bed).rstrip(".bed")+".haplotype.resolved.bp.res.bed","w") as f:
+      writer = csv.writer(f,delimiter="\t")
+      writer.writerows(result)
+      f.close()
 
-    print(result)
