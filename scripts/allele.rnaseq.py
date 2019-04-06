@@ -17,11 +17,11 @@ def get_windows(length,bed_file): #ezpz
 	a=pybedtools.BedTool()
 
 	b = pybedtools.BedTool(bed_file)
-	windows=a.window_maker(g="/Users/mike/replication_rnaseq/scripts/hg38.10x.nochr.fa.fai",
+	windows=a.window_maker(g="/Users/heskett/replication_rnaseq/scripts/hg38.10x.nochr.fa.fai",
 						w=length,s=length/2)
 
 	c = pybedtools.BedTool()
-	window_read_counts = c.map(a=windows,b=b,c=[6,7],o="sum")
+	window_read_counts = c.map(a=windows,b=b,c=[6,7],o="sum") ## this can fail?? somehow dos2unix helped?
 	df =  window_read_counts.to_dataframe(names=["chrom","start","stop",
 										"hap1_reads","hap2_reads"])
 
@@ -75,6 +75,7 @@ if __name__ == "__main__":
 							names=["chrom","start","stop","hap1","hap2","hap1_reads","hap2_reads"],
 							dtype={"chrom":str,"start":int,"stop":int,"hap1":str,"hap2":str,"hap1_reads":int,"hap2_reads":int})
 		df = df[df["hap1_reads"]+df["hap2_reads"] >= 10] # min 15 reads per site
+		df = df.loc[:,["chrom","start","stop","hap1_reads","hap2_reads"]] # dont need genotype here
 	if arguments.windows:
 		df = get_windows(length=arguments.window_size,bed_file=arguments.df)
 		df = df[df["hap1_reads"]+df["hap2_reads"] >= 30] # for windows
@@ -118,8 +119,18 @@ if __name__ == "__main__":
 		#ax[i].axvline(x=int(centromere[chromosomes[i]]),linestyle = "--", lw = 0.5,color="black")
 		f.subplots_adjust(wspace=0, hspace=0)
 		plt.show()
+		plt.savefig(arguments.df.rstrip(".bed")+".png",dpi=400,bbox_inches='tight',pad_inches = 0,transparent=True) #
 
+		### Now output circos format plots
+		df_circos_hap1 = df[(df["hap1_logR"] > 0)].loc[:,["chrom","start","stop","hap1_logR"]]
+		df_circos_hap2 = df[(df["hap2_logR"] > 0)].loc[:,["chrom","start","stop","hap2_logR"]]
+		df_circos_hap1["chrom"]= "hs"+df_circos_hap1["chrom"].astype(str)
+		df_circos_hap2["chrom"]= "hs"+df_circos_hap2["chrom"].astype(str)
 
+		df_circos_hap2["hap2_logR"] = -df_circos_hap2["hap2_logR"] # for circos plotting
+		### v good 
+		df_circos_hap1.to_csv(arguments.df.rstrip(".bed")+".circos.hap1.bed",header=None,index=None,sep="\t")
+		df_circos_hap2.to_csv(arguments.df.rstrip(".bed")+".circos.hap2.bed",header=None,index=None,sep="\t")
 	if arguments.binomial_test:
     # for binomial pval analysis
 		df["binom_pval"] = df.apply(lambda row: scipy.stats.binom_test(row["hap1_reads"],row["hap1_reads"]+row["hap2_reads"],
@@ -154,3 +165,5 @@ if __name__ == "__main__":
 			ax[i].axvline(x=int(centromere[chromosomes[i]]),linestyle = "--", lw = 0.5,color="black")
 		f.subplots_adjust(wspace=0, hspace=0)
 		plt.show()
+		plt.savefig(arguments.df.rstrip(".bed")+".png",dpi=400,bbox_inches='tight',pad_inches = 0,transparent=True) #
+
