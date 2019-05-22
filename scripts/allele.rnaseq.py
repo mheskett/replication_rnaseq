@@ -74,7 +74,7 @@ if __name__ == "__main__":
 							header=None,
 							names=["chrom","start","stop","hap1","hap2","hap1_reads","hap2_reads"],
 							dtype={"chrom":str,"start":int,"stop":int,"hap1":str,"hap2":str,"hap1_reads":int,"hap2_reads":int})
-		df = df[df["hap1_reads"]+df["hap2_reads"] >= 10] # min 15 reads per site
+		df = df[df["hap1_reads"]+df["hap2_reads"] >= 15] # min 15 reads per site
 		df = df.loc[:,["chrom","start","stop","hap1_reads","hap2_reads"]] # dont need genotype here
 	if arguments.windows:
 		df = get_windows(length=arguments.window_size,bed_file=arguments.df)
@@ -87,6 +87,15 @@ if __name__ == "__main__":
 		f, ax = plt.subplots(1,len(chromosomes),sharex=False,
 												sharey=False,
 												figsize=(14,1))
+
+		### create log ratio files for DNAcopy segmentation
+		### strategy: hap 1 is positive, hap 2 negative. keep the positive value and then make it negative if its hap 2.
+		#df["logR_dnacopy"] = df.apply(lambda x: x.hap1_logR**2 if x.hap1_logR > 0 else -x.hap2_logR**2, axis=1)
+		df["logR_dnacopy"] = df.apply(lambda x: x.hap1_logR if x.hap1_logR > 0 else -x.hap2_logR, axis=1)
+		max_value = max(df["hap1_reads"]+df["hap2_reads"])
+		df["dnacopy_weights"] = df.apply(lambda x: (x.hap1_reads+x.hap2_reads) / max_value, axis=1)
+		print(df)
+		df.loc[:,["chrom","stop","logR_dnacopy","dnacopy_weights"]].to_csv(arguments.df.rstrip(".bed")+".dnacopy.txt",sep="\t",index=None)
 		for i in range(len(chromosomes)):
 
 			x1 = df[(df["hap1_logR"] > 0) & (df["chrom"]==chromosomes[i])]["start"] # this is for read ratios
