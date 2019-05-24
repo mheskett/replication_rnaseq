@@ -23,4 +23,5 @@ dev.off()
 
 write.table(segment.smoothed.CNA.object$output,
 	file=paste(unlist(strsplit(arguments[1],"\\."))[1],".segments.txt",sep=''),
-	quote=FALSE)
+	quote=FALSE,
+	sep="\t")
