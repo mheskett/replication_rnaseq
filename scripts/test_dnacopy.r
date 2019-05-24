@@ -22,5 +22,5 @@ dev.off()
 ## now need a cutoff for segment mean to indicate monoallelic
 
 write.table(segment.smoothed.CNA.object$output,
-	file=paste(unlist(strsplit(arguments[1],"\\."))[1],".segments.txt"),
+	file=paste(unlist(strsplit(arguments[1],"\\."))[1],".segments.txt",sep=''),
 	quote=FALSE)
