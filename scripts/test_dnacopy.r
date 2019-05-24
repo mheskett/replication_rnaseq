@@ -1,6 +1,5 @@
 library(DNAcopy)
 
-
 arguments = commandArgs(trailingOnly=TRUE)
 df = read.table(arguments[1],header=TRUE)
 
@@ -22,6 +21,6 @@ dev.off()
 ## now need a cutoff for segment mean to indicate monoallelic
 
 write.table(segment.smoothed.CNA.object$output,
-	file=paste(unlist(strsplit(arguments[1],"\\."))[1],".segments.txt",sep=''),
+	file=paste(tools::file_path_sans_ext(arguments[1]),".segments.txt",sep=''),
 	quote=FALSE,
 	sep="\t")
