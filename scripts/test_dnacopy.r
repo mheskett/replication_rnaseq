@@ -1,14 +1,26 @@
 library(DNAcopy)
-test = read.table("/Users/heskett/replication_rnaseq/scripts/gm12878.rep1Aligned.hcgatk3.overlap.platinum.haplotype.resolv.dnacopy.txt",header=TRUE)
-test_1 = test[test$chrom=="1",]
 
-CNA.object = CNA(cbind(test_1$logR_dnacopy),test_1$chrom,test_1$stop,data.type="logratio",sampleid="test1")
-#smoothed.CNA.object = smooth.CNA(CNA.object)
 
-#segment.smoothed.CNA.object <- segment(smoothed.CNA.object, verbose=1)
-segment.CNA.object <- segment(CNA.object, verbose=1,alpha=0.0001) # alpha is significance level to accept change points.
+arguments = commandArgs(trailingOnly=TRUE)
+df = read.table(arguments[1],header=TRUE)
+
+CNA.object = CNA(cbind(df$logR_dnacopy), factor(df$chrom,levels=c(1:22,"X")), df$stop,
+	data.type="logratio",
+	sampleid="sample1")
+smoothed.CNA.object = smooth.CNA(CNA.object)
+segment.smoothed.CNA.object <- segment(smoothed.CNA.object, verbose=1, alpha=0.0001,min.width=4)
 ## in general i believe higher alpha means more segments--try alpha between 10**-8 and 5*10**-2
 ## try using weights based on read depth?
 #plot(segment.smoothed.CNA.object, plot.type="w")
-plot(segment.CNA.object)
+pdf(paste(arguments[1],".pdf",sep=""),height=4,width=12)
+plotSample(segment.smoothed.CNA.object)
+dev.off()
 
+pdf(paste(arguments[1],"allchr.pdf",sep=""),height=9,width=20)
+plot(segment.smoothed.CNA.object,plot.type='s')
+dev.off()
+## now need a cutoff for segment mean to indicate monoallelic
+
+write.table(segment.smoothed.CNA.object$output,
+	file=paste(unlist(strsplit(arguments[1],"\\."))[1],".segments.txt"),
+	quote=FALSE)
