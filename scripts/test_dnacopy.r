@@ -7,7 +7,7 @@ CNA.object = CNA(cbind(df$logR_dnacopy), factor(df$chrom,levels=c(1:22,"X")), df
 	data.type="logratio",
 	sampleid="sample1")
 smoothed.CNA.object = smooth.CNA(CNA.object)
-segment.smoothed.CNA.object <- segment(smoothed.CNA.object, verbose=1, alpha=0.0001,min.width=4)
+segment.smoothed.CNA.object <- segment(smoothed.CNA.object, verbose=1, alpha=0.0001)
 ## in general i believe higher alpha means more segments--try alpha between 10**-8 and 5*10**-2
 ## try using weights based on read depth?
 #plot(segment.smoothed.CNA.object, plot.type="w")
