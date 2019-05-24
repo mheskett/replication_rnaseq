@@ -40,7 +40,6 @@ centromere = {"1":"124535434", "2":"95326171", "3":"93504854", "4":"52660117",
 "13":"19000000","14":"19000000","15":"20000000","16":"38335801","17":"25263006",
 "18":"18460898","19":"27681782","20":"29369569","21":"14288129","22":"16000000"}
 
-
 if __name__ == "__main__":
 	parser = argparse.ArgumentParser(description="scripts to combine samples")
 	parser.add_argument("--df",
@@ -94,8 +93,8 @@ if __name__ == "__main__":
 		df["logR_dnacopy"] = df.apply(lambda x: x.hap1_logR if x.hap1_logR > 0 else -x.hap2_logR, axis=1)
 		max_value = max(df["hap1_reads"]+df["hap2_reads"])
 		df["dnacopy_weights"] = df.apply(lambda x: (x.hap1_reads+x.hap2_reads) / max_value, axis=1)
-		print(df)
 		df.loc[:,["chrom","stop","logR_dnacopy","dnacopy_weights"]].to_csv(arguments.df.rstrip(".bed")+".dnacopy.txt",sep="\t",index=None)
+
 		for i in range(len(chromosomes)):
 
 			x1 = df[(df["hap1_logR"] > 0) & (df["chrom"]==chromosomes[i])]["start"] # this is for read ratios
@@ -127,7 +126,7 @@ if __name__ == "__main__":
 			ax[i].set_ylim([-1.05,1.05]) # for all plots
 		#ax[i].axvline(x=int(centromere[chromosomes[i]]),linestyle = "--", lw = 0.5,color="black")
 		f.subplots_adjust(wspace=0, hspace=0)
-		plt.show()
+		#plt.show()
 		plt.savefig(arguments.df.rstrip(".bed")+".png",dpi=400,bbox_inches='tight',pad_inches = 0,transparent=True) #
 
 		### Now output circos format plots
@@ -140,6 +139,7 @@ if __name__ == "__main__":
 		### v good 
 		df_circos_hap1.to_csv(arguments.df.rstrip(".bed")+".circos.hap1.bed",header=None,index=None,sep="\t")
 		df_circos_hap2.to_csv(arguments.df.rstrip(".bed")+".circos.hap2.bed",header=None,index=None,sep="\t")
+	
 	if arguments.binomial_test:
     # for binomial pval analysis
 		df["binom_pval"] = df.apply(lambda row: scipy.stats.binom_test(row["hap1_reads"],row["hap1_reads"]+row["hap2_reads"],
@@ -173,6 +173,6 @@ if __name__ == "__main__":
 			ax[i].set_ylim([0,8]) # for all plots
 			ax[i].axvline(x=int(centromere[chromosomes[i]]),linestyle = "--", lw = 0.5,color="black")
 		f.subplots_adjust(wspace=0, hspace=0)
-		plt.show()
-		plt.savefig(arguments.df.rstrip(".bed")+".png",dpi=400,bbox_inches='tight',pad_inches = 0,transparent=True) #
+		#plt.show()
+		plt.savefig(arguments.df.rstrip("binom.test.bed")+".png",dpi=400,bbox_inches='tight',pad_inches = 0,transparent=True) #
 
