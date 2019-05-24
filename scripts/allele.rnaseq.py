@@ -174,5 +174,10 @@ if __name__ == "__main__":
 			ax[i].axvline(x=int(centromere[chromosomes[i]]),linestyle = "--", lw = 0.5,color="black")
 		f.subplots_adjust(wspace=0, hspace=0)
 		#plt.show()
-		plt.savefig(arguments.df.rstrip("binom.test.bed")+".png",dpi=400,bbox_inches='tight',pad_inches = 0,transparent=True) #
-		print(df)
+		plt.savefig(arguments.df.rstrip(".bed")+"binom.test.png",dpi=400,bbox_inches='tight',pad_inches = 0,transparent=True) #
+		if not arguments.windows:
+			df.to_csv(arguments.df.rstrip(".bed")+"binom.pvals.txt",sep="\t",index=None)
+		if arguments.windows:
+			df.to_csv(arguments.df.rstrip(".bed")+"binom.pvals."
+						+str(arguments.window_size)+".txt",sep="\t",index=None)
+
