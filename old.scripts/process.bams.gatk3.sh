@@ -52,7 +52,13 @@ tail -n +2 $out_dir/$filename.table | awk 'OFS="\t"{split($4,a,",");print $1,$2-
 
 bedtools intersect -wa -wb -a $out_dir/$filename.bed -b /home/groups/Spellmandata/heskett/replication.rnaseq/platinum.genome/NA12878.nochr.het.bed > $out_dir/$filename.overlap.platinum.bed
 
-#python /home/groups/Spellmandata/heskett/replication.rnaseq/scripts/haplotyping.py --bed $out_dir/$filename.overlap.platinum.bed --out_directory $out_dir
+#### now final analyses, output plots, files for circos, etc
+#####
+
+python /home/groups/Spellmandata/heskett/replication.rnaseq/scripts/haplotyping.bp.res.py --bed $out_dir/$filename.overlap.platinum.bed --out_directory $out_dir
+python /home/groups/Spellmandata/heskett/replication.rnaseq/scripts/allele.rnaseq.py --df $out_dir/$filename.overlap.platinum.haplotype.resolved.bp.res.bed --out_directory $out_dir
+/home/groups/Spellmandata/heskett/packages/bin/Rscript /home/groups/Spellmandata/heskett/replication.rnaseq/scripts/test_dnacopy.r $out_dir/$filename.overlap.platinum.haplotype.resolved.bp.res.dnacopy.txt
+
 
 
 # remove intermediate files
