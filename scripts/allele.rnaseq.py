@@ -81,7 +81,7 @@ if __name__ == "__main__":
 
 	if not arguments.binomial_test:
 	    ## happens for non-binomial test version
-		df["hap1_logR"] = np.log2((df["hap1_reads"] / (df["hap1_reads"]+df["hap2_reads"])) / 0.5 )
+		df["hap1_logR"] = np.log2((df["hap1_reads"] / (df["hap1_reads"]+df["hap2_reads"])) / 0.5 ) # will get divide by zero errors here
 		df["hap2_logR"] = np.log2((df["hap2_reads"] / (df["hap1_reads"]+df["hap2_reads"])) / 0.5 )
 		f, ax = plt.subplots(1,len(chromosomes),sharex=False,
 												sharey=False,
@@ -175,4 +175,4 @@ if __name__ == "__main__":
 		f.subplots_adjust(wspace=0, hspace=0)
 		#plt.show()
 		plt.savefig(arguments.df.rstrip("binom.test.bed")+".png",dpi=400,bbox_inches='tight',pad_inches = 0,transparent=True) #
-
+		print(df)
