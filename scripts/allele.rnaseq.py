@@ -73,11 +73,15 @@ if __name__ == "__main__":
 							header=None,
 							names=["chrom","start","stop","hap1","hap2","hap1_reads","hap2_reads"],
 							dtype={"chrom":str,"start":int,"stop":int,"hap1":str,"hap2":str,"hap1_reads":int,"hap2_reads":int})
+		print("length before filtering",len(df))
 		df = df[df["hap1_reads"]+df["hap2_reads"] >= 15] # min 15 reads per site
+		print("length after filtering",len(df))
 		df = df.loc[:,["chrom","start","stop","hap1_reads","hap2_reads"]] # dont need genotype here
 	if arguments.windows:
 		df = get_windows(length=arguments.window_size,bed_file=arguments.df)
+		print("length before filtering",len(df))
 		df = df[df["hap1_reads"]+df["hap2_reads"] >= 30] # for windows
+		print("length after filtering",len(df))
 
 	if not arguments.binomial_test:
 	    ## happens for non-binomial test version
@@ -96,7 +100,7 @@ if __name__ == "__main__":
 		df.loc[:,["chrom","stop","logR_dnacopy","dnacopy_weights"]].to_csv(arguments.df.rstrip(".bed")+".dnacopy.txt",sep="\t",index=None)
 
 		for i in range(len(chromosomes)):
-
+			# do a grid instead of a line
 			x1 = df[(df["hap1_logR"] > 0) & (df["chrom"]==chromosomes[i])]["start"] # this is for read ratios
 			x2 = df[(df["hap2_logR"] > 0) & (df["chrom"]==chromosomes[i])]["start"]
 			y1 = df[(df["hap1_logR"] > 0) & (df["chrom"]==chromosomes[i])]["hap1_logR"] 
@@ -141,7 +145,7 @@ if __name__ == "__main__":
 		df_circos_hap2.to_csv(arguments.df.rstrip(".bed")+".circos.hap2.bed",header=None,index=None,sep="\t")
 	
 	if arguments.binomial_test:
-    # for binomial pval analysis
+    # for binomial pval analysis. dont need plot that shows significant p values, just do the same grid plot
 		df["binom_pval"] = df.apply(lambda row: scipy.stats.binom_test(row["hap1_reads"],row["hap1_reads"]+row["hap2_reads"],
 			p=0.5,
 			alternative="two-sided"), # v slow for some reason 
