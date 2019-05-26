@@ -150,34 +150,42 @@ if __name__ == "__main__":
 			p=0.5,
 			alternative="two-sided"), # v slow for some reason 
 			axis=1)
-		f, ax = plt.subplots(1,len(chromosomes),sharex=False,
-												sharey=False,
-												figsize=(14,1))
+		f, ax = plt.subplots(4, 6, sharex=False,
+								sharey=False,
+								figsize=(20,6))
+		positions = ((0,0),(0,1),(0,2),(0,3),(0,4),(0,5),
+			(1,0),(1,1),(1,2),(1,3),(1,4),(1,5),
+			(2,0),(2,1),(2,2),(2,3),(2,4),(2,5),
+			(3,0),(3,1),(3,2),(3,3),(3,4))
 		for i in range(len(chromosomes)):
-
-			x1 = df[(df["chrom"]==chromosomes[i])]["start"] # this is for read ratios
-			y1 = -np.log10(df[(df["chrom"]==chromosomes[i])]["binom_pval"])
-			colors = ['red' if val >= 2 else 'blue' for val in y1 ]
-			ax[i].scatter(x1,y1,
+			x1 = df[(df["hap1_reads"] > df["hap2_reads"]) & (df["chrom"]==chromosomes[i])]["start"]/10**6
+			x2 = df[(df["hap1_reads"] < df["hap2_reads"]) & (df["chrom"]==chromosomes[i])]["start"]/10**6
+			y1 = -np.log10(df[(df["hap1_reads"] > df["hap2_reads"]) & (df["chrom"]==chromosomes[i])]["binom_pval"])
+			y2 = -np.log10(df[(df["hap1_reads"] < df["hap2_reads"]) & (df["chrom"]==chromosomes[i])]["binom_pval"])*-1
+			y1 = [x if x < 10 else 10 for x in y1] # so we can see outliers
+			y2 = [x if x > -10 else -10 for x in y2]
+			colors1 = [[1,0,0,1] if x >=4 else [1,1,1,0.1] for x in y1]
+			colors2 = [[1,0,0,1] if x <= -4 else [1,1,1,0.1] for x in y2]
+			######## 
+			ax[positions[i][0],positions[i][1]].scatter(x1,y1,
 				 		s=4,
 						lw=0.1,
 						edgecolor="black",
-						alpha=0.6,
-						c=colors)
-			ax[i].set(xlabel=chromosomes[i]) # x axis labels or no
-			ax[i].set_xticks([])
-			ax[i].set_xlim([min(df[df["chrom"]==chromosomes[i]]["start"].values),
-					max(df[df["chrom"]==chromosomes[i]]["stop"])])
-			if chromosomes[i]=="1":
-				ax[i].set_yticks([0,1,2,3,4,5,6,7,8])
-			else:
-				ax[i].set_yticks([])
+						c=colors1)
+			ax[positions[i][0],positions[i][1]].scatter(x2,y2,
+				 		s=4,
+						lw=0.1,
+						edgecolor="black",
+						c=colors2)
+			ax[positions[i][0],positions[i][1]].set(xlabel=chromosomes[i]) # x axis labels or no
+			#ax[positions[i][0],positions[i][1]].set_xticks([])
+			ax[positions[i][0],positions[i][1]].set_xlim([min(df[df["chrom"]==chromosomes[i]]["start"].values)/10**6,
+					max(df[df["chrom"]==chromosomes[i]]["stop"])/10**6])
+			ax[positions[i][0],positions[i][1]].set_yticks([-10,-8,-6,-4,-2,0,2,4,6,8,10])
+
 			plt.grid(True)
-			ax[i].axhline(y=2,linestyle="--",color="red")
-			ax[i].set_ylim([0,8]) # for all plots
-			ax[i].axvline(x=int(centromere[chromosomes[i]]),linestyle = "--", lw = 0.5,color="black")
-		f.subplots_adjust(wspace=0, hspace=0)
-		#plt.show()
+			ax[positions[i][0],positions[i][1]].set_ylim([-10.2,10.2]) # for all plots
+
 		plt.savefig(arguments.df.rstrip(".bed")+"binom.test.png",dpi=400,bbox_inches='tight',pad_inches = 0,transparent=True) #
 		if not arguments.windows:
 			df.to_csv(arguments.df.rstrip(".bed")+"binom.pvals.txt",sep="\t",index=None)
