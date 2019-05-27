@@ -19,6 +19,7 @@ def get_windows(length,bed_file): #ezpz
 	a=pybedtools.BedTool()
 
 	b = pybedtools.BedTool(bed_file)
+	#/home/groups/Spellmandata/heskett/refs/
 	windows=a.window_maker(g="/Users/heskett/replication_rnaseq/scripts/hg38.10x.nochr.fa.fai",
 						w=length,s=length/2)
 
