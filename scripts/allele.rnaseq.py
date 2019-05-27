@@ -9,6 +9,8 @@ import seaborn as sns
 import scipy.stats
 import matplotlib.pyplot as plt
 import pybedtools
+from matplotlib.ticker import (MultipleLocator, FormatStrFormatter,
+                               AutoMinorLocator)
 
 ### Separate script for window version since this is a totally different procedure and windows are made on command line?
 ### Or, use pybedtools to make windows within this script, but then must provide the reference genome location
@@ -73,15 +75,15 @@ if __name__ == "__main__":
 							header=None,
 							names=["chrom","start","stop","hap1","hap2","hap1_reads","hap2_reads"],
 							dtype={"chrom":str,"start":int,"stop":int,"hap1":str,"hap2":str,"hap1_reads":int,"hap2_reads":int})
-		print("length before filtering",len(df))
-		df = df[df["hap1_reads"]+df["hap2_reads"] >= 15] # min 15 reads per site
-		print("length after filtering",len(df))
+		print("num individual markers before filtering",len(df))
+		df = df[df["hap1_reads"]+df["hap2_reads"] >= 5] # min 15 reads per site
+		print("num individual markers after filtering",len(df))
 		df = df.loc[:,["chrom","start","stop","hap1_reads","hap2_reads"]] # dont need genotype here
 	if arguments.windows:
 		df = get_windows(length=arguments.window_size,bed_file=arguments.df)
-		print("length before filtering",len(df))
-		df = df[df["hap1_reads"]+df["hap2_reads"] >= 30] # for windows
-		print("length after filtering",len(df))
+		print("num windows before filtering",len(df))
+		df = df[df["hap1_reads"]+df["hap2_reads"] >= 20] # for windows
+		print("num windows after filtering",len(df))
 
 	if not arguments.binomial_test:
 	    ## happens for non-binomial test version
@@ -118,7 +120,7 @@ if __name__ == "__main__":
 						edgecolor="black",
 						c=colors2)
 			ax[i].set(xlabel=chromosomes[i]) # x axis labels or no
-			ax[i].set_xticks([])
+			ax[i].set_xticks([],minor=True)
 			ax[i].set_xlim([min(df[df["chrom"]==chromosomes[i]]["start"].values),
 					max(df[df["chrom"]==chromosomes[i]]["stop"])])
 			if chromosomes[i]=="1":
@@ -152,7 +154,8 @@ if __name__ == "__main__":
 			axis=1)
 		f, ax = plt.subplots(4, 6, sharex=False,
 								sharey=False,
-								figsize=(20,6))
+								figsize=(22,8))
+
 		positions = ((0,0),(0,1),(0,2),(0,3),(0,4),(0,5),
 			(1,0),(1,1),(1,2),(1,3),(1,4),(1,5),
 			(2,0),(2,1),(2,2),(2,3),(2,4),(2,5),
@@ -164,7 +167,7 @@ if __name__ == "__main__":
 			y2 = -np.log10(df[(df["hap1_reads"] < df["hap2_reads"]) & (df["chrom"]==chromosomes[i])]["binom_pval"])*-1
 			y1 = [x if x < 10 else 10 for x in y1] # so we can see outliers
 			y2 = [x if x > -10 else -10 for x in y2]
-			colors1 = [[1,0,0,1] if x >=4 else [1,1,1,0.1] for x in y1]
+			colors1 = [[1,0,0,1] if x >=4 else [1,1,1,0.1] for x in y1] ## pval for significance here set to 10e-4
 			colors2 = [[1,0,0,1] if x <= -4 else [1,1,1,0.1] for x in y2]
 			######## 
 			ax[positions[i][0],positions[i][1]].scatter(x1,y1,
@@ -182,11 +185,20 @@ if __name__ == "__main__":
 			ax[positions[i][0],positions[i][1]].set_xlim([min(df[df["chrom"]==chromosomes[i]]["start"].values)/10**6,
 					max(df[df["chrom"]==chromosomes[i]]["stop"])/10**6])
 			ax[positions[i][0],positions[i][1]].set_yticks([-10,-8,-6,-4,-2,0,2,4,6,8,10])
-
 			plt.grid(True)
-			ax[positions[i][0],positions[i][1]].set_ylim([-10.2,10.2]) # for all plots
+			ax[positions[i][0],positions[i][1]].xaxis.set_minor_locator(AutoMinorLocator(4))
+			ax[positions[i][0],positions[i][1]].set_ylim([-10.5,10.5]) # for all plots
+			#params = {'axes.labelsize': 18,'axes.titlesize':20, 'text.fontsize': 20, 
+					#'legend.fontsize': 20, 'xtick.labelsize': 8, 'ytick.labelsize': 8}
+			#matplotlib.rcParams.update(params)
+		plt.subplots_adjust(wspace=.2, hspace=.4)
 
-		plt.savefig(arguments.df.rstrip(".bed")+"binom.test.png",dpi=400,bbox_inches='tight',pad_inches = 0,transparent=True) #
+		if arguments.windows:
+			plt.savefig(arguments.df.rstrip(".bed")+"binom.pvals."+str(arguments.window_size)+".png",
+			dpi=400,transparent=True,bbox_inches='tight',pad_inches = 0)
+		if not arguments.windows:
+			plt.savefig(arguments.df.rstrip(".bed")+"binom.pvals."+".png",
+			dpi=400,transparent=True,bbox_inches='tight',pad_inches = 0)
 		if not arguments.windows:
 			df.to_csv(arguments.df.rstrip(".bed")+"binom.pvals.txt",sep="\t",index=None)
 		if arguments.windows:
