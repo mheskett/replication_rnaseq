@@ -82,7 +82,7 @@ if __name__ == "__main__":
 	if arguments.windows:
 		df = get_windows(length=arguments.window_size,bed_file=arguments.df)
 		print("num windows before filtering",len(df))
-		df = df[df["hap1_reads"]+df["hap2_reads"] >= 20] # for windows
+		df = df[df["hap1_reads"]+df["hap2_reads"] >= 8] # for windows
 		print("num windows after filtering",len(df))
 
 	if not arguments.binomial_test:
@@ -200,8 +200,8 @@ if __name__ == "__main__":
 			plt.savefig(arguments.df.rstrip(".bed")+"binom.pvals."+".png",
 			dpi=400,transparent=True,bbox_inches='tight',pad_inches = 0)
 		if not arguments.windows:
-			df.to_csv(arguments.df.rstrip(".bed")+"binom.pvals.txt",sep="\t",index=None)
+			df.to_csv(arguments.df.rstrip(".bed")+"binom.pvals.txt",sep="\t",index=None,header=None)
 		if arguments.windows:
 			df.to_csv(arguments.df.rstrip(".bed")+"binom.pvals."
-						+str(arguments.window_size)+".txt",sep="\t",index=None)
+						+str(arguments.window_size)+".txt",sep="\t",index=None,header=None)
 
