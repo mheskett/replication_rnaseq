@@ -69,8 +69,16 @@ if __name__ == "__main__":
 		action="store_true",
 		required=False,
 		help="use windows instead of single snps")
+	parser.add_argument("--repli_seq",
+		type=str,
+		metavar="[repliseq bed file]",
+		required=False,
+		help="repli-seq bed file with asyncrhonous regions to plot")
 
 	arguments = parser.parse_args()
+	if arguments.repli_seq:
+		df_repliseq = pd.read_table(arguments.repli_seq, names=["chrom","start","stop","pval"])
+		print("ddd")
 	if not arguments.windows:
 		df = pd.read_table(arguments.df, # for original data
 							header=None,
@@ -146,7 +154,8 @@ if __name__ == "__main__":
 		### v good 
 		df_circos_hap1.to_csv(arguments.df.rstrip(".bed")+".circos.hap1.bed",header=None,index=None,sep="\t")
 		df_circos_hap2.to_csv(arguments.df.rstrip(".bed")+".circos.hap2.bed",header=None,index=None,sep="\t")
-	
+
+	############# binomial test turning out to be the most sensical analysis
 	if arguments.binomial_test:
     # for binomial pval analysis. dont need plot that shows significant p values, just do the same grid plot
 		df["binom_pval"] = df.apply(lambda row: scipy.stats.binom_test(row["hap1_reads"],row["hap1_reads"]+row["hap2_reads"],
@@ -171,6 +180,12 @@ if __name__ == "__main__":
 			colors1 = [[1,0,0,1] if x >=4 else [1,1,1,0.1] for x in y1] ## pval for significance here set to 10e-4
 			colors2 = [[1,0,0,1] if x <= -4 else [1,1,1,0.1] for x in y2]
 			######## 
+			### repliseq data
+			if arguments.repli_seq:
+				repliseq = df_repliseq[df_repliseq["chrom"]==chromosomes[i]]
+				for index,row in repliseq.iterrows():
+					ax[positions[i][0],positions[i][1]].axvspan(xmin = row["start"]/10**6, xmax = row["stop"]/10**6,
+																ymin=0,ymax=1,alpha=0.5,facecolor="blue")
 			ax[positions[i][0],positions[i][1]].scatter(x1,y1,
 				 		s=4,
 						lw=0.1,
