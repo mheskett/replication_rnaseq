@@ -57,6 +57,7 @@ bedtools intersect -wa -wb -a $out_dir/$filename.bed -b /home/groups/Spellmandat
 
 python /home/groups/Spellmandata/heskett/replication.rnaseq/scripts/haplotyping.bp.res.py --bed $out_dir/$filename.overlap.platinum.bed --out_directory $out_dir
 python /home/groups/Spellmandata/heskett/replication.rnaseq/scripts/allele.rnaseq.py --df $out_dir/$filename.overlap.platinum.haplotype.resolved.bp.res.bed --out_directory $out_dir
+python /home/groups/Spellmandata/heskett/replication.rnaseq/scripts/allele.rnaseq.py --df $out_dir/$filename.overlap.platinum.haplotype.resolved.bp.res.bed --out_directory $out_dir --windows --window_length 50000 --binomial_test
 /home/groups/Spellmandata/heskett/packages/bin/Rscript /home/groups/Spellmandata/heskett/replication.rnaseq/scripts/test_dnacopy.r $out_dir/$filename.overlap.platinum.haplotype.resolved.bp.res.dnacopy.txt
 
 
