@@ -42,15 +42,15 @@ samtools merge -f $out_dir$filename.minus.bam $out_dir$filename.rev1.bam $out_di
 samtools index $out_dir$filename.minus.bam
 
 ## now do coverage separately
-bedtools genomecov -bga -split -ibam $out_dir$filename.plus.bam > $out_dir$filename.plus.cov.bed
-bedtools genomecov -bga -split -ibam $out_dir$filename.minus.bam > $out_dir$filename.minus.cov.bed
+bedtools genomecov -bg -split -ibam $out_dir$filename.plus.bam > $out_dir$filename.plus.cov.bed
+bedtools genomecov -bg -split -ibam $out_dir$filename.minus.bam > $out_dir$filename.minus.cov.bed
 
 ## remove all overlap with known exons and introns for coding genes (whole gene) in a strand specific manner. remove poor mapping regions
 bedtools subtract -a $out_dir$filename.plus.cov.bed -b /home/groups/Spellmandata/heskett/replication.rnaseq/annotation.files/encode.blacklist.nochr.hg38.bed \
-  | bedtools subtract -a stdin -b /home/groups/Spellmandata/heskett/replication.rnaseq/annotation.files/whole.gene.plus.nochr.ucsc.hg38.bed > $out_dir$filename.plus.subtract.whole.gene.bed
+  | bedtools subtract -a stdin -b /home/groups/Spellmandata/heskett/replication.rnaseq/annotation.files/whole.gene.ucsc.hg38.cds.plus.bed > $out_dir$filename.plus.subtract.whole.gene.bed
 
 bedtools subtract -a $out_dir$filename.minus.cov.bed -b /home/groups/Spellmandata/heskett/replication.rnaseq/annotation.files/encode.blacklist.nochr.hg38.bed \
-  | bedtools subtract -a stdin -b /home/groups/Spellmandata/heskett/replication.rnaseq/annotation.files/whole.gene.minus.nochr.ucsc.hg38.bed > $out_dir$filename.minus.subtract.whole.gene.bed
+  | bedtools subtract -a stdin -b /home/groups/Spellmandata/heskett/replication.rnaseq/annotation.files/whole.gene.ucsc.hg38.cds.minus.bed > $out_dir$filename.minus.subtract.whole.gene.bed
 
 ## merge segments that are separated by 500bp (caron) or 1000bp (kapranov) or less
 bedtools merge -i $out_dir$filename.plus.subtract.whole.gene.bed -d 1000 > $out_dir$filename.plus.subtract.merge.1kb.bed
@@ -78,9 +78,6 @@ awk 'OFS="\t"{print "chr"$1,$2,$3,"contig_"NR,0,"-"}' $out_dir$filename.minus.vl
 ##### too many temp files will make this slow
 ##### 
 
-rm $out_dir$filename.mq30.bam
-#rm $out_dir$filename.mq30.plus.cov.bed
-#rm $out_dir$filename.mq30.minus.cov.bed
 
 rm $out_dir$filename.plus.subtract.whole.gene.bed
 rm $out_dir$filename.minus.subtract.whole.gene.bed

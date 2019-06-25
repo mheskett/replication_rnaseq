@@ -61,7 +61,6 @@ python /home/groups/Spellmandata/heskett/replication.rnaseq/scripts/allele.rnase
 /home/groups/Spellmandata/heskett/packages/bin/Rscript /home/groups/Spellmandata/heskett/replication.rnaseq/scripts/test_dnacopy.r $out_dir/$filename.overlap.platinum.haplotype.resolved.bp.res.dnacopy.txt
 
 
-
 # remove intermediate files
 rm $out_dir/$filename.table
 rm $out_dir/$filename.rg.sorted.markdup.bam

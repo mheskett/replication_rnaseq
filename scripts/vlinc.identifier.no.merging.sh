@@ -1,5 +1,4 @@
 #!/bin/bash
-
 input=$1 ## bam file
 out_dir=$2
 b=$(basename $input) ## removes /path/to/file
@@ -42,23 +41,27 @@ samtools merge -f $out_dir$filename.minus.bam $out_dir$filename.rev1.bam $out_di
 samtools index $out_dir$filename.minus.bam
 
 ## now do coverage separately
-bedtools genomecov -bga -split -ibam $out_dir$filename.plus.bam > $out_dir$filename.plus.cov.bed
-bedtools genomecov -bga -split -ibam $out_dir$filename.minus.bam > $out_dir$filename.minus.cov.bed
+## just get all covered regions regardless of depth. want to merge everything that is separated	by only a few base pairs?
+## debug by keeping read counts in the bam file?
+bedtools genomecov -bg -split -ibam $out_dir$filename.plus.bam | bedtools merge -i stdin -d 10 > $out_dir$filename.plus.cov.bed
+bedtools genomecov -bg -split -ibam $out_dir$filename.minus.bam | bedtools merge -i stdin -d 10 > $out_dir$filename.minus.cov.bed
+
 
 ## remove all overlap with known exons and introns for coding genes (whole gene) in a strand specific manner. remove poor mapping regions
 bedtools subtract -a $out_dir$filename.plus.cov.bed -b /home/groups/Spellmandata/heskett/replication.rnaseq/annotation.files/encode.blacklist.nochr.hg38.bed \
-  | bedtools subtract -a stdin -b /home/groups/Spellmandata/heskett/replication.rnaseq/annotation.files/whole.gene.plus.nochr.ucsc.hg38.bed > $out_dir$filename.plus.subtract.whole.gene.bed
+  | bedtools subtract -a stdin -b /home/groups/Spellmandata/heskett/replication.rnaseq/annotation.files/whole.gene.ucsc.hg38.cds.plus.bed > $out_dir$filename.plus.subtract.whole.gene.bed
 
 bedtools subtract -a $out_dir$filename.minus.cov.bed -b /home/groups/Spellmandata/heskett/replication.rnaseq/annotation.files/encode.blacklist.nochr.hg38.bed \
-  | bedtools subtract -a stdin -b /home/groups/Spellmandata/heskett/replication.rnaseq/annotation.files/whole.gene.minus.nochr.ucsc.hg38.bed > $out_dir$filename.minus.subtract.whole.gene.bed
+  | bedtools subtract -a stdin -b /home/groups/Spellmandata/heskett/replication.rnaseq/annotation.files/whole.gene.ucsc.hg38.cds.minus.bed > $out_dir$filename.minus.subtract.whole.gene.bed
 
 awk 'OFS="\t"{print "chr"$1,$2,$3,"contig_"NR,0,"+"}' $out_dir$filename.plus.subtract.whole.gene.bed | grep -v chrGL | grep -v chrKI > $out_dir$filename.vlinc.all.reads.browser.bed
 awk 'OFS="\t"{print "chr"$1,$2,$3,"contig_"NR,0,"-"}' $out_dir$filename.minus.subtract.whole.gene.bed | grep -v chrGL | grep -v chrKI >> $out_dir$filename.vlinc.all.reads.browser.bed
+
 
 
 rm $out_dir$filename.fwd1.bam
 rm $out_dir$filename.fwd2.bam
 rm $out_dir$filename.rev1.bam
 rm $out_dir$filename.rev2.bam
-rm $out_dir$filename.plus.subtract.whole.gene.bed
-rm $out_dir$filename.minus.subtract.whole.gene.bed
+#rm $out_dir$filename.plus.subtract.whole.gene.bed
+#rm $out_dir$filename.minus.subtract.whole.gene.bed
