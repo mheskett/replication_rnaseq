@@ -49,7 +49,7 @@ if __name__ == "__main__":
         result += [ [tmp[0],tmp[1],tmp[2],tmp[4],tmp[3],tmp[6],tmp[5]] ]#tmp[7],tmp[8],tmp[9],tmp[10],tmp[11]]]
 
     #print(result)
-    with open(arguments.out_directory+os.path.basename(arguments.bed).rstrip(".bed")+".haplotype.resolved.bp.res.bed","w") as f:
+    with open(arguments.out_directory+os.path.basename(arguments.bed).rstrip(".bed")+".haplotypes.bed","w") as f:
       writer = csv.writer(f,delimiter="\t")
       writer.writerows(result)
       f.close()
