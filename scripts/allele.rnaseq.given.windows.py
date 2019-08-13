@@ -11,7 +11,7 @@ import matplotlib.pyplot as plt
 import pybedtools
 from matplotlib.ticker import (MultipleLocator, FormatStrFormatter,
                                AutoMinorLocator)
-
+import statsmodels.stats.multitest as mt
 ## hg38
 lengths = [248956422,#1
 242193529,#2
@@ -76,9 +76,10 @@ def get_windows(window_file, read_counts_file): #
 	## genome file to specify sort order
 
 	window_read_counts = c.map(a=window_file,b=b,c=[6,7],o="sum",g="hg38.10x.nochr.fa.fai") ## this can fail?? somehow dos2unix helped?
-	df =  window_read_counts.to_dataframe(names=["chrom","start","stop","name","score","strand_of_window",
-										"hap1_reads","hap2_reads"],dtype={"chrom":str,"start":int,"stop":int,"name":str,"score":float,"strand_of_window":str,
-										"hap1_reads":str,"hap2_reads":str})
+	df =  window_read_counts.to_dataframe(names=["chrom", "start", "stop", "name", "score", "strand_of_window",
+										"hap1_reads", "hap2_reads"],dtype={"chrom":str, "start":int, "stop":int,
+										"name":str, "score":float, "strand_of_window":str,
+										"hap1_reads":str, "hap2_reads":str})
 	df = df[ (df["hap1_reads"]!=".") & (df["hap2_reads"]!=".") ]
 	df["hap1_reads"] = df["hap1_reads"].astype(int)
 	df["hap2_reads"] = df["hap2_reads"].astype(int)
@@ -115,6 +116,8 @@ if __name__ == "__main__":
 		p=0.5,
 		alternative="two-sided"), # v slow for some reason 
 		axis=1)
+	df["fdr_pval"]=mt.multipletests(pvals=df["binom_pval"], alpha=0.01,
+													method="fdr_bh")[1]
 	f, ax = plt.subplots(1, len(chromosomes), sharex=False,
 							sharey=False,
 							figsize=(15,1),
@@ -127,19 +130,19 @@ if __name__ == "__main__":
 			result[1]=1 # plus strand green
 		if x["strand_of_window"]==".":
 			result[2]=1 ## no strand info is blue
-		if x["binom_pval"]<=0.0001:
+		if x["fdr_pval"]<=0.05:
 			result[3]=1
-		if x["binom_pval"]>0.0001:
-			result[3]=0.2
+		if x["fdr_pval"]>0.05:
+			result[3]=0.1
 		return result
 	def marker_size(x):
 		if x["total_reads"] <=100:
 			return 10
 		if 100 < x["total_reads"] <= 1000:
-			return 50
+			return 40
 		if 1000 < x["total_reads"]:
-			return 100
-	has_run=True
+			return 75
+	print(df)
 	for i in range(len(chromosomes)):
 		if chromosomes[i] not in list(df.chrom):
 			ax[i].set_yticks([])
@@ -150,8 +153,6 @@ if __name__ == "__main__":
 			ax[i].set(xlabel=chromosomes[i]) # x axis labels or no
 			ax[i].axvline(x=int(centromere[chromosomes[i]])/10**6, linestyle = "--", lw = 0.5,color="black")
 			ax[i].set_xlim([0,lengths[i]/10**6])
-
-		#ax[i].set_yticks([-12,-8,-4,0,4,8,12])
 			continue
 		## clean up this bullcrap
 		#### make a df for each
@@ -166,7 +167,7 @@ if __name__ == "__main__":
 					lw=0.1,
 					edgecolor="black",
 					c=hap1["color"])
-			for index,row in hap1[hap1["binom_pval"]<=0.0001].iterrows():
+			for index,row in hap1[hap1["fdr_pval"]<=0.05].iterrows():
 				ax[i].annotate(s=row["name"],
 				xy=(row["start"]/10**6, -np.log10(row["binom_pval"]) if -np.log10(row["binom_pval"]) <= 12 else 12)).set_fontsize(6)
 		### this breaks if the df is empty...thecrappy fix is to assign windows where hap1 reads = hap2 reads to both hap1 and hap2.
@@ -182,11 +183,9 @@ if __name__ == "__main__":
 					lw=0.1,
 					edgecolor="black",
 					c=hap2["color"])
-			for index,row in hap2[hap2["binom_pval"]<=0.0001].iterrows():
+			for index,row in hap2[hap2["fdr_pval"]<=0.05].iterrows():
 				ax[i].annotate(s=row["name"],
 				xy=(row["start"]/10**6, -1*(-np.log10(row["binom_pval"]) if -np.log10(row["binom_pval"]) <= 12 else 12))).set_fontsize(6)
-
-
 
 		ax[i].set_yticks([])
 		ax[i].set_xticks([])
@@ -199,11 +198,6 @@ if __name__ == "__main__":
 		#ax[i].set_yticks([-12,-8,-4,0,4,8,12])
 		#plt.grid(True)
 		ax[i].set_ylim([-14,14]) # for all plots
-
-		### try to annotate all significant links
-		#params = {'axes.labelsize': 18,'axes.titlesize':20, 'text.fontsize': 20, 
-				#'legend.fontsize': 20, 'xtick.labelsize': 8, 'ytick.labelsize': 8}
-		#matplotlib.rcParams.update(params)
 	for i in range(len(chromosomes)):
 		if chromosomes[i] in gray_chromosomes:
 		    ax[i].axvspan(xmin=0, xmax=lengths[i]/10**6, ymin=0, ymax=1,
@@ -211,9 +205,8 @@ if __name__ == "__main__":
 	plt.subplots_adjust(wspace=0, hspace=0)
 	plt.savefig(os.path.basename(arguments.df.rstrip(".bed"))+"."+os.path.basename(arguments.window_file.rstrip(".bed"))+".png",dpi=400,transparent=True,bbox_inches='tight',pad_inches = 0)
 
-
 	### output files with proper filenames
 	df.to_csv(os.path.basename(arguments.df.rstrip(".bed"))+"."+os.path.basename(arguments.window_file.rstrip(".bed"))+".txt",sep="\t",index=None,header=None)
-	browser_df = df[df["binom_pval"]<=0.0001].loc[:,:"strand_of_window"]
+	browser_df = df[df["fdr_pval"]<=0.05].loc[:,:"strand_of_window"]
 	browser_df["chrom"] = "chr"+browser_df["chrom"].astype(str)
 	browser_df.to_csv(os.path.basename(arguments.df.rstrip(".bed"))+"."+os.path.basename(arguments.window_file.rstrip(".bed"))+".browser.bed",sep="\t",index=None,header=None)
