@@ -118,6 +118,8 @@ if __name__ == "__main__":
 		axis=1)
 	df["fdr_pval"]=mt.multipletests(pvals=df["binom_pval"], alpha=0.01,
 													method="fdr_bh")[1]
+	df["fdr_reject"] =  mt.multipletests(pvals=df["binom_pval"], alpha=0.01,
+													method="fdr_bh")[0]
 	f, ax = plt.subplots(1, len(chromosomes), sharex=False,
 							sharey=False,
 							figsize=(15,1),
@@ -130,9 +132,9 @@ if __name__ == "__main__":
 			result[1]=1 # plus strand green
 		if x["strand_of_window"]==".":
 			result[2]=1 ## no strand info is blue
-		if x["fdr_pval"]<=0.05:
+		if x["fdr_reject"]<=0.05:
 			result[3]=1
-		if x["fdr_pval"]>0.05:
+		if x["fdr_reject"]>0.05:
 			result[3]=0.1
 		return result
 	def marker_size(x):
@@ -167,7 +169,7 @@ if __name__ == "__main__":
 					lw=0.1,
 					edgecolor="black",
 					c=hap1["color"])
-			for index,row in hap1[hap1["fdr_pval"]<=0.05].iterrows():
+			for index,row in hap1[hap1["fdr_reject"]==True].iterrows():
 				ax[i].annotate(s=row["name"],
 				xy=(row["start"]/10**6, -np.log10(row["binom_pval"]) if -np.log10(row["binom_pval"]) <= 12 else 12)).set_fontsize(6)
 		### this breaks if the df is empty...thecrappy fix is to assign windows where hap1 reads = hap2 reads to both hap1 and hap2.
@@ -183,7 +185,7 @@ if __name__ == "__main__":
 					lw=0.1,
 					edgecolor="black",
 					c=hap2["color"])
-			for index,row in hap2[hap2["fdr_pval"]<=0.05].iterrows():
+			for index,row in hap2[hap2["fdr_reject"]==True].iterrows():
 				ax[i].annotate(s=row["name"],
 				xy=(row["start"]/10**6, -1*(-np.log10(row["binom_pval"]) if -np.log10(row["binom_pval"]) <= 12 else 12))).set_fontsize(6)
 
@@ -206,7 +208,7 @@ if __name__ == "__main__":
 	plt.savefig(os.path.basename(arguments.df.rstrip(".bed"))+"."+os.path.basename(arguments.window_file.rstrip(".bed"))+".png",dpi=400,transparent=True,bbox_inches='tight',pad_inches = 0)
 
 	### output files with proper filenames
-	df.to_csv(os.path.basename(arguments.df.rstrip(".bed"))+"."+os.path.basename(arguments.window_file.rstrip(".bed"))+".txt",sep="\t",index=None,header=None)
-	browser_df = df[df["fdr_pval"]<=0.05].loc[:,:"strand_of_window"]
+	df.to_csv(os.path.basename(arguments.df.rstrip(".bed"))+"."+os.path.basename(arguments.window_file.rstrip(".bed"))+".bed",sep="\t",index=None,header=None)
+	browser_df = df[df["fdr_reject"]==True].loc[:,:"strand_of_window"]
 	browser_df["chrom"] = "chr"+browser_df["chrom"].astype(str)
 	browser_df.to_csv(os.path.basename(arguments.df.rstrip(".bed"))+"."+os.path.basename(arguments.window_file.rstrip(".bed"))+".browser.bed",sep="\t",index=None,header=None)
