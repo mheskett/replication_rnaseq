@@ -132,9 +132,9 @@ if __name__ == "__main__":
 			result[1]=1 # plus strand green
 		if x["strand_of_window"]==".":
 			result[2]=1 ## no strand info is blue
-		if x["fdr_reject"]<=0.05:
+		if x["fdr_reject"]==True:
 			result[3]=1
-		if x["fdr_reject"]>0.05:
+		if x["fdr_reject"]==False:
 			result[3]=0.1
 		return result
 	def marker_size(x):
@@ -144,7 +144,6 @@ if __name__ == "__main__":
 			return 40
 		if 1000 < x["total_reads"]:
 			return 75
-	print(df)
 	for i in range(len(chromosomes)):
 		if chromosomes[i] not in list(df.chrom):
 			ax[i].set_yticks([])
