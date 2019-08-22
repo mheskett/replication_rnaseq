@@ -42,8 +42,8 @@ bedtools subtract -a $out_dir$filename.plus.cov.bed -b /home/groups/Spellmandata
   | bedtools subtract -a stdin -b /home/groups/Spellmandata/heskett/replication.rnaseq/annotation.files/ucsc.exons.plus.filtered.hg38.bed \
   | bedtools subtract -a stdin -b /home/groups/Spellmandata/heskett/replication.rnaseq/annotation.files/ucsc.5utr.plus.filtered.hg38.bed \
   | bedtools subtract -a stdin -b /home/groups/Spellmandata/heskett/replication.rnaseq/annotation.files/ucsc.3utr.plus.filtered.hg38.bed \
-  | bedtools subtract -a stdin -b /home/groups/Spellmandata/heskett/replication.rnaseq/annotation.files/vlinc1541.nochr.sorted.plus.hg38.bed \
-  | bedtools subtract -a stdin -b /home/groups/Spellmandata/heskett/replication.rnaseq/annotation.files/vlinc2149.nochr.sorted.plus.hg38.bed \
+#  | bedtools subtract -a stdin -b /home/groups/Spellmandata/heskett/replication.rnaseq/annotation.files/vlinc1541.nochr.sorted.plus.hg38.bed \
+#  | bedtools subtract -a stdin -b /home/groups/Spellmandata/heskett/replication.rnaseq/annotation.files/vlinc2149.nochr.sorted.plus.hg38.bed \
     > $out_dir$filename.plus.subtract.whole.gene.bed
 
 bedtools subtract -a $out_dir$filename.minus.cov.bed -b /home/groups/Spellmandata/heskett/replication.rnaseq/annotation.files/encode.blacklist.nochr.hg38.bed \
@@ -51,8 +51,8 @@ bedtools subtract -a $out_dir$filename.minus.cov.bed -b /home/groups/Spellmandat
   | bedtools subtract -a stdin -b /home/groups/Spellmandata/heskett/replication.rnaseq/annotation.files/ucsc.exons.minus.filtered.hg38.bed \
   | bedtools subtract -a stdin -b /home/groups/Spellmandata/heskett/replication.rnaseq/annotation.files/ucsc.5utr.minus.filtered.hg38.bed \
   | bedtools subtract -a stdin -b /home/groups/Spellmandata/heskett/replication.rnaseq/annotation.files/ucsc.3utr.minus.filtered.hg38.bed \
-  | bedtools subtract -a stdin -b /home/groups/Spellmandata/heskett/replication.rnaseq/annotation.files/vlinc1541.nochr.sorted.minus.hg38.bed \
-  | bedtools subtract -a stdin -b /home/groups/Spellmandata/heskett/replication.rnaseq/annotation.files/vlinc2149.nochr.sorted.minus.hg38.bed \
+#  | bedtools subtract -a stdin -b /home/groups/Spellmandata/heskett/replication.rnaseq/annotation.files/vlinc1541.nochr.sorted.minus.hg38.bed \
+#  | bedtools subtract -a stdin -b /home/groups/Spellmandata/heskett/replication.rnaseq/annotation.files/vlinc2149.nochr.sorted.minus.hg38.bed \
     > $out_dir$filename.minus.subtract.whole.gene.bed
 
 ## merge segments that are separated by 500bp (caron) or 1000bp (kapranov) or less
