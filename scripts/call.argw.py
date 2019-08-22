@@ -31,4 +31,4 @@ python allele.rnaseq.given.windows.py --df ../data/gm12878.rep2Aligned.out.sorte
 python allele.rnaseq.given.windows.py --df ../data/gm12878.rep2Aligned.out.sorted.plus.platinum.sites.haplotypes.bed --window_file /Users/heskett/replication_rnaseq/annotation.files/ucsc.whole.gene.plus.filtered.hg38.bed --out_directory ./
 
 #### discovery mode
-
+#### use vlinc.identifier.sh to get windows
