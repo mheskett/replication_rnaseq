@@ -8,8 +8,8 @@ import matplotlib.pyplot as plt
 import pybedtools
 
 
-# eclip = "/Users/heskett/replication_rnaseq/rnbp.of.lines/data/all.eclip.chr6.nochr.sorted.bed"
-eclip = "/Users/heskett/replication_rnaseq/rnbp.of.lines/data/all.eclip.nochr.sorted.bed"
+eclip = "/Users/heskett/replication_rnaseq/rnbp.of.lines/data/all.eclip.chr6.nochr.sorted.bed"
+# eclip = "/Users/heskett/replication_rnaseq/rnbp.of.lines/data/all.eclip.nochr.sorted.bed"
 introns =  "/Users/heskett/replication_rnaseq/annotation.files/ucsc.introns.filtered.hg19.bed"
 vlincs = "/Users/heskett/replication_rnaseq/annotation.files/mcaron.vlinc1541.vlinc2149.merged.final.hg19g1k.bed"
 lines = "/Users/heskett/replication_rnaseq/annotation.files/ucsc.L1.filtered.hg19.bed"
@@ -59,7 +59,7 @@ fraction_of_vlinc_lines_bound = eclip_binding_lines_in_vlincs.groupby(["name_ecl
 
 
 
-print(fraction_of_vlinc_lines_bound  / fraction_of_intronic_lines_bound)
+fraction_of_vlinc_lines_bound.divide(fraction_of_intronic_lines_bound).to_csv("vlinc_vs_intron_l1_rnbp_binding.txt",sep="\t")
 
 
 
