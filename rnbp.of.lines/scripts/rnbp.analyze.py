@@ -7,16 +7,14 @@ import re
 import matplotlib.pyplot as plt
 import pybedtools
 
-## for the cluster
-# eclip = "/Users/heskett/replication_rnaseq/rnbp.of.lines/data/all.eclip.chr6.nochr.sorted.bed"
-# # eclip = "/Users/heskett/replication_rnaseq/rnbp.of.lines/data/all.eclip.nochr.sorted.bed"
-# introns =  "/Users/heskett/replication_rnaseq/annotation.files/ucsc.introns.filtered.hg19.bed"
-# vlincs = "/Users/heskett/replication_rnaseq/annotation.files/mcaron.vlinc1541.vlinc2149.merged.final.hg19g1k.bed"
-# lines = "/Users/heskett/replication_rnaseq/annotation.files/ucsc.L1.filtered.hg19.bed"
+# for the cluster
+ eclip = "/home/groups/Spellmandata/heskett/replication.rnaseq/rnbp.of.lines/big.downloadall.eclip.nochr.sorted.bed"
+introns =  "/home/groups/Spellmandata/heskett/replication.rnaseq/annotation.files/ucsc.introns.filtered.hg19.bed"
+vlincs = "/home/groups/Spellmandata/heskett/replication.rnaseq/annotation.files/mcaron.vlinc1541.vlinc2149.merged.final.hg19g1k.bed"
+lines = "/home/groups/Spellmandata/heskett/replication.rnaseq/annotation.files/ucsc.L1.filtered.hg19.bed"
 
-
+## for local use
 eclip = "/Users/heskett/replication_rnaseq/rnbp.of.lines/data/all.eclip.chr6.nochr.sorted.bed"
-# eclip = "/Users/heskett/replication_rnaseq/rnbp.of.lines/data/all.eclip.nochr.sorted.bed"
 introns =  "/Users/heskett/replication_rnaseq/annotation.files/ucsc.introns.filtered.hg19.bed"
 vlincs = "/Users/heskett/replication_rnaseq/annotation.files/mcaron.vlinc1541.vlinc2149.merged.final.hg19g1k.bed"
 lines = "/Users/heskett/replication_rnaseq/annotation.files/ucsc.L1.filtered.hg19.bed"
