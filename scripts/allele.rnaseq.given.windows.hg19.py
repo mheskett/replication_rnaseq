@@ -19,6 +19,12 @@ ratios=[249250621/249250621,243199373/249250621,198022430/249250621,191154276/24
 135006516/249250621,133851895/249250621,115169878/249250621,107349540/249250621,102531392/249250621,
 90354753/249250621,81195210/249250621,78077248/249250621,59128983/249250621,63025520/249250621,
 48129895/249250621,51304566/249250621,155270560/249250621]
+
+lengths = [249250621,243199373,198022430,191154276,180915260,
+171115067,159138663,146364022,141213431,135534747,
+135006516,133851895,115169878,107349540,102531392,
+90354753,81195210,78077248,59128983,63025520,
+48129895,51304566,155270560]
 # hg19
 centromere = {"1":"124535434",
 "2":"95326171",
@@ -139,9 +145,11 @@ if __name__ == "__main__":
 
 	arguments = parser.parse_args()
 	df_plus = get_windows(window_file = arguments.window_file_plus,
-		read_counts_file=arguments.df_plus)
+		read_counts_file=arguments.dfplus)
 	df_minus = get_windows(window_file = arguments.window_file_minus,
-		read_counts_file=arguments.df_minus)
+		read_counts_file=arguments.dfminus)
+	add_binom_pval(df_plus)
+	add_binom_pval(df_minus)
 
 	f, ax = plt.subplots(1, len(chromosomes), sharex=False,
 											sharey=False,
@@ -149,7 +157,7 @@ if __name__ == "__main__":
 											gridspec_kw={'width_ratios': ratios})
 
 	for i in range(len(chromosomes)):
-		if chromosomes[i] not in list(df.chrom):
+		if chromosomes[i] not in list(df_plus.chrom):
 			ax[i].set_yticks([])
 			ax[i].set_xticks([])
 			ax[i].margins(x=0,y=0)
@@ -173,9 +181,10 @@ if __name__ == "__main__":
 					lw=0.1,
 					edgecolor="black",
 					c=hap1_plus["color"])
-			for index,row in hap1_plus[hap1_plus["fdr_reject"]==True].iterrows():
-				ax[i].annotate(s=row["name"],
-				xy=(row["start"]/10**6, -np.log10(row["binom_pval"]) if -np.log10(row["binom_pval"]) <= 12 else 12)).set_fontsize(6)
+			### text annotation
+			# for index,row in hap1_plus[hap1_plus["fdr_reject"]==True].iterrows():
+			# 	ax[i].annotate(s=row["name"],
+			# 	xy=(row["start"]/10**6, -np.log10(row["binom_pval"]) if -np.log10(row["binom_pval"]) <= 12 else 12)).set_fontsize(6)
 		### hap1 minus
 		hap1_minus = df_minus[(df_minus["hap1_reads"] >= df_minus["hap2_reads"]) & (df_minus["chrom"]==chromosomes[i]) ]
 		if len(hap1_minus)>0:
@@ -188,9 +197,10 @@ if __name__ == "__main__":
 					lw=0.1,
 					edgecolor="black",
 					c=hap1_minus["color"])
-			for index,row in hap1_minus[hap1_minus["fdr_reject"]==True].iterrows():
-				ax[i].annotate(s=row["name"],
-				xy=(row["start"]/10**6, -np.log10(row["binom_pval"]) if -np.log10(row["binom_pval"]) <= 12 else 12)).set_fontsize(6)
+			### text annotation
+			# for index,row in hap1_minus[hap1_minus["fdr_reject"]==True].iterrows():
+			# 	ax[i].annotate(s=row["name"],
+			# 	xy=(row["start"]/10**6, -np.log10(row["binom_pval"]) if -np.log10(row["binom_pval"]) <= 12 else 12)).set_fontsize(6)
 		### this breaks if the df is empty...thecrappy fix is to assign windows where hap1 reads = hap2 reads to both hap1 and hap2.
 		### it may double plot them, but they will be non significant anyways so who cares?
 		#### hap2 plus
@@ -205,9 +215,10 @@ if __name__ == "__main__":
 					lw=0.1,
 					edgecolor="black",
 					c=hap2_plus["color"])
-			for index,row in hap2_plus[hap2_plus["fdr_reject"]==True].iterrows():
-				ax[i].annotate(s=row["name"],
-				xy=(row["start"]/10**6, -1*(-np.log10(row["binom_pval"]) if -np.log10(row["binom_pval"]) <= 12 else 12))).set_fontsize(6)
+			### annotation by text. doesnt show up well.
+			# for index,row in hap2_plus[hap2_plus["fdr_reject"]==True].iterrows():
+			# 	ax[i].annotate(s=row["name"],
+			# 	xy=(row["start"]/10**6, -1*(-np.log10(row["binom_pval"]) if -np.log10(row["binom_pval"]) <= 12 else 12))).set_fontsize(6)
 		### hap2 minus
 		hap2_minus = df_minus[(df_minus["hap1_reads"] <= df_minus["hap2_reads"]) & (df_minus["chrom"]==chromosomes[i]) ]
 		if len(hap2_minus)>0:
@@ -220,9 +231,10 @@ if __name__ == "__main__":
 					lw=0.1,
 					edgecolor="black",
 					c=hap2_minus["color"])
-			for index,row in hap2_minus[hap2_minus["fdr_reject"]==True].iterrows():
-				ax[i].annotate(s=row["name"],
-				xy=(row["start"]/10**6, -1*(-np.log10(row["binom_pval"]) if -np.log10(row["binom_pval"]) <= 12 else 12))).set_fontsize(6)
+			### annotation by text. doesnt show up well.
+			# for index,row in hap2_minus[hap2_minus["fdr_reject"]==True].iterrows():
+			# 	ax[i].annotate(s=row["name"],
+			# 	xy=(row["start"]/10**6, -1*(-np.log10(row["binom_pval"]) if -np.log10(row["binom_pval"]) <= 12 else 12))).set_fontsize(6)
 
 		ax[i].set_yticks([])
 		ax[i].set_xticks([])
@@ -240,10 +252,11 @@ if __name__ == "__main__":
 		    ax[i].axvspan(xmin=0, xmax=lengths[i]/10**6, ymin=0, ymax=1,
 		     alpha=0.2,facecolor="gray") 
 	plt.subplots_adjust(wspace=0, hspace=0)
-	plt.savefig(os.path.basename(arguments.df.rstrip(".bed"))+"."+os.path.basename(arguments.window_file.rstrip(".bed"))+".png",dpi=400,transparent=True,bbox_inches='tight',pad_inches = 0)
+	plt.show()
+	# plt.savefig(os.path.basename(arguments.dfp.rstrip(".bed"))+"."+os.path.basename(arguments.window_file.rstrip(".bed"))+".png",dpi=400,transparent=True,bbox_inches='tight',pad_inches = 0)
 
-	### output files with proper filenames
-	df.to_csv(os.path.basename(arguments.df.rstrip(".bed"))+"."+os.path.basename(arguments.window_file.rstrip(".bed"))+".bed",sep="\t",index=None,header=None)
-	browser_df = df[df["fdr_reject"]==True].loc[:,:"strand_of_window"]
-	browser_df["chrom"] = "chr"+browser_df["chrom"].astype(str)
-	browser_df.to_csv(os.path.basename(arguments.df.rstrip(".bed"))+"."+os.path.basename(arguments.window_file.rstrip(".bed"))+".browser.bed",sep="\t",index=None,header=None)
+	# ### output files with proper filenames
+	# df.to_csv(os.path.basename(arguments.df.rstrip(".bed"))+"."+os.path.basename(arguments.window_file.rstrip(".bed"))+".bed",sep="\t",index=None,header=None)
+	# browser_df = df[df["fdr_reject"]==True].loc[:,:"strand_of_window"]
+	# browser_df["chrom"] = "chr"+browser_df["chrom"].astype(str)
+	# browser_df.to_csv(os.path.basename(arguments.df.rstrip(".bed"))+"."+os.path.basename(arguments.window_file.rstrip(".bed"))+".browser.bed",sep="\t",index=None,header=None)
