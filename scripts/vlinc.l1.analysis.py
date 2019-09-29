@@ -23,20 +23,45 @@ def sample_introns(length):
 		remainder_chrom = tmp.at[tmp.index[-1], "chrom"]
 		new_remainder_stop = remainder_stop - remainder
 		# convert new intron to bed tool, get line counts
-		new_intron_fragment = pybedtools.BedTool(remainder_chrom+' '+str(remainder_start)+' '+str(new_remainder_stop), from_string=True)
-		new_intron_fragment_lines = new_intron_fragment.coverage(lines, F=0.9).to_dataframe(names=["chrom","start","stop","line_count","num_bases_covered","intron_length","fraction_l1"],
-																				dtype={"chrom":str,"start":int,"stop":int,"line_count":int,"num_bases_covered":int,"intron_length":int,"fraction_l1":float})
+
+		new_intron_fragment = pybedtools.BedTool(remainder_chrom+' '+str(remainder_start)+' '+str(new_remainder_stop) + ' ' + str(tmp.at[tmp.index[-1],"intron_name"])
+												+ ' ' + str(tmp.at[tmp.index[-1],"score"])+ ' ' + str(tmp.at[tmp.index[-1],"strand"]), from_string=True)
+		new_intron_fragment_lines = new_intron_fragment.coverage(lines, F=0.9).to_dataframe(names=["chrom","start","stop","intron_name","score",
+																									"strand","line_count","num_bases_covered",
+																									"intron_length","fraction_l1"],
+																							dtype={"chrom":str,"start":int,"stop":int,"intron_name":str,
+																							"score":int,"strand":str,"line_count":int,
+																							"num_bases_covered":int,"intron_length":int,"fraction_l1":float})
+
+		# new_intron_fragment = pybedtools.BedTool(remainder_chrom+' '+str(remainder_start)+' '+str(new_remainder_stop), from_string=True)
+		# new_intron_fragment_lines = new_intron_fragment.coverage(lines, F=0.9).to_dataframe(names=["chrom","start","stop","line_count","num_bases_covered","intron_length","fraction_l1"],
+		# 																		dtype={"chrom":str,"start":int,"stop":int,"line_count":int,"num_bases_covered":int,"intron_length":int,"fraction_l1":float})
 		# can optimize this thing by adding name score strand to the bedtools string above, then just doing drop followed by append below...
 		# new_intron_fragment_line_count = new_intron_fragment_lines.at[0, "line_count"]
 		# # replace the values in the tmp data frame to reflect the shortened intron while keeping the name the same
-		tmp.loc[tmp.index[-1],"stop"] = new_remainder_stop # dis works
-		tmp.loc[tmp.index[-1],"line_count"] = new_intron_fragment_lines.at[0,"line_count"]
-		tmp.loc[tmp.index[-1],"num_bases_covered"] = new_intron_fragment_lines.at[0,"num_bases_covered"]
-		tmp.loc[tmp.index[-1],"intron_length"] = new_remainder_stop - remainder_start
-		tmp.loc[tmp.index[-1],"fraction_l1"] = new_intron_fragment_lines.at[0,"fraction_l1"]
-		if tmp["intron_length"].sum() != length:
+
+		###
+		# print(tmp)
+		tmp = tmp.drop(tmp.tail(1).index)
+		tmp = tmp.append(new_intron_fragment_lines)
+		# print(tmp)
+		####
+		# tmp.loc[tmp.index[-1],"stop"] = new_remainder_stop # dis works
+		# tmp.loc[tmp.index[-1],"line_count"] = new_intron_fragment_lines.at[0,"line_count"]
+		# tmp.loc[tmp.index[-1],"num_bases_covered"] = new_intron_fragment_lines.at[0,"num_bases_covered"]
+		# tmp.loc[tmp.index[-1],"intron_length"] = new_remainder_stop - remainder_start
+		# tmp.loc[tmp.index[-1],"fraction_l1"] = new_intron_fragment_lines.at[0,"fraction_l1"]
+		sum_intron_length = tmp["intron_length"].sum()
+		sum_covered_bases = tmp["num_bases_covered"].sum()
+		intron_fraction_l1 = sum_covered_bases / sum_intron_length
+
+		if sum_intron_length != length:
 			print("DEBUG ALERT")
-	return tmp["num_bases_covered"].sum() / tmp["intron_length"].sum()
+		if intron_fraction_l1 == 0:
+			print("sampled a total of 0 lines from introns, adding one artificial base")
+			return (sum_covered_bases + 1) / sum_intron_length
+
+	return intron_fraction_l1
 
 def get_line_fraction(chrom, start, stop):
 	my_bedtool = pybedtools.BedTool(str(chrom)+' '+str(start)+' '+str(stop), from_string=True)
@@ -48,6 +73,13 @@ def get_pvalue_line_content(vlinc_length, line_fraction, num_simulations):
 	results = []
 	for i in range(0,num_simulations):
 		results += [sample_introns(length = vlinc_length)]
+	### fit beta to results
+	a1,b1,loc1,scale1 = scipy.stats.beta.fit(results, floc=0, fscale=1)
+	x = np.linspace(0,1,1000)
+	y = scipy.stats.beta.pdf(x, a1, b1)
+	beta_pvalue = 1 - scipy.stats.beta.cdf(line_fraction, a1, b1)
+	# plt.plot(x, y)
+	# plt.show()
 	# plt.hist(results,bins=20)
 	# plt.show()
 	pvalue = (100 - scipy.stats.percentileofscore(results, line_fraction, kind='strict')) / 100
@@ -55,7 +87,7 @@ def get_pvalue_line_content(vlinc_length, line_fraction, num_simulations):
 		pvalue = 1/num_simulations
 
 	### or center and scale data then fit a normal, or fit a poisson or whatever
-	return pvalue
+	return pvalue, beta_pvalue
 
 
 introns_file =  "/Users/heskett/replication_rnaseq/annotation.files/ucsc.introns.filtered.hg19.bed"
