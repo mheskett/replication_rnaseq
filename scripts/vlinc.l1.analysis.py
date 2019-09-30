@@ -69,7 +69,7 @@ def get_line_fraction(chrom, start, stop):
 														dtype={"chrom":str,"start":int,"stop":int,"line_count":int,"num_bases":int,"input_length":int,"fraction_l1":float})
 	return tmp["fraction_l1"].values[0]
 
-def get_pvalue_line_content(vlinc_length, line_fraction, num_simulations):
+def get_pvalue_line_content(vlinc_name, vlinc_length, line_fraction, num_simulations):
 	results = []
 	for i in range(0,num_simulations):
 		results += [sample_introns(length = vlinc_length)]
@@ -87,7 +87,7 @@ def get_pvalue_line_content(vlinc_length, line_fraction, num_simulations):
 		pvalue = 1/num_simulations
 
 	### or center and scale data then fit a normal, or fit a poisson or whatever
-	return pvalue, beta_pvalue
+	return vlinc_name, pvalue, beta_pvalue
 
 
 introns_file =  "/Users/heskett/replication_rnaseq/annotation.files/ucsc.introns.filtered.hg19.bed"
@@ -99,18 +99,29 @@ vlincs = pybedtools.BedTool(vlincs_file)
 lines = pybedtools.BedTool(lines_file)
 
 df_introns = introns.coverage(lines, F=0.9).to_dataframe(names=["chrom","start","stop","intron_name","score","strand","line_count","num_bases_covered","intron_length","fraction_l1"],
-																	dtype={"chrom":str,"start":int,"stop":int,"intron_name":str,"strand":str,"line_count":int,"num_bases":int,"intron_length":int,"fraction_l1":float}) ## the line should be at least 90 % covered by the intron 
+														dtype={"chrom":str,"start":int,"stop":int,"intron_name":str,"strand":str,"line_count":int,"num_bases":int,"intron_length":int,"fraction_l1":float}) ## the line should be at least 90 % covered by the intron 
 
 df_vlincs = vlincs.coverage(lines, F=0.9).to_dataframe(names=["chrom","start","stop","vlinc_name","score","strand","line_count","num_bases_covered","vlinc_length","fraction_l1"],
-																	dtype={"chrom":str,"start":int,"stop":int,"vlinc_name":str,"strand":str,"line_count":int,"num_bases":int,"vlinc_length":int,"fraction_l1":float}) ## the line should be at least 90 % covered by the intron )
+														dtype={"chrom":str,"start":int,"stop":int,"vlinc_name":str,"strand":str,"line_count":int,"num_bases":int,"vlinc_length":int,"fraction_l1":float}) ## the line should be at least 90 % covered by the intron )
 
-vlinc273_row = df_vlincs[df_vlincs["vlinc_name"]=="273,313,6.141125478.141219540"]
-# print(vlinc273_row["start"].values[0])
+# vlinc273_row = df_vlincs[df_vlincs["vlinc_name"]=="273,313,6.141125478.141219540"]
 
-vlinc273_line_content = get_line_fraction(chrom=vlinc273_row["chrom"].values[0], start=vlinc273_row["start"].values[0], stop=vlinc273_row["stop"].values[0])
-print(get_pvalue_line_content(vlinc_length=vlinc273_row["vlinc_length"].values[0], line_fraction=vlinc273_row["fraction_l1"].values[0], num_simulations=1000))
+# vlinc273_line_content = get_line_fraction(chrom=vlinc273_row["chrom"].values[0], start=vlinc273_row["start"].values[0], stop=vlinc273_row["stop"].values[0])
+# print(get_pvalue_line_content(vlinc_length=vlinc273_row["vlinc_length"].values[0], line_fraction=vlinc273_row["fraction_l1"].values[0], num_simulations=1000))
 
-asar6_line_fraction = get_line_fraction(6,96075000,96279595)
-print(get_pvalue_line_content(vlinc_length=96279595 - 96075000 , line_fraction=asar6_line_fraction, num_simulations=1000))
+# asar6_line_fraction = get_line_fraction(6,96075000,96279595)
+# print(get_pvalue_line_content(vlinc_length=96279595 - 96075000 , line_fraction=asar6_line_fraction, num_simulations=1000))
+
+
+### main program
+
+pool = mp.Pool()
+results = pool.starmap(get_pvalue_line_content,[(row["vlinc_name"], row["vlinc_length"], row["fraction_l1"], 1000) for row in df_vlincs.itertuples()]) ##  each link needs to be list of list in parallel call
+
+with open("vlinc_l1_significance.txt", "w") as f:
+    writer = csv.writer(f,delimiter="\t") 
+    for i in range(len(results)):
+		writer.writerow(results[i])
+
 
 
