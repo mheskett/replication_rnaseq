@@ -14,8 +14,9 @@ def sample_introns(length):
 	# creates a df of introns where the sum of lengths equals length
 	tmp = df_introns.sample(n=1)
 	while tmp["intron_length"].sum() < length:
-		tmp = tmp.append(df_introns.sample(n=1))
+		tmp = pd.concat([tmp,df_introns.sample(n=1)], ignore_index=True)
 	remainder = tmp["intron_length"].sum() - length
+
 	if remainder > 0:
 		# print(tmp)
 		###
@@ -44,17 +45,22 @@ def sample_introns(length):
 																							dtype={"chrom":str,"start":int,"stop":int,"intron_name":str,
 																							"score":int,"strand":str,"line_count":int,
 																							"num_bases_covered":int,"intron_length":int,"fraction_l1":float})
-
 		tmp = tmp.drop(tmp.tail(1).index)
-		tmp = tmp.append(new_intron_fragment_lines)
-		sum_intron_length = tmp["intron_length"].sum()
-		sum_covered_bases = tmp["num_bases_covered"].sum()
-		intron_fraction_l1 = sum_covered_bases / sum_intron_length
+		tmp = pd.concat([tmp,new_intron_fragment_lines], ignore_index=True)
 
-		if sum_intron_length != length:
-			print("DEBUG ALERT")
-		if intron_fraction_l1 == 0:
-			return (sum_covered_bases + 1) / sum_intron_length
+	sum_intron_length = tmp["intron_length"].sum()
+	sum_covered_bases = tmp["num_bases_covered"].sum()
+	intron_fraction_l1 = sum_covered_bases / sum_intron_length
+
+	if sum_intron_length != length:
+		print("DEBUG ALERT")
+		print(tmp)
+		print("sum intron length ", tmp["intron_length"].sum())
+		print("length: ", length)
+		print("remainder: ", remainder)
+		print(bedtool_string)
+	if intron_fraction_l1 == 0:
+		return (sum_covered_bases + 1) / sum_intron_length
 
 	return intron_fraction_l1
 
@@ -66,7 +72,7 @@ def get_line_fraction(chrom, start, stop):
 
 def get_pvalue_line_content(vlinc_name, vlinc_length, line_fraction, num_simulations):
 	results = []
-	for i in range(0,num_simulations):
+	for i in range(0, num_simulations):
 		results += [sample_introns(length = vlinc_length)]
 	### fit beta to results
 	a1,b1,loc1,scale1 = scipy.stats.beta.fit(results, floc=0, fscale=1)
@@ -95,7 +101,9 @@ lines = pybedtools.BedTool(lines_file)
 
 df_introns = introns.coverage(lines, F=0.9).to_dataframe(names=["chrom","start","stop","intron_name","score","strand","line_count","num_bases_covered","intron_length","fraction_l1"],
 														dtype={"chrom":str,"start":int,"stop":int,"intron_name":str,"strand":str,"line_count":int,"num_bases":int,"intron_length":int,"fraction_l1":float}) ## the line should be at least 90 % covered by the intron 
-df_introns.to_csv("test_introns",sep="\t")
+df_introns.to_csv("test_introns.txt",sep="\t",index=None)
+# test = pd.read_table("test_introns.txt",sep="\t",index_col=None)
+# print(test)
 df_vlincs = vlincs.coverage(lines, F=0.9).to_dataframe(names=["chrom","start","stop","vlinc_name","score","strand","line_count","num_bases_covered","vlinc_length","fraction_l1"],
 														dtype={"chrom":str,"start":int,"stop":int,"vlinc_name":str,"strand":str,"line_count":int,"num_bases":int,"vlinc_length":int,"fraction_l1":float}) ## the line should be at least 90 % covered by the intron )
 
@@ -106,6 +114,11 @@ df_vlincs = vlincs.coverage(lines, F=0.9).to_dataframe(names=["chrom","start","s
 
 # asar6_line_fraction = get_line_fraction(6,96075000,96279595)
 # print(get_pvalue_line_content(vlinc_length=96279595 - 96075000 , line_fraction=asar6_line_fraction, num_simulations=1000))
+
+### 
+# results_regression = []
+# for i in range(50000,500000,10000):
+# 	results_regression += [sample_introns(i)]
 
 
 ### main program
