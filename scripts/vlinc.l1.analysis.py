@@ -37,12 +37,14 @@ def sample_introns(length):
 			print(bedtool_string)
 			print(tmp)
 			print("ERROR...handling error")
+			return sample_introns(length) # this could go infite loop if errors keep happening, but since they are random i dont think it can
 		new_intron_fragment_lines = new_intron_fragment.coverage(lines, F=0.9).to_dataframe(names=["chrom","start","stop","intron_name","score",
 																									"strand","line_count","num_bases_covered",
 																									"intron_length","fraction_l1"],
 																							dtype={"chrom":str,"start":int,"stop":int,"intron_name":str,
 																							"score":int,"strand":str,"line_count":int,
 																							"num_bases_covered":int,"intron_length":int,"fraction_l1":float})
+
 		tmp = tmp.drop(tmp.tail(1).index)
 		tmp = tmp.append(new_intron_fragment_lines)
 		sum_intron_length = tmp["intron_length"].sum()
