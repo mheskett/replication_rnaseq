@@ -5,7 +5,7 @@ out_dir=$2
 b=$(basename $input) ## removes /path/to/file
 filename=${b%.*} ### removes file extension
 
-samtools sort -@ 8 -o $out_dir$filename.sorted.bam $input 
+samtools sort -@ 8 -m 3G -o $out_dir$filename.sorted.bam $input 
 echo done sort
 ############################
 
