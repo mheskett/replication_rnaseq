@@ -6,8 +6,8 @@ b=$(basename $input) ## removes /path/to/file
 filename=${b%.*} ### removes file extension
 
 first_merge=$3
-filter_size=$4
-second_merge=$5
+second_merge=$4
+filter_size=$5
 ## switching to samtools instead of GATK for remove duplicates. print reads not necessary unless GATK being used downstream
 
 ## get plus strand
@@ -60,13 +60,13 @@ bedtools merge -i $out_dir$filename.minus.subtract.merge.$first_merge.bed -d $se
 
 ## now only keep fragments of size 50 kb or larger. could consider lowering or removing this.
 ## this is the most stringent part since there are small gaps that will prevent 50kb fragments from existing
-awk -v var="$filter_size" -v var2="$filename" 'OFS="\t" $3-$2>=var{print $1, $2, $3, NR"_"var2, 0, "+"}' $out_dir$filename.plus.$first_merge.$second_merge.bed > $out_dir$filename.plus.$first_merge.$second_merge.$filter_size.vlinc.discovery.bed
-awk -v var="$filter_size" -v var2="$filename" 'OFS="\t" $3-$2>=var{print $1, $2, $3, NR"_"var2, 0, "-"}' $out_dir$filename.minus.$first_merge.$second_merge.bed > $out_dir$filename.minus.$first_merge.$second_merge.$filter_size.vlinc.discovery.bed
+awk -v var="$filter_size" -v var2="$filename" '{OFS="\t"} $3-$2>=var{print $1, $2, $3, NR"_"var2, 0, "+"}' $out_dir$filename.plus.$first_merge.$second_merge.bed > $out_dir$filename.plus.$first_merge.$second_merge.$filter_size.vlinc.discovery.bed
+awk -v var="$filter_size" -v var2="$filename" '{OFS="\t"} $3-$2>=var{print $1, $2, $3, NR"_"var2, 0, "-"}' $out_dir$filename.minus.$first_merge.$second_merge.bed > $out_dir$filename.minus.$first_merge.$second_merge.$filter_size.vlinc.discovery.bed
 
 ## now create a	new file specifically for genome browser
 
-awk 'OFS="\t"{print "chr"$1,$2,$3,"contig_"NR,0,"+"}' $out_dir$filename.plus.$first_merge.$filter_size.$second_merge.vlinc.discovery.bed | grep -v chrGL | grep -v chrKI > $out_dir$filename.$first_merge.$filter_size.$second_merge.vlinc.discovery.plus.browser.bed
-awk 'OFS="\t"{print "chr"$1,$2,$3,"contig_"NR,0,"-"}' $out_dir$filename.minus.$first_merge.$filter_size.$second_merge.vlinc.discovery.bed | grep -v chrGL | grep -v chrKI > $out_dir$filename.$first_merge.$filter_size.$second_merge.vlinc.discovery.minus.browser.bed
+awk 'OFS="\t"{print "chr"$1,$2,$3,"contig_"NR,0,"+"}' $out_dir$filename.plus.$first_merge.$second_merge.$filter_size.vlinc.discovery.bed | grep -v chrGL | grep -v chrKI > $out_dir$filename.$first_merge.$second_merge.$filter_size.vlinc.discovery.plus.browser.bed
+awk 'OFS="\t"{print "chr"$1,$2,$3,"contig_"NR,0,"-"}' $out_dir$filename.minus.$first_merge.$second_merge.$filter_size.vlinc.discovery.bed | grep -v chrGL | grep -v chrKI > $out_dir$filename.$first_merge.$second_merge.$filter_size.vlinc.discovery.minus.browser.bed
 
 rm $out_dir$filename.plus.cov.bed
 rm $out_dir$filename.minus.cov.bed
@@ -74,11 +74,11 @@ rm $out_dir$filename.minus.cov.bed
 #rm $out_dir$filename.plus.subtract.whole.gene.bed
 #rm $out_dir$filename.minus.subtract.whole.gene.bed
 
-rm $out_dir$filename.plus.subtract.merge.1kb.bed*
-rm $out_dir$filename.minus.subtract.merge.1kb.bed*
+#rm $out_dir$filename.plus.subtract.merge.$first_merge.bed
+#rm $out_dir$filename.minus.subtract.merge.$first_merge.bed
 
-rm $out_dir$filename.plus.subtract.merge.1kb.filter.bed*
-rm $out_dir$filename.minus.subtract.merge.1kb.filter.bed*
+#rm $out_dir$filename.plus.$first_merge.$second_merge.bed
+#rm $out_dir$filename.minus.$first_merge.$second_merge.bed
 
 rm $out_dir$filename.fwd1.bam*
 rm $out_dir$filename.fwd2.bam*
