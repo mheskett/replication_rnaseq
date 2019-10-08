@@ -91,9 +91,15 @@ def get_pvalue_line_content(vlinc_name, vlinc_length, line_fraction, num_simulat
 	return vlinc_name, line_fraction, pvalue, beta_pvalue
 
 
-introns_file =  "/Users/heskett/replication_rnaseq/annotation.files/ucsc.introns.filtered.hg19.bed"
-vlincs_file = "/Users/heskett/replication_rnaseq/annotation.files/mcaron.vlinc1541.vlinc2149.merged.final.hg19g1k.bed"
-lines_file = "/Users/heskett/replication_rnaseq/annotation.files/ucsc.L1.filtered.hg19.bed"
+### cluster use
+introns_file =  "/home/groups/Spellmandata/heskett/replication.rnaseq/annotation.files/ucsc.introns.filtered.hg19.bed"
+vlincs_file = "/home/groups/Spellmandata/heskett/replication.rnaseq/annotation.files/mcaron.vlinc1541.vlinc2149.merged.final.hg19g1k.bed"
+lines_file = "/home/groups/Spellmandata/heskett/replication.rnaseq/annotation.files/ucsc.L1.filtered.hg19.bed"
+
+### local use
+# introns_file =  "/Users/heskett/replication_rnaseq/annotation.files/ucsc.introns.filtered.hg19.bed"
+# vlincs_file = "/Users/heskett/replication_rnaseq/annotation.files/mcaron.vlinc1541.vlinc2149.merged.final.hg19g1k.bed"
+# lines_file = "/Users/heskett/replication_rnaseq/annotation.files/ucsc.L1.filtered.hg19.bed"
 
 introns = pybedtools.BedTool(introns_file)
 vlincs = pybedtools.BedTool(vlincs_file)
@@ -107,13 +113,13 @@ df_introns = introns.coverage(lines, F=0.9).to_dataframe(names=["chrom","start",
 df_vlincs = vlincs.coverage(lines, F=0.9).to_dataframe(names=["chrom","start","stop","vlinc_name","score","strand","line_count","num_bases_covered","vlinc_length","fraction_l1"],
 														dtype={"chrom":str,"start":int,"stop":int,"vlinc_name":str,"strand":str,"line_count":int,"num_bases":int,"vlinc_length":int,"fraction_l1":float}) ## the line should be at least 90 % covered by the intron )
 
-vlinc273_row = df_vlincs[df_vlincs["vlinc_name"]=="273,313,6.141125478.141219540"]
+# vlinc273_row = df_vlincs[df_vlincs["vlinc_name"]=="273,313,6.141125478.141219540"]
 
-vlinc273_line_content = get_line_fraction(chrom=vlinc273_row["chrom"].values[0], start=vlinc273_row["start"].values[0], stop=vlinc273_row["stop"].values[0])
-print(get_pvalue_line_content(vlinc_name = "asar6-141", vlinc_length=vlinc273_row["vlinc_length"].values[0], line_fraction=0.28, num_simulations=100))
+# vlinc273_line_content = get_line_fraction(chrom=vlinc273_row["chrom"].values[0], start=vlinc273_row["start"].values[0], stop=vlinc273_row["stop"].values[0])
+# print(get_pvalue_line_content(vlinc_name = "asar6-141", vlinc_length=vlinc273_row["vlinc_length"].values[0], line_fraction=0.28, num_simulations=100))
 
-asar6_line_fraction = get_line_fraction(6,96075000,96279595)
-print(get_pvalue_line_content(vlinc_name = "asar6-96",vlinc_length=96279595 - 96075000 , line_fraction=0.38, num_simulations=100))
+# asar6_line_fraction = get_line_fraction(6,96075000,96279595)
+# print(get_pvalue_line_content(vlinc_name = "asar6-96",vlinc_length=96279595 - 96075000 , line_fraction=0.38, num_simulations=100))
 
 
 ### 
@@ -122,11 +128,11 @@ print(get_pvalue_line_content(vlinc_name = "asar6-96",vlinc_length=96279595 - 96
 # 	results_regression += [sample_introns(i)]
 
 
-### main program
-# pool = mp.Pool()
-# results = pool.starmap(get_pvalue_line_content,[(row.vlinc_name, row.vlinc_length, row.fraction_l1, 1000) for row in df_vlincs.itertuples()]) ##  each link needs to be list of list in parallel call
+## main program
+pool = mp.Pool()
+results = pool.starmap(get_pvalue_line_content,[(row.vlinc_name, row.vlinc_length, row.fraction_l1, 1000) for row in df_vlincs.itertuples()]) ##  each link needs to be list of list in parallel call
 
-# with open("vlinc_l1_significance.txt", "w") as f:
-# 	writer = csv.writer(f,delimiter="\t") 
-# 	for i in range(len(results)):
-# 		writer.writerow(results[i])
+with open("vlinc_l1_significance.txt", "w") as f:
+	writer = csv.writer(f,delimiter="\t") 
+	for i in range(len(results)):
+		writer.writerow(results[i])
