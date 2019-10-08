@@ -52,21 +52,22 @@ bedtools merge -i $out_dir$filename.plus.subtract.whole.gene.bed -d $first_merge
 bedtools merge -i $out_dir$filename.minus.subtract.whole.gene.bed -d $first_merge > $out_dir$filename.minus.subtract.merge.$first_merge.bed
 
 # now merge segments if theyre less than 10kb separated (caron)
-bedtools merge -i $out_dir$filename.plus.subtract.merge.$first_merge.bed -d $second_merge | \
-  awk -v var="$filename" 'OFS="\t"{print $1, $2, $3, NR"_"var, 0, "+"}' > $out_dir$filename.plus.$first_merge.$second_merge.bed
-
-bedtools merge -i $out_dir$filename.minus.subtract.merge.$first_merge.bed -d $second_merge | \
-  awk -v var="$filename" 'OFS="\t"{print $1, $2, $3, NR"_"var, 0, "-"}' > $out_dir$filename.minus.$first_merge.$second_merge.bed
+bedtools merge -i $out_dir$filename.plus.subtract.merge.$first_merge.bed -d $second_merge > $out_dir$filename.plus.$first_merge.$second_merge.bed
+bedtools merge -i $out_dir$filename.minus.subtract.merge.$first_merge.bed -d $second_merge > $out_dir$filename.minus.$first_merge.$second_merge.bed
 
 ## now only keep fragments of size 50 kb or larger. could consider lowering or removing this.
 ## this is the most stringent part since there are small gaps that will prevent 50kb fragments from existing
-awk -v var="$filter_size" -v var2="$filename" '{OFS="\t"} $3-$2>=var{print $1, $2, $3, NR"_"var2, 0, "+"}' $out_dir$filename.plus.$first_merge.$second_merge.bed > $out_dir$filename.plus.$first_merge.$second_merge.$filter_size.vlinc.discovery.bed
-awk -v var="$filter_size" -v var2="$filename" '{OFS="\t"} $3-$2>=var{print $1, $2, $3, NR"_"var2, 0, "-"}' $out_dir$filename.minus.$first_merge.$second_merge.bed > $out_dir$filename.minus.$first_merge.$second_merge.$filter_size.vlinc.discovery.bed
+awk -v var="$filter_size" -v var2="$filename" '{OFS="\t"} $3-$2>=var{print $1, $2, $3, i++"_"var2}' $out_dir$filename.plus.$first_merge.$second_merge.bed |
+	bedtools coverage -c -F 0.5 -a stdin -b $out_dir$filename.plus.bam | 
+	awk 'OFS="\t"{print $1, $2, $3, $4, $5, "+"}' > $out_dir$filename.plus.$first_merge.$second_merge.$filter_size.vlinc.discovery.bed
+awk -v var="$filter_size" -v var2="$filename" '{OFS="\t"} $3-$2>=var{print $1, $2, $3, i++"_"var2}' $out_dir$filename.minus.$first_merge.$second_merge.bed |
+	bedtools coverage -c -F 0.5 -a stdin -b $out_dir$filename.minus.bam |
+	awk 'OFS="\t"{print $1, $2, $3, $4, $5, "-"}' > $out_dir$filename.minus.$first_merge.$second_merge.$filter_size.vlinc.discovery.bed
 
 ## now create a	new file specifically for genome browser
 
-awk 'OFS="\t"{print "chr"$1,$2,$3,"contig_"NR,0,"+"}' $out_dir$filename.plus.$first_merge.$second_merge.$filter_size.vlinc.discovery.bed | grep -v chrGL | grep -v chrKI > $out_dir$filename.$first_merge.$second_merge.$filter_size.vlinc.discovery.plus.browser.bed
-awk 'OFS="\t"{print "chr"$1,$2,$3,"contig_"NR,0,"-"}' $out_dir$filename.minus.$first_merge.$second_merge.$filter_size.vlinc.discovery.bed | grep -v chrGL | grep -v chrKI > $out_dir$filename.$first_merge.$second_merge.$filter_size.vlinc.discovery.minus.browser.bed
+awk 'OFS="\t"{print "chr"$1,$2,$3,$4,$5,$6}' $out_dir$filename.plus.$first_merge.$second_merge.$filter_size.vlinc.discovery.bed | grep -v chrGL | grep -v chrKI > $out_dir$filename.$first_merge.$second_merge.$filter_size.vlinc.discovery.plus.browser.bed
+awk 'OFS="\t"{print "chr"$1,$2,$3,$4,$5,$6}' $out_dir$filename.minus.$first_merge.$second_merge.$filter_size.vlinc.discovery.bed | grep -v chrGL | grep -v chrKI > $out_dir$filename.$first_merge.$second_merge.$filter_size.vlinc.discovery.minus.browser.bed
 
 rm $out_dir$filename.plus.cov.bed
 rm $out_dir$filename.minus.cov.bed
