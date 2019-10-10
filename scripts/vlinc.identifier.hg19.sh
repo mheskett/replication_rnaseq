@@ -5,6 +5,9 @@ out_dir=$2
 b=$(basename $input) ## removes /path/to/file
 filename=${b%.*} ### removes file extension
 
+library_size=$(samtools view -c -F 260 $input)
+echo $library_size
+
 first_merge=$3
 second_merge=$4
 filter_size=$5
@@ -57,17 +60,22 @@ bedtools merge -i $out_dir$filename.minus.subtract.merge.$first_merge.bed -d $se
 
 ## now only keep fragments of size 50 kb or larger. could consider lowering or removing this.
 ## this is the most stringent part since there are small gaps that will prevent 50kb fragments from existing
+## $5 is the number of reads
+
+## bedtools coverage -s doesn't seem to be accurate so im avoiding this
 awk -v var="$filter_size" -v var2="$filename" '{OFS="\t"} $3-$2>=var{print $1, $2, $3, i++"_"var2}' $out_dir$filename.plus.$first_merge.$second_merge.bed |
-	bedtools coverage -c -F 0.5 -a stdin -b $out_dir$filename.plus.bam | 
-	awk 'OFS="\t"{print $1, $2, $3, $4, $5, "+"}' > $out_dir$filename.plus.$first_merge.$second_merge.$filter_size.vlinc.discovery.bed
-awk -v var="$filter_size" -v var2="$filename" '{OFS="\t"} $3-$2>=var{print $1, $2, $3, i++"_"var2}' $out_dir$filename.minus.$first_merge.$second_merge.bed |
+	bedtools coverage -c -F 0.5 -a stdin -b $out_dir$filename.plus.bam |
+	bedtools coverage -a stdin -b /home/groups/Spellmandata/heskett/replication.rnaseq/annotation.files/ucsc.L1.filtered.hg19.bed -F 0.9 |
+	awk -v var3="$library_size" 'OFS="\t"{print $1, $2, $3, $4, $5 / ( ($3-$2)/1000 ), "+", $9}' > $out_dir$filename.plus.$first_merge.$second_merge.$filter_size.vlinc.discovery.bed
+awk -v var="$filter_size" -v var2="$filename" -v var3="$library_size" '{OFS="\t"} $3-$2>=var{print $1, $2, $3, i++"_"var2}' $out_dir$filename.minus.$first_merge.$second_merge.bed |
 	bedtools coverage -c -F 0.5 -a stdin -b $out_dir$filename.minus.bam |
-	awk 'OFS="\t"{print $1, $2, $3, $4, $5, "-"}' > $out_dir$filename.minus.$first_merge.$second_merge.$filter_size.vlinc.discovery.bed
+	bedtools coverage -a stdin -b /home/groups/Spellmandata/heskett/replication.rnaseq/annotation.files/ucsc.L1.filtered.hg19.bed -F 0.9 |
+	awk -v var3="$library_size" 'OFS="\t"{print $1, $2, $3, $4, $5 / ( ($3-$2)/1000 ), "-", $9}' > $out_dir$filename.minus.$first_merge.$second_merge.$filter_size.vlinc.discovery.bed
 
 ## now create a	new file specifically for genome browser
 
-awk 'OFS="\t"{print "chr"$1,$2,$3,$4,$5,$6}' $out_dir$filename.plus.$first_merge.$second_merge.$filter_size.vlinc.discovery.bed | grep -v chrGL | grep -v chrKI > $out_dir$filename.$first_merge.$second_merge.$filter_size.vlinc.discovery.plus.browser.bed
-awk 'OFS="\t"{print "chr"$1,$2,$3,$4,$5,$6}' $out_dir$filename.minus.$first_merge.$second_merge.$filter_size.vlinc.discovery.bed | grep -v chrGL | grep -v chrKI > $out_dir$filename.$first_merge.$second_merge.$filter_size.vlinc.discovery.minus.browser.bed
+awk 'OFS="\t"{print "chr"$1, $2, $3, $4, 0, $6}' $out_dir$filename.plus.$first_merge.$second_merge.$filter_size.vlinc.discovery.bed | grep -v chrGL | grep -v chrKI > $out_dir$filename.$first_merge.$second_merge.$filter_size.vlinc.discovery.plus.browser.bed
+awk 'OFS="\t"{print "chr"$1, $2, $3, $4, 0, $6}' $out_dir$filename.minus.$first_merge.$second_merge.$filter_size.vlinc.discovery.bed | grep -v chrGL | grep -v chrKI > $out_dir$filename.$first_merge.$second_merge.$filter_size.vlinc.discovery.minus.browser.bed
 
 rm $out_dir$filename.plus.cov.bed
 rm $out_dir$filename.minus.cov.bed
