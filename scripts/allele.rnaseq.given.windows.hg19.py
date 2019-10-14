@@ -55,6 +55,9 @@ gray_chromosomes = ["1","3","5","7","9","11","13","15","17","19","21","X"]
 def get_windows(window_file, read_counts_file): #
 	a = pybedtools.BedTool(window_file) # change this to bed file of previously determined windows of interest
 	b = pybedtools.BedTool(read_counts_file) ## read counts at alleles
+
+	a = a.sort(faidx="/Users/heskett/replication_rnaseq/annotation.files/human_g1k_v37.fasta.fai")
+	b = b.sort(faidx="/Users/heskett/replication_rnaseq/annotation.files/human_g1k_v37.fasta.fai")
 	#/home/groups/Spellmandata/heskett/refs/
 	#windows=a.window_maker(g="/Users/heskett/replication_rnaseq/scripts/hg38.10x.nochr.fa.fai",
 	#					w=length,s=length/2)
@@ -62,12 +65,15 @@ def get_windows(window_file, read_counts_file): #
 	c = pybedtools.BedTool()
 	## genome file to specify sort order
 
-	window_read_counts = c.map(a=window_file,b=b,c=[6,7],o="sum",g="/Users/heskett/replication_rnaseq/annotation.files/human_g1k_v37.fasta.fai") ## this can fail?? somehow dos2unix helped?
-	df =  window_read_counts.to_dataframe(names=["chrom", "start", "stop", "name", "score", "strand_of_window",
-										"hap1_reads", "hap2_reads"],
+	window_read_counts = c.map(a=a,b=b,c=[6,7],o="sum",g="/Users/heskett/replication_rnaseq/annotation.files/human_g1k_v37.fasta.fai") ## this can fail?? somehow dos2unix helped?
+	print(window_read_counts)
+	### invalid int for literal...
+	df =  window_read_counts.to_dataframe(names=["chrom", "start", "stop", "name", "score", "strand_of_window", 
+										"fraction_l1","hap1_reads", "hap2_reads"],
 										dtype={"chrom":str, "start":int, "stop":int,
-										"name":str, "score":float, "strand_of_window":str,
+										"name":str, "score":float, "strand_of_window":str, "fraction_l1":float,
 										"hap1_reads":str, "hap2_reads":str})
+	print(df)
 	df = df[ (df["hap1_reads"]!=".") & (df["hap2_reads"]!=".") ]
 	df["hap1_reads"] = df["hap1_reads"].astype(int)
 	df["hap2_reads"] = df["hap2_reads"].astype(int)
@@ -155,7 +161,7 @@ if __name__ == "__main__":
 											sharey=False,
 											figsize=(15,1),
 											gridspec_kw={'width_ratios': ratios})
-
+	print(df_plus)
 	for i in range(len(chromosomes)):
 		if chromosomes[i] not in list(df_plus.chrom):
 			ax[i].set_yticks([])
@@ -252,11 +258,16 @@ if __name__ == "__main__":
 		    ax[i].axvspan(xmin=0, xmax=lengths[i]/10**6, ymin=0, ymax=1,
 		     alpha=0.2,facecolor="gray") 
 	plt.subplots_adjust(wspace=0, hspace=0)
-	plt.show()
-	# plt.savefig(os.path.basename(arguments.dfp.rstrip(".bed"))+"."+os.path.basename(arguments.window_file.rstrip(".bed"))+".png",dpi=400,transparent=True,bbox_inches='tight',pad_inches = 0)
 
-	# ### output files with proper filenames
-	# df.to_csv(os.path.basename(arguments.df.rstrip(".bed"))+"."+os.path.basename(arguments.window_file.rstrip(".bed"))+".bed",sep="\t",index=None,header=None)
-	# browser_df = df[df["fdr_reject"]==True].loc[:,:"strand_of_window"]
-	# browser_df["chrom"] = "chr"+browser_df["chrom"].astype(str)
-	# browser_df.to_csv(os.path.basename(arguments.df.rstrip(".bed"))+"."+os.path.basename(arguments.window_file.rstrip(".bed"))+".browser.bed",sep="\t",index=None,header=None)
+	plt.savefig(arguments.out_directory+os.path.basename(arguments.dfplus.replace("plus.overlap.platinum.haplotypes.bed",""))+"."+os.path.basename(arguments.window_file_plus.replace(".bed","")+".png"),
+		dpi=400,transparent=True,bbox_inches='tight',pad_inches = 0)
+
+	combined_df = pd.concat([df_plus[df_plus["fdr_reject"]==True], df_minus[df_minus["fdr_reject"]==True]])
+	combined_df.to_csv(os.path.basename(arguments.dfplus.replace("plus.overlap.platinum.haplotypes.bed",""))+"."+os.path.basename(arguments.window_file_plus.replace(".bed",""))+".bed",
+		sep="\t",index=None,header=None)
+
+	### output files with proper filenames
+	browser_df = combined_df[combined_df["fdr_reject"]==True].loc[:,:"strand_of_window"]
+	browser_df["chrom"] = "chr"+browser_df["chrom"].astype(str)
+	browser_df.to_csv(os.path.basename(arguments.dfplus.replace("plus.overlap.platinum.haplotypes.bed",""))+"."+os.path.basename(arguments.window_file_plus.replace(".bed",""))+".browser.bed",
+		sep="\t",index=None,header=None)
