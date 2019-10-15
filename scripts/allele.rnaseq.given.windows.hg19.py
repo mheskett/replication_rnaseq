@@ -66,14 +66,12 @@ def get_windows(window_file, read_counts_file): #
 	## genome file to specify sort order
 
 	window_read_counts = c.map(a=a,b=b,c=[6,7],o="sum",g="/Users/heskett/replication_rnaseq/annotation.files/human_g1k_v37.fasta.fai") ## this can fail?? somehow dos2unix helped?
-	print(window_read_counts)
 	### invalid int for literal...
 	df =  window_read_counts.to_dataframe(names=["chrom", "start", "stop", "name", "score", "strand_of_window", 
 										"fraction_l1","hap1_reads", "hap2_reads"],
 										dtype={"chrom":str, "start":int, "stop":int,
 										"name":str, "score":float, "strand_of_window":str, "fraction_l1":float,
 										"hap1_reads":str, "hap2_reads":str})
-	print(df)
 	df = df[ (df["hap1_reads"]!=".") & (df["hap2_reads"]!=".") ]
 	df["hap1_reads"] = df["hap1_reads"].astype(int)
 	df["hap2_reads"] = df["hap2_reads"].astype(int)
@@ -110,6 +108,11 @@ if __name__ == "__main__":
 		metavar="[out directory]",
 		required=True,
 		help="full path to output results")
+	parser.add_argument("--repli_seq",
+		type=str,
+		metavar="[repliseq_files",
+		required=False,
+		help="includ repliseq files if you have them")
 ########## funcs
 	def add_binom_pval(df):
 		df["binom_pval"] = df.apply(lambda row: scipy.stats.binom_test(row["hap1_reads"],
@@ -117,9 +120,13 @@ if __name__ == "__main__":
 								p=0.5,
 								alternative="two-sided"), # v slow for some reason 
 								axis=1)
+
 		df["fdr_pval"]=mt.multipletests(pvals=df["binom_pval"], 
 									alpha=0.01,
 									method="fdr_bh")[1]
+		df["fdr_reject"] =  mt.multipletests(pvals=df["binom_pval"], 
+										alpha=0.01,
+										method="fdr_bh")[0]
 		df["fdr_reject"] =  mt.multipletests(pvals=df["binom_pval"], 
 										alpha=0.01,
 										method="fdr_bh")[0]
@@ -133,18 +140,30 @@ if __name__ == "__main__":
 			result[1]=1 # plus strand green
 		if x["strand_of_window"]==".":
 			result[2]=1 ## no strand info is blue
-		if x["fdr_reject"]==True:
-			result[3]=1
-		if x["fdr_reject"]==False:
+		# if x["fdr_reject"]==True:
+		# 	result[3]=1
+		# for FDR method
+		# if x["fdr_reject"]==False:
+		# 	result[3]=0.1
+		# if x["binom_pval"] <= 0.0001:
+		# 	result[3]=1
+
+		#for just using a strict pval
+		# 0.0001 would require 14 reads minimum
+		if x["binom_pval"] > 0.000001:
 			result[3]=0.1
+		if x["binom_pval"] <= 0.000001:
+			result[3]=1
 		return result
 	def marker_size(x):
-		if x["total_reads"] <=100:
-			return 10
-		if 100 < x["total_reads"] <= 1000:
-			return 40
-		if 1000 < x["total_reads"]:
-			return 75
+		size = np.sqrt(x["score"])
+		return size*3
+		# if x["score"] <=20:
+		# 	return 10
+		# if 20 < x["score"] <= 1000:
+		# 	return 40
+		# if 1000 < x["score"]:
+		# 	return 75
 ###############
 # Main program
 ###############
@@ -161,7 +180,6 @@ if __name__ == "__main__":
 											sharey=False,
 											figsize=(15,1),
 											gridspec_kw={'width_ratios': ratios})
-	print(df_plus)
 	for i in range(len(chromosomes)):
 		if chromosomes[i] not in list(df_plus.chrom):
 			ax[i].set_yticks([])
@@ -257,17 +275,33 @@ if __name__ == "__main__":
 		if chromosomes[i] in gray_chromosomes:
 		    ax[i].axvspan(xmin=0, xmax=lengths[i]/10**6, ymin=0, ymax=1,
 		     alpha=0.2,facecolor="gray") 
-	plt.subplots_adjust(wspace=0, hspace=0)
 
-	plt.savefig(arguments.out_directory+os.path.basename(arguments.dfplus.replace("plus.overlap.platinum.haplotypes.bed",""))+"."+os.path.basename(arguments.window_file_plus.replace(".bed","")+".png"),
+	if arguments.repli_seq:
+		df_repliseq = pd.read_csv(arguments.repli_seq,sep="\t",names=["chrom","start","stop","pvalue"],
+													dtype={"chrom":str,"start":int,"stop":int,"pvalue":float})
+		for i in range(len(chromosomes)):
+			df_repliseq_chr = df_repliseq[(df_repliseq["chrom"]=="chr"+str(chromosomes[i])) &
+											(df_repliseq["pvalue"] <= 0.01 )]
+			print(df_repliseq_chr)								
+			print("chr ",chromosomes[i])								
+			print("plotting all the asynchronous sites")
+			for index,row in df_repliseq_chr.iterrows():
+				ax[i].axvspan(xmin=row["start"]/10**6-0.1, 
+					xmax=row["stop"]/10**6+0.1,
+					ymin=0,ymax=1,
+					alpha=0.8,facecolor="blue")
+
+	print("done plotting")
+	plt.subplots_adjust(wspace=0, hspace=0)
+	plt.savefig(arguments.out_directory+os.path.basename(arguments.dfplus.replace(".plus.overlap.platinum.haplotypes.bed",""))+"."+os.path.basename(arguments.window_file_plus.replace(".bed","")+".png"),
 		dpi=400,transparent=True,bbox_inches='tight',pad_inches = 0)
 
-	combined_df = pd.concat([df_plus[df_plus["fdr_reject"]==True], df_minus[df_minus["fdr_reject"]==True]])
-	combined_df.to_csv(os.path.basename(arguments.dfplus.replace("plus.overlap.platinum.haplotypes.bed",""))+"."+os.path.basename(arguments.window_file_plus.replace(".bed",""))+".bed",
+	combined_df = pd.concat([df_plus[df_plus["binom_pval"] <= 0.000001], df_minus[df_minus["binom_pval"] <= 0.000001]])
+	combined_df.to_csv(os.path.basename(arguments.dfplus.replace(".plus.overlap.platinum.haplotypes.bed",""))+"."+os.path.basename(arguments.window_file_plus.replace(".bed",""))+".bed",
 		sep="\t",index=None,header=None)
 
 	### output files with proper filenames
-	browser_df = combined_df[combined_df["fdr_reject"]==True].loc[:,:"strand_of_window"]
+	browser_df = combined_df[combined_df["binom_pval"] <= 0.000001].loc[:,:"strand_of_window"]
 	browser_df["chrom"] = "chr"+browser_df["chrom"].astype(str)
-	browser_df.to_csv(os.path.basename(arguments.dfplus.replace("plus.overlap.platinum.haplotypes.bed",""))+"."+os.path.basename(arguments.window_file_plus.replace(".bed",""))+".browser.bed",
+	browser_df.to_csv(os.path.basename(arguments.dfplus.replace(".plus.overlap.platinum.haplotypes.bed",""))+"."+os.path.basename(arguments.window_file_plus.replace(".bed",""))+".browser.bed",
 		sep="\t",index=None,header=None)
