@@ -17,37 +17,48 @@ from sklearn.decomposition import PCA
 
 from sklearn import manifold, datasets
 
-df_plus = pd.read_csv("/Users/heskett/replication_rnaseq/data/gm12878.4x.hg19Aligned.out.samtool.rmdup.plus.1000.10000.50000.vlinc.discovery.bed",
+# df_plus = pd.read_csv("/Users/heskett/replication_rnaseq/data/gm12878.rep1.hg19Aligned.out.samtool.rmdup.plus.1000.10000.50000.vlinc.discovery.bed",
+# 				header=None,
+# 				index_col=None,
+# 				names=["chrom","start","stop","name","reads/kb","strand","fraction_l1"],
+# 				sep="\t")
+
+# df_minus = pd.read_csv("/Users/heskett/replication_rnaseq/data/gm12878.rep1.hg19Aligned.out.samtool.rmdup.minus.1000.10000.50000.vlinc.discovery.bed",
+# 				header=None,
+# 				index_col=None,
+# 				names=["chrom","start","stop","name","reads/kb","strand","fraction_l1"],
+# 				sep="\t")
+df = pd.read_csv("/Users/heskett/replication_rnaseq/scripts/gm12878.rep1.hg19Aligned.out.gm12878.rep1.hg19Aligned.out.samtool.rmdup.plus.1000.10000.50000.vlinc.discovery.bed",
 				header=None,
 				index_col=None,
-				names=["chrom","start","stop","name","reads/kb","strand","fraction_l1"],
+				names=["chrom","start","stop","name","reads/kb","strand","fraction_l1","hap1_reads","hap2_reads","pval","qval","reject"],
 				sep="\t")
 
-df_minus = pd.read_csv("/Users/heskett/replication_rnaseq/data/gm12878.4x.hg19Aligned.out.samtool.rmdup.minus.1000.10000.50000.vlinc.discovery.bed",
-				header=None,
-				index_col=None,
-				names=["chrom","start","stop","name","reads/kb","strand","fraction_l1"],
-				sep="\t")
 
-df = pd.concat([df_plus,df_minus])
+#df = df[df["chrom"]!="X"]
+# df = pd.concat([df_plus,df_minus])
+df = df[df["chrom"]!="X"]
 df.loc[:,"length"] = df["stop"] - df["start"]
 df.loc[:,"length_zscore"] = scipy.stats.mstats.zscore(df["length"])
 df.loc[:,"reads/kb_zscore"] = scipy.stats.mstats.zscore(df["reads/kb"])
 df.loc[:,"fraction_l1_zscore"] = scipy.stats.mstats.zscore(df["fraction_l1"])
 
-print(df["reads/kb"].describe())
-print(df["length"].describe())
-print(df["fraction_l1"].describe())
+# print(df["reads/kb"].describe())
+# print(df["length"].describe())
+# print(df["fraction_l1"].describe())
 
-plt.hist(df["fraction_l1"])
-plt.show()
-plt.close()
-plt.hist(df["length"])
-plt.show()
-plt.close()
-plt.hist(df["reads/kb"])
-plt.show()
-plt.close()
+# df.hist(["length","reads/kb","fraction_l1"],bins=30)
+# plt.show()
+
+# plt.hist(df["fraction_l1"],range=(0,0.8),bins=30)
+# plt.show()
+# plt.close()
+# plt.hist(df["length"],range = (50000,300000),bins=30)
+# plt.show()
+# plt.close()
+# plt.hist(df["reads/kb"], range = (0,100),bins=30)
+# plt.show()
+# plt.close()
 
 
 print(df)
@@ -60,28 +71,41 @@ reduced_data = PCA(n_components=2).fit_transform(X.values)
 
 fig = plt.figure()
 ax = fig.add_subplot(111)
-
-ax.scatter(x=reduced_data[:,0],y=reduced_data[:,1],lw=0.1,edgecolor="black")
-# plt.show()
+ax.scatter(x=reduced_data[:,0],y=reduced_data[:,1],lw=0.1,edgecolor="black",c=df["reads/kb_zscore"],cmap="Reds",vmin=-2,vmax=2)
+plt.show()
 plt.close()
+
+fig = plt.figure()
+ax = fig.add_subplot(111)
+ax.scatter(x=reduced_data[:,0],y=reduced_data[:,1],lw=0.1,edgecolor="black",c=df["length_zscore"],cmap="Reds",vmin=-2,vmax=2)
+plt.show()
+plt.close()
+
+fig = plt.figure()
+ax = fig.add_subplot(111)
+ax.scatter(x=reduced_data[:,0],y=reduced_data[:,1],lw=0.1,edgecolor="black",c=df["fraction_l1_zscore"],cmap="Reds",vmin=-2,vmax=2)
+plt.show()
+plt.close()
+
+
 
 print("computing tsne")
 tsne = manifold.TSNE(n_components=2, init='random',
                          random_state=0).fit_transform(X.values)
 
 fig = plt.figure()
-ax = fig.add_subplot(111)
-ax.scatter(x=tsne[:,0],y=tsne[:,1],lw=0.1,edgecolor="black",c=df["reads/kb"],cmap="Reds",vmin=-2,vmax=4)
-plt.show()
-plt.close()
-fig = plt.figure()
-ax = fig.add_subplot(111)
-ax.scatter(x=tsne[:,0],y=tsne[:,1],lw=0.1,edgecolor="black",c=df["fraction_l1"],cmap="Reds",vmin=-2,vmax=4)
-plt.show()
-plt.close()
-fig = plt.figure()
-ax = fig.add_subplot(111)
-ax.scatter(x=tsne[:,0],y=tsne[:,1],lw=0.1,edgecolor="black",c=df["length"],cmap="Reds",vmin=-2,vmax=4)
+ax = fig.add_subplot(131)
+ax.scatter(x=tsne[:,0],y=tsne[:,1],lw=0.1,edgecolor="black",c=df["reads/kb_zscore"],cmap="Reds",vmin=-2,vmax=2)
+# plt.show()
+# plt.close()
+# fig = plt.figure()
+ax = fig.add_subplot(132)
+ax.scatter(x=tsne[:,0],y=tsne[:,1],lw=0.1,edgecolor="black",c=df["fraction_l1_zscore"],cmap="Reds",vmin=-2,vmax=2)
+# plt.show()
+# plt.close()
+# fig = plt.figure()
+ax = fig.add_subplot(133)
+ax.scatter(x=tsne[:,0],y=tsne[:,1],lw=0.1,edgecolor="black",c=df["length_zscore"],cmap="Reds",vmin=-2,vmax=2)
 plt.show()
 plt.close()
 
