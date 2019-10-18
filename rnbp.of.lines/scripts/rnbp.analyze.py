@@ -16,9 +16,11 @@ import seaborn as sns
 # lines = "/home/groups/Spellmandata/heskett/replication.rnaseq/annotation.files/ucsc.L1.filtered.hg19.bed"
 
 ## for local use
-eclip_file = "/Users/heskett/replication_rnaseq/rnbp.of.lines/data/all.eclip.hepg2.chr6.nochr.sorted.bed"
+eclip_file = "/Users/heskett/replication_rnaseq/rnbp.of.lines/data/all.eclip.k562.nochr.sorted.bed"
 introns_file =  "/Users/heskett/replication_rnaseq/annotation.files/ucsc.introns.filtered.hg19.bed"
-vlincs_file = "/Users/heskett/replication_rnaseq/annotation.files/mcaron.vlinc1541.vlinc2149.merged.final.hg19g1k.bed"
+#vlincs_file = "/Users/heskett/replication_rnaseq/annotation.files/mcaron.vlinc1541.vlinc2149.merged.final.hg19g1k.bed"
+vlincs_file = "/Users/heskett/replication_rnaseq/scripts/gm12878.rep1.monoallelic.vlincs.bed"
+
 lines_file = "/Users/heskett/replication_rnaseq/annotation.files/ucsc.L1.filtered.hg19.bed"
 eclip = pybedtools.BedTool(eclip_file) # change this to bed file of previously determined windows of interest
 introns = pybedtools.BedTool(introns_file)
@@ -57,7 +59,7 @@ eclip_within_vlincs_raw_df = eclip.intersect(vlincs,
 											 "chrom_lnc","start_lnc","stop_lnc","name_lnc","score_lnc","strand_lnc"],
 											 dtype={"chrom":str, "start":int, "stop":int, "name_eclip":str, 
 											 "score_eclip":int, "strand_eclip":str,"signalvalue":float,"pvalue":float,"qvalue":float,"peak":float,
-											 "chrom_lnc":str,"start_lnc":int,"stop_lnc":int,"name_lnc":str,"score_lnc":int,"strand_lnc":str})
+											 "chrom_lnc":str,"start_lnc":int,"stop_lnc":int,"name_lnc":str,"score_lnc":float,"strand_lnc":str})
 #### filter out insignificant peaks
 eclip_within_vlincs_raw_df = eclip_within_vlincs_raw_df[(~eclip_within_vlincs_raw_df.name_eclip.str.contains("IDR",case=False)) & (eclip_within_vlincs_raw_df["pvalue"] >= 2) & (eclip_within_vlincs_raw_df["signalvalue"] >= 1)]
 
