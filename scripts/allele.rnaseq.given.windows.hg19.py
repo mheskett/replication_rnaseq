@@ -78,6 +78,25 @@ def get_windows(window_file, read_counts_file): #
 	df["chrom"] = df["chrom"].astype(str)
 	return df
 
+def get_tiling_windows(read_counts_file, size):
+	a = pybedtools.BedTool()
+	a = a.window_maker(w=size,g="/Users/heskett/replication_rnaseq/annotation.files/human_g1k_v37.fasta.fai")
+	b = pybedtools.BedTool(read_counts_file)
+	b = b.sort(faidx="/Users/heskett/replication_rnaseq/annotation.files/human_g1k_v37.fasta.fai")
+	c = pybedtools.BedTool()
+
+	window_read_counts = b.map(a=a,b=b,c=[6,7],o="sum",g="/Users/heskett/replication_rnaseq/annotation.files/human_g1k_v37.fasta.fai")
+	df =  window_read_counts.to_dataframe(names=["chrom", "start", "stop", "name", "score", "strand_of_window", 
+										"fraction_l1","hap1_reads", "hap2_reads"],
+										dtype={"chrom":str, "start":int, "stop":int,
+										"name":str, "score":float, "strand_of_window":str, "fraction_l1":float,
+										"hap1_reads":str, "hap2_reads":str})
+	df = df[ (df["hap1_reads"]!=".") & (df["hap2_reads"]!=".") ]
+	df["hap1_reads"] = df["hap1_reads"].astype(int)
+	df["hap2_reads"] = df["hap2_reads"].astype(int)
+	df["chrom"] = df["chrom"].astype(str)
+	return df
+
 ### hg38
 chromosomes = ["1","2","3","4","5","6","7","8","9","10","11","12",
 				"13","14","15","16","17","18","19","20","21","22","X"]
@@ -96,12 +115,12 @@ if __name__ == "__main__":
 	parser.add_argument("--window_file_plus",
 		type=str,
 		metavar="[bed file of windows]",
-		required=True,
+		required=False,
 		help="use previously determined windows instead of tiling")
 	parser.add_argument("--window_file_minus",
 		type=str,
 		metavar="[bed file of windows]",
-		required=True,
+		required=False,
 		help="use previously determined windows instead of tiling")
 	parser.add_argument("--out_directory",
 		type=str,
@@ -110,9 +129,13 @@ if __name__ == "__main__":
 		help="full path to output results")
 	parser.add_argument("--repli_seq",
 		type=str,
-		metavar="[repliseq_files",
+		metavar="[repliseq_files]",
 		required=False,
 		help="includ repliseq files if you have them")
+	parser.add_argument("--tiling_windows",
+		required=False,
+		metavar="[tiling windows]",
+		action="store_true")
 ########## funcs
 	def add_binom_pval(df):
 		df["binom_pval"] = df.apply(lambda row: scipy.stats.binom_test(row["hap1_reads"],
@@ -157,7 +180,7 @@ if __name__ == "__main__":
 		return result
 	def marker_size(x):
 		size = np.sqrt(x["score"])
-		return size*3
+		return size*2
 		# if x["score"] <=20:
 		# 	return 10
 		# if 20 < x["score"] <= 1000:
@@ -169,12 +192,18 @@ if __name__ == "__main__":
 ###############
 
 	arguments = parser.parse_args()
+	if arguments.tiling_windows:
+		df_plus = 
+
+
 	df_plus = get_windows(window_file = arguments.window_file_plus,
 		read_counts_file=arguments.dfplus)
 	df_minus = get_windows(window_file = arguments.window_file_minus,
 		read_counts_file=arguments.dfminus)
 	add_binom_pval(df_plus)
 	add_binom_pval(df_minus)
+	df_plus = df_plus[df_plus["chrom"]!="X"]
+	df_minus = df_minus[df_minus["chrom"]!="X"]
 
 	f, ax = plt.subplots(1, len(chromosomes), sharex=False,
 											sharey=False,
