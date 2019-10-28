@@ -133,6 +133,11 @@ if __name__ == "__main__":
 	parser.add_argument("--tiling_windows",
 		required=False,
 		action="store_true")
+	parser.add_argument("--single_chrom",
+		type=str,
+		metavar="[single_chrom]",
+		required=False,
+		help="plot a single chromosome in addition to all of them")
 ########## funcs
 	def add_binom_pval(df):
 		df["binom_pval"] = df.apply(lambda row: scipy.stats.binom_test(row["hap1_reads"],
@@ -200,8 +205,8 @@ if __name__ == "__main__":
 		print("tiling windows selected")
 		add_binom_pval(df_plus)
 		add_binom_pval(df_minus)
-		df_plus = df_plus[df_plus["chrom"]!="X"]
-		df_minus = df_minus[df_minus["chrom"]!="X"]
+		# df_plus = df_plus[df_plus["chrom"]!="X"]
+		# df_minus = df_minus[df_minus["chrom"]!="X"]
 
 		f, ax = plt.subplots(1, len(chromosomes), sharex=False,
 									sharey=False,
@@ -227,12 +232,17 @@ if __name__ == "__main__":
 			if len(hap1_plus)>0:
 				hap1_plus["total_reads"] = hap1_plus["hap1_reads"] + hap1_plus["hap2_reads"]
 				hap1_plus["color"] = "green"
+				hap1_plus["skew"] = np.log2(hap1_plus["hap1_reads"]  / hap1_plus["total_reads"] / 0.5)
 				ax[i].scatter(hap1_plus["start"]/10**6,
 						[-np.log10(x) if ( x >= 10**-20 ) else 20 for x in hap1_plus["binom_pval"]],
-				 		s=10,
+				 		s=6,
 						lw=0.1,
 						edgecolor="black",
-						c=hap1_plus["color"])
+						c=-np.log10(hap1_plus["binom_pval"]),
+						vmin=3,
+						vmax=30,
+						cmap="Greens",
+						alpha=0.6)
 				### text annotation
 				# for index,row in hap1_plus[hap1_plus["fdr_reject"]==True].iterrows():
 				# 	ax[i].annotate(s=row["name"],
@@ -242,12 +252,17 @@ if __name__ == "__main__":
 			if len(hap1_minus)>0:
 				hap1_minus["total_reads"] = hap1_minus["hap1_reads"] + hap1_minus["hap2_reads"]
 				hap1_minus["color"] = "red"
+				hap1_minus["skew"] = np.log2(hap1_minus["hap1_reads"]  / hap1_minus["total_reads"] / 0.5)
 				ax[i].scatter(hap1_minus["start"]/10**6,
 						[-np.log10(x) if ( x >= 10**-20 ) else 20 for x in hap1_minus["binom_pval"]],
-				 		s=10, # this scaling sucks still
+				 		s=6, # this scaling sucks still
 						lw=0.1,
 						edgecolor="black",
-						c=hap1_minus["color"])
+						c=-np.log10(hap1_minus["binom_pval"]),
+						vmin=3,
+						vmax=30,
+						cmap="Reds",
+						alpha=0.6)
 				### text annotation
 				# for index,row in hap1_minus[hap1_minus["fdr_reject"]==True].iterrows():
 				# 	ax[i].annotate(s=row["name"],
@@ -259,12 +274,18 @@ if __name__ == "__main__":
 			if len(hap2_plus)>0:
 				hap2_plus["total_reads"] = hap2_plus["hap1_reads"] + hap2_plus["hap2_reads"]
 				hap2_plus["color"] = "green"
+				hap2_plus["skew"] = np.log2(hap2_plus["hap1_reads"]  / hap2_plus["total_reads"] / 0.5)
 				ax[i].scatter(hap2_plus["start"]/10**6,
-						[np.log10(x) if ( x >= 10**-20 ) else -20 for x in hap2_plus["binom_pval"]],
-				 		s=10,
+						# [np.log10(x) if ( x >= 10**-20 ) else -20 for x in hap2_plus["binom_pval"]], 
+						hap2_plus["skew"],
+				 		s=6,
 						lw=0.1,
 						edgecolor="black",
-						c=hap2_plus["color"])
+						c=-np.log10(hap2_plus["binom_pval"]),
+						cmap="Greens",
+						vmin=3,
+						vmax=30,
+						alpha=0.6)
 				### annotation by text. doesnt show up well.
 				# for index,row in hap2_plus[hap2_plus["fdr_reject"]==True].iterrows():
 				# 	ax[i].annotate(s=row["name"],
@@ -274,12 +295,17 @@ if __name__ == "__main__":
 			if len(hap2_minus)>0:
 				hap2_minus["total_reads"] = hap2_minus["hap1_reads"] + hap2_minus["hap2_reads"]
 				hap2_minus["color"] = "red"
+				hap2_minus["skew"] = np.log2(hap2_minus["hap1_reads"]  / hap2_minus["total_reads"] / 0.5)
 				ax[i].scatter(hap2_minus["start"]/10**6,
 						[np.log10(x) if ( x >= 10**-20 ) else -20 for x in hap2_minus["binom_pval"]],
-				 		s=10,
+				 		s=6,
 						lw=0.1,
 						edgecolor="black",
-						c=hap2_minus["color"])
+						c=-np.log10(hap2_minus["binom_pval"]),
+						vmin=3,
+						vmax=30,
+						cmap="Reds",
+						alpha=0.6)
 				### annotation by text. doesnt show up well.
 				# for index,row in hap2_minus[hap2_minus["fdr_reject"]==True].iterrows():
 				# 	ax[i].annotate(s=row["name"],
@@ -300,6 +326,7 @@ if __name__ == "__main__":
 			if chromosomes[i] in gray_chromosomes:
 			    ax[i].axvspan(xmin=0, xmax=lengths[i]/10**6, ymin=0, ymax=1,
 			     alpha=0.2,facecolor="gray") 
+
 
 
     ####################
@@ -449,3 +476,51 @@ if __name__ == "__main__":
 		browser_df = combined_df[combined_df["binom_pval"] <= 0.000001].loc[:,:"strand_of_window"]
 		browser_df["chrom"] = "chr"+browser_df["chrom"].astype(str)
 		browser_df.to_csv(out_string + ".browser.bed", sep="\t",index=None,header=None)
+
+	####################
+	####################
+	####################
+	####################
+	# plot single chromosomes
+	if arguments.single_chrom:
+
+		f, ax = plt.subplots(1, 1, sharex=False,
+										sharey=False,
+										figsize=(12,1),
+										)
+		chrom = arguments.single_chrom
+
+
+
+		#### fill in the plotting methods here
+
+			### annotation by text. doesnt show up well.
+			# for index,row in hap2_minus[hap2_minus["fdr_reject"]==True].iterrows():
+			# 	ax[i].annotate(s=row["name"],
+			# 	xy=(row["start"]/10**6, -1*(-np.log10(row["binom_pval"]) if -np.log10(row["binom_pval"]) <= 12 else 12))).set_fontsize(6)
+		if arguments.repli_seq:
+			df_repliseq = pd.read_csv(arguments.repli_seq,sep="\t",names=["chrom","start","stop","pvalue"],
+														dtype={"chrom":str,"start":int,"stop":int,"pvalue":float})
+			df_repliseq_chr = df_repliseq[(df_repliseq["chrom"]=="chr"+str(chrom)) &
+											(df_repliseq["pvalue"] <= 0.01 )]
+			print(df_repliseq_chr)								
+			print("chr ",chrom)								
+			print("plotting all the asynchronous sites")
+			for index,row in df_repliseq_chr.iterrows():
+				ax[i].axvspan(xmin=row["start"]/10**6-0.1, 
+					xmax=row["stop"]/10**6+0.1,
+					ymin=0,ymax=1,
+					alpha=0.8,facecolor="blue")
+		#formatting
+		ax.set_yticks([])
+		ax.set_xticks([])
+		ax.margins(x=0,y=0)
+		ax.set(xlabel=chrom) # x axis labels or no
+		ax.axvline(x=int(centromere[chrom])/10**6, linestyle = "--", lw = 0.5,color="black")
+		ax.set_xlim([0,lengths[chrom]/10**6])
+		## savefig
+		plt.savefig(out_string+chrom+".only"+".png", dpi=400, transparent=True, bbox_inches='tight', pad_inches = 0)
+###################
+###################
+###################
+# done single chrom
