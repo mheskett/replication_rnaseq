@@ -28,7 +28,8 @@ def add_binom_pval(df):
 									method="fdr_bh")[0]
 	return
 		
-def get_windows(window_file, read_counts_file): #
+def get_windows(window_file, read_counts_file, is_file=True): 
+	
 	a = pybedtools.BedTool(window_file) # change this to bed file of previously determined windows of interest
 	b = pybedtools.BedTool(read_counts_file) ## read counts at alleles
 
@@ -43,6 +44,7 @@ def get_windows(window_file, read_counts_file): #
 
 	window_read_counts = c.map(a=a,b=b,c=[6,7],o="sum",g="/Users/heskett/replication_rnaseq/annotation.files/human_g1k_v37.fasta.fai") ## this can fail?? somehow dos2unix helped?
 	### invalid int for literal...
+	print(window_read_counts)
 	df =  window_read_counts.to_dataframe(names=["chrom", "start", "stop", "name", "score", "strand", 
 										"fraction_l1","hap1_reads", "hap2_reads"],
 										dtype={"chrom":str, "start":int, "stop":int,
@@ -54,9 +56,35 @@ def get_windows(window_file, read_counts_file): #
 	df["chrom"] = df["chrom"].astype(str)
 	return df
 
+def get_windows_from_merged(window_file, read_counts_file): 
+	a = window_file
+	b = pybedtools.BedTool(read_counts_file) ## read counts at alleles
+
+	a = a.sort(faidx="/Users/heskett/replication_rnaseq/annotation.files/human_g1k_v37.fasta.fai")
+	b = b.sort(faidx="/Users/heskett/replication_rnaseq/annotation.files/human_g1k_v37.fasta.fai")
+	#/home/groups/Spellmandata/heskett/refs/
+	#windows=a.window_maker(g="/Users/heskett/replication_rnaseq/scripts/hg38.10x.nochr.fa.fai",
+	#					w=length,s=length/2)
+
+	c = pybedtools.BedTool()
+	## genome file to specify sort order
+
+	window_read_counts = c.map(a=a,b=b,c=[6,7],o="sum",g="/Users/heskett/replication_rnaseq/annotation.files/human_g1k_v37.fasta.fai") ## this can fail?? somehow dos2unix helped?
+	### invalid int for literal...
+	df =  window_read_counts.to_dataframe(names=["chrom", "start", "stop", 
+										"hap1_reads", "hap2_reads"],
+										dtype={"chrom":str, "start":int, "stop":int,
+										"hap1_reads":str, "hap2_reads":str})
+	df = df[ (df["hap1_reads"]!=".") & (df["hap2_reads"]!=".") ]
+	df["hap1_reads"] = df["hap1_reads"].astype(int)
+	df["hap2_reads"] = df["hap2_reads"].astype(int)
+	df["chrom"] = df["chrom"].astype(str)
+	return df
+
+
 def get_tiling_windows(read_counts_file, size):
 	a = pybedtools.BedTool()
-	a = a.window_maker(w=size, s=size/2, g="/Users/heskett/replication_rnaseq/annotation.files/human_g1k_v37.fasta.fai")
+	a = a.window_maker(w=size, s=size/4, g="/Users/heskett/replication_rnaseq/annotation.files/human_g1k_v37.fasta.fai")
 	b = pybedtools.BedTool(read_counts_file)
 	b = b.sort(faidx="/Users/heskett/replication_rnaseq/annotation.files/human_g1k_v37.fasta.fai")
 	c = pybedtools.BedTool()
@@ -204,23 +232,60 @@ if __name__ == "__main__":
 		df_plus.loc[:,"strand"] = "+"
 		df_minus.loc[:,"strand"] = "-"
 		print("tiling windows selected")
+		add_binom_pval(df_plus)
+		add_binom_pval(df_minus)
+		## treat plus and minus separately still
+		df_plus["total_reads"] = df_plus["hap1_reads"] + df_plus["hap2_reads"]
+		df_plus = df_plus[df_plus["total_reads"]>=50] # or do at least min 1 read per kb
+		df_plus.loc[:,"skew"] = df_plus.apply(lambda x: np.log2(x["hap1_reads"]  / x["total_reads"] / 0.5) if (x["hap1_reads"] >= x["hap2_reads"]) else 
+															-np.log2(x["hap2_reads"]  / x["total_reads"] / 0.5)	, axis = 1)
+		df_plus_skewed = df_plus[(df_plus["binom_pval"]<=10**-6) & (abs(df_plus["skew"])>=0.4)]
+		df_plus_skewed_merged = pybedtools.BedTool.from_dataframe(df_plus_skewed).merge(s=True)
+		### do minus
+		df_minus["total_reads"] = df_minus["hap1_reads"] + df_minus["hap2_reads"]
+		df_minus = df_minus[df_minus["total_reads"]>=50] # or do at least min 1 read per kb
+		df_minus.loc[:,"skew"] = df_minus.apply(lambda x: np.log2(x["hap1_reads"]  / x["total_reads"] / 0.5) if (x["hap1_reads"] >= x["hap2_reads"]) else 
+															-np.log2(x["hap2_reads"]  / x["total_reads"] / 0.5)	, axis = 1)
+		df_minus_skewed = df_minus[(df_minus["binom_pval"]<=10**-6) & (abs(df_minus["skew"])>=0.4)]
+		df_minus_skewed_merged = pybedtools.BedTool.from_dataframe(df_minus_skewed).merge(s=True)
+		df_combined = pd.concat([df_plus,df_minus]) # non merged, but still min read filtered. use this for plotting. 
+		# df_combined = df_combined[df_combined["chrom"]!="X"]
+
+		## then put it back in to get windows, recount the number of reads, combine, add binom pvals.
+		## basically this allows you to do tiling windows, then merge
+		df_plus = get_windows_from_merged(window_file = df_plus_skewed_merged, read_counts_file=arguments.dfplus )
+		df_minus = get_windows_from_merged(window_file = df_minus_skewed_merged, read_counts_file=arguments.dfminus)
+		df_plus.loc[:,"strand"] = "+"
+		df_minus.loc[:,"strand"] = "-"
+		df_combined_merged = pd.concat([df_plus, df_minus])
+		add_binom_pval(df_combined_merged)
+		df_combined_merged["total_reads"] = df_combined_merged["hap1_reads"] + df_combined_merged["hap2_reads"]
+		df_combined_merged.loc[:,"skew"] =df_combined_merged.apply(lambda x: np.log2(x["hap1_reads"]  / x["total_reads"] / 0.5) if (x["hap1_reads"] >= x["hap2_reads"]) else 
+															-np.log2(x["hap2_reads"]  / x["total_reads"] / 0.5)	, axis = 1)
+		df_combined_merged = df_combined_merged[(df_combined_merged["binom_pval"]<=10**-6) & (abs(df_combined_merged["skew"])>=0.4)] # use this for actual stats on 
+		# non overlapping mono allelic regions
+
+		# df_combined_merged = df_combined_merged[df_combined_merged["chrom"]!="X"]
+
+
+
 	else:
 		df_plus = get_windows(window_file = arguments.window_file_plus,
 							read_counts_file=arguments.dfplus)
 		df_minus = get_windows(window_file = arguments.window_file_minus,
 							read_counts_file=arguments.dfminus)
+		df_combined = pd.concat([df_plus, df_minus])
+		add_binom_pval(df_combined)
+		df_combined["total_reads"] = df_combined["hap1_reads"] + df_combined["hap2_reads"]
 
-	df_combined = pd.concat([df_plus, df_minus])
-	add_binom_pval(df_combined)
-	df_combined["total_reads"] = df_combined["hap1_reads"] + df_combined["hap2_reads"]
+		df_combined = df_combined[df_combined["total_reads"]>=50] # or do at least min 1 read per kb
+		df_combined.loc[:,"skew"] = df_combined.apply(lambda x: np.log2(x["hap1_reads"]  / x["total_reads"] / 0.5) if (x["hap1_reads"] >= x["hap2_reads"]) else 
+															-np.log2(x["hap2_reads"]  / x["total_reads"] / 0.5)	, axis = 1)
 
 	# df_combined = df_plus[df_plus["chrom"]!="X"]
 
-	df_combined = df_combined[df_combined["total_reads"]>=50] # or do at least min 1 read per kb
 	## hap1 is positive skew hap2 is negative skew
-	df_combined.loc[:,"skew"] = df_combined.apply(lambda x: np.log2(x["hap1_reads"]  / x["total_reads"] / 0.5) if (x["hap1_reads"] >= x["hap2_reads"]) else 
-															-np.log2(x["hap2_reads"]  / x["total_reads"] / 0.5)	, axis = 1)
-	print(df_combined)
+
 	f, ax = plt.subplots(1, len(chromosomes), sharex=False,
 								sharey=False,
 								figsize=(15,1),
@@ -286,7 +351,7 @@ if __name__ == "__main__":
 	plt.savefig(out_string+".png", dpi=400, transparent=True, bbox_inches='tight', pad_inches = 0)
 
 	# combined_df = pd.concat([df_plus, df_minus])
-	df_combined[df_combined["binom_pval"]<=10**-6].to_csv(out_string + ".skewed.bed", sep="\t", index=None, header=None)
+	df_combined_merged.to_csv(out_string + ".skewed.bed", sep="\t", index=None, header=None)
 	df_combined.to_csv(out_string + ".all.bed", sep="\t", index=None, header=None)
 	if not arguments.tiling_windows:
 		### dont need to make genome browser files for just random windows
