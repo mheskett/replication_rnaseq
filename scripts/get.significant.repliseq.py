@@ -113,6 +113,10 @@ def get_arms(cytoband):
 		cytoband[(cytoband["chrom"]==chromosomes[i]) & (cytoband["arm"].str.contains("q"))]["stop"].max())
 	return arm_dict
 
+def add_binom_pval(x):
+
+	return
+
 arm_dict = get_arms(cytoband)
 
 df_windows = pd.read_csv("4e.100kb.slide.25kb.haplotype.counts.bed",sep="\t",header=None,index_col=None,
@@ -134,10 +138,8 @@ df2_windows["arm"] = df2_windows.apply(lambda x: "q" if (x["stop"] > arm_dict[x[
 # get thresholds top 5% skewed on all autosomes.
 early_thresholds = np.percentile(df_windows[df_windows["chrom"] != "X"]["logR"],[5,95])
 late_thresholds = np.percentile(df2_windows[df2_windows["chrom"] != "X"]["logR"],[5,95])
-##
 asynch_early_hap1 =  df_windows[(df_windows["logR"] >= early_thresholds[1])]
 asynch_early_hap2 = df_windows[(df_windows["logR"] <= early_thresholds[0])]
-
 asynch_late_hap1 =  df2_windows[(df2_windows["logR"] >= late_thresholds[1])]
 asynch_late_hap2 = df2_windows[(df2_windows["logR"] <= late_thresholds[0])]
 
@@ -160,12 +162,42 @@ late_merged_hap1 = asynch_late_hap1_bed.merge(d=25000,c=[4,5],o=["sum","sum"]).f
 late_merged_hap2 = asynch_late_hap2_bed.merge(d=25000,c=[4,5],o=["sum","sum"]).filter(lambda x: len(x) >= 250000).merge(d=100000,c=[4,5],o=["sum","sum"])\
 			.to_dataframe(names=["chrom","start","stop","hap1","hap2"])
 
+early_merged_hap1["binom_pval"] = early_merged_hap1.apply(lambda row: scipy.stats.binom_test(row["hap1"],
+							row["hap1"]+row["hap2"],
+							p=0.5,
+							alternative="two-sided"), # v slow for some reason 
+							axis=1)
+early_merged_hap2["binom_pval"] = early_merged_hap2.apply(lambda row: scipy.stats.binom_test(row["hap1"],
+							row["hap1"]+row["hap2"],
+							p=0.5,
+							alternative="two-sided"), 
+							axis=1)
+
+late_merged_hap1["binom_pval"] = late_merged_hap1.apply(lambda row: scipy.stats.binom_test(row["hap1"],
+							row["hap1"]+row["hap2"],
+							p=0.5,
+							alternative="two-sided"), 
+							axis=1)
+late_merged_hap2["binom_pval"] = late_merged_hap2.apply(lambda row: scipy.stats.binom_test(row["hap1"],
+							row["hap1"]+row["hap2"],
+							p=0.5,
+							alternative="two-sided"),  
+							axis=1)
+
+early_merged_hap1["type"] = "early_hap1"
+early_merged_hap2["type"] = "early_hap2"
+late_merged_hap1["type"] = "late_hap1"
+late_merged_hap2["type"] = "late_hap2"
+
+final_df = pd.concat([early_merged_hap1, early_merged_hap2, late_merged_hap1, late_merged_hap2],axis=0)\
+			.sort_values(by=["chrom","start"]) ## now merge this one more time with d = 0, and add the types together
+# final_bed = pybedtools.BedTool.from_dataframe(final_df).merge(c=[7],o=["distinct"])\
+# 			.to_dataframe(names=["chrom","start","stop","type"])
+
+final_df.to_csv("4el.asynchronous.regions.bed",header=None,index=None,sep="\t")
 print(early_merged_hap1)
-print(early_merged_hap2)
-
-print(late_merged_hap1)
-print(late_merged_hap2)
-
+print(final_df)
+print(final_bed)
 
 for i in range(len(chromosomes)):
 	f,ax = plt.subplots(figsize=(12,2))
@@ -182,14 +214,13 @@ for i in range(len(chromosomes)):
 		ax.axvspan(xmin=row["start"], xmax=row["stop"], facecolor="red", alpha=0.5)
 	for index, row in late_merged_hap2[late_merged_hap2["chrom"]==chromosomes[i]].iterrows():
 		ax.axvspan(xmin=row["start"], xmax=row["stop"], facecolor="blue", alpha=0.5)
-	plt.show()
+	# plt.show()
 	plt.close()
-
 
 # ax.scatter(df2_windows[df2_windows["chrom"]=="1"]["start"],df2_windows[df2_windows["chrom"]=="1"]["logR"],s=5,lw=0.2)
 # ax.axhline(y=0)
 # for index, row in late_merged[late_merged["chrom"]=="1"].iterrows():
 # 	ax.axvspan(xmin=row["start"],xmax=row["stop"],facecolor="red",alpha=0.5)
 
-plt.show()
-plt.close()
+# plt.show()
+# plt.close()
