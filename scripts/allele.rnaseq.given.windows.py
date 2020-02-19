@@ -109,21 +109,25 @@ if __name__ == "__main__":
 
 	arguments = parser.parse_args()
 
-	df = get_windows(window_file = arguments.window_file, read_counts_file=arguments.df)
+	df = get_windows(window_file = arguments.window_file,
+		read_counts_file=arguments.df)
 
 	# for binomial pval analysis. dont need plot that shows significant p values, just do the same grid plot
-	df["binom_pval"] = df.apply(lambda row: scipy.stats.binom_test(row["hap1_reads"],row["hap1_reads"]+row["hap2_reads"],
-		p=0.5,
-		alternative="two-sided"), # v slow for some reason 
-		axis=1)
-	df["fdr_pval"]=mt.multipletests(pvals=df["binom_pval"], alpha=0.01,
-													method="fdr_bh")[1]
-	df["fdr_reject"] =  mt.multipletests(pvals=df["binom_pval"], alpha=0.01,
-													method="fdr_bh")[0]
+	df["binom_pval"] = df.apply(lambda row: scipy.stats.binom_test(row["hap1_reads"],
+									row["hap1_reads"]+row["hap2_reads"],
+									p=0.5,
+									alternative="two-sided"), # v slow for some reason 
+									axis=1)
+	df["fdr_pval"]=mt.multipletests(pvals=df["binom_pval"], 
+									alpha=0.01,
+									method="fdr_bh")[1]
+	df["fdr_reject"] =  mt.multipletests(pvals=df["binom_pval"], 
+										alpha=0.01,
+										method="fdr_bh")[0]
 	f, ax = plt.subplots(1, len(chromosomes), sharex=False,
-							sharey=False,
-							figsize=(15,1),
-							gridspec_kw={'width_ratios': ratios})
+											sharey=False,
+											figsize=(15,1),
+											gridspec_kw={'width_ratios': ratios})
 	def color_maker(x):
 		result = [0,0,0,0]
 		if x["strand_of_window"]=="-":

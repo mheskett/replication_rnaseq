@@ -16,7 +16,7 @@ import statsmodels.api as sm
 ## list of chromosome names
 chromosomes = ["1","2","3","4","5","6","7","8","9","10","11","12",
 				"13","14","15","16","17","18","19","20","21","22","X"]
-
+arms = ["p","q"]
 #### for arm level data to skip over centromeres				
 cytoband = pd.read_table("/Users/heskett/replication_rnaseq/data/cytoband.nochr.hg19.bed",sep="\t",
 							names =["chrom","start","stop","arm","band"])
@@ -60,75 +60,75 @@ df_plotting = pd.concat( [df.loc[:,["chrom","start","stop","name_lncrna","skew"]
 df_plotting.columns = ["chrom","start","stop","name_lncrna","rna_skew","early_skew","late_skew"]
 df_plotting.loc[:,"repli_difference"] = abs(df_plotting["early_skew"] - df_plotting["late_skew"])
 
-# f,ax = plt.subplots()
-# ax.scatter(df[df["chrom"]=="X"]["start"],df[df["chrom"]=="X"]["logR"],s=30,c="blue",label = "Early Fraction log(Hap1/Hap2",lw=0.2,edgecolor="black")
-# ax.scatter(df2[df2["chrom"]=="X"]["start"],df2[df2["chrom"]=="X"]["logR"],  zorder=2,s=30, c="yellow",label="Late Fraction log(Hap1/Hap2)",lw=0.2,edgecolor="black")
-# ax.legend(loc="upper right")
-# ax.set_ylim([-3,3])
+f,ax = plt.subplots()
+ax.scatter(df[df["chrom"]=="X"]["start"],df[df["chrom"]=="X"]["logR"],s=30,c="blue",label = "Early Fraction log(Hap1/Hap2",lw=0.2,edgecolor="black")
+ax.scatter(df2[df2["chrom"]=="X"]["start"],df2[df2["chrom"]=="X"]["logR"],  zorder=2,s=30, c="yellow",label="Late Fraction log(Hap1/Hap2)",lw=0.2,edgecolor="black")
+ax.legend(loc="upper right")
+ax.set_ylim([-3,3])
 
-# ax2 = ax.twinx()
-# ax2.scatter(df[df["chrom"]=="X"]["start"], df[df["chrom"]=="X"]["skew"],s=30,zorder=2,c="red",label="RNA Expression Skew",lw=0.2,edgecolor="black")
-# ax2.set_ylim([-.5,.5])
+ax2 = ax.twinx()
+ax2.scatter(df[df["chrom"]=="X"]["start"], df[df["chrom"]=="X"]["skew"],s=30,zorder=2,c="red",label="RNA Expression Skew",lw=0.2,edgecolor="black")
+ax2.set_ylim([-.5,.5])
 
-# for pos in df[df["chrom"]=="X"]["start"]:
-# 	ax.axvline(x=pos,linestyle="--",lw=0.5,c="black")
+for pos in df[df["chrom"]=="X"]["start"]:
+	ax.axvline(x=pos,linestyle="--",lw=0.5,c="black")
 
-# ax.axhline(y=0,linestyle="--",c="black",zorder=1)
-# ax2.legend(loc="upper left")
-# plt.show()
-# plt.close()
+ax.axhline(y=0,linestyle="--",c="black",zorder=1)
+ax2.legend(loc="upper left")
+plt.show()
+plt.close()
 
-# print(df[df["chrom"]=="X"]["skew"])
-# print(df[df["chrom"]=="X"]["logR"])
-# print(df2[df2["chrom"]=="X"]["logR"])
+print(df[df["chrom"]=="X"]["skew"])
+print(df[df["chrom"]=="X"]["logR"])
+print(df2[df2["chrom"]=="X"]["logR"])
 
-### plots difference versus skew
-### color dots by hap1 vs hap2
-## shape dots by 
+## plots difference versus skew
+## color dots by hap1 vs hap2
+# shape dots by 
 
-# f,ax = plt.subplots()
-# ax.scatter(df_plotting[df_plotting["chrom"]=="X"]["rna_skew"], abs(df_plotting[df_plotting["chrom"]=="X"]["early_skew"] - df_plotting[df_plotting["chrom"]=="X"]["late_skew"]),
-# 			lw=0.2,edgecolor="black")
-# plt.show()
-# plt.close()
+f,ax = plt.subplots()
+ax.scatter(df_plotting[df_plotting["chrom"]=="X"]["rna_skew"], abs(df_plotting[df_plotting["chrom"]=="X"]["early_skew"] - df_plotting[df_plotting["chrom"]=="X"]["late_skew"]),
+			lw=0.2,edgecolor="black")
+plt.show()
+plt.close()
 
-# rna_skew_mean = np.mean(df_plotting[df_plotting["chrom"] != "X"]["rna_skew"])
-# rna_skew_std = np.std(df_plotting[df_plotting["chrom"] != "X"]["rna_skew"])
-# el_difference_mean = np.mean(abs(df_plotting[df_plotting["chrom"] != "X"]["early_skew"] - df_plotting[df_plotting["chrom"]!="X"]["late_skew"]))
-# el_difference_var = np.var(abs(df_plotting[df_plotting["chrom"] != "X"]["early_skew"] - df_plotting[df_plotting["chrom"]!="X"]["late_skew"]))
-# alpha = (((1-el_difference_mean)/el_difference_var) - el_difference_mean**-1) * el_difference_mean**2
-# beta=alpha* ( el_difference_mean**-1 - 1)
+rna_skew_mean = np.mean(df_plotting[df_plotting["chrom"] != "X"]["rna_skew"])
+rna_skew_std = np.std(df_plotting[df_plotting["chrom"] != "X"]["rna_skew"])
+el_difference_mean = np.mean(abs(df_plotting[df_plotting["chrom"] != "X"]["early_skew"] - df_plotting[df_plotting["chrom"]!="X"]["late_skew"]))
+el_difference_var = np.var(abs(df_plotting[df_plotting["chrom"] != "X"]["early_skew"] - df_plotting[df_plotting["chrom"]!="X"]["late_skew"]))
+alpha = (((1-el_difference_mean)/el_difference_var) - el_difference_mean**-1) * el_difference_mean**2
+beta=alpha* ( el_difference_mean**-1 - 1)
 
-# rna_skew_dist = scipy.stats.norm(loc=rna_skew_mean, scale=rna_skew_std)
-# rna_skew_critical_values = rna_skew_dist.ppf([0.05,0.95]) # given percentiles get value
-# el_difference_dist = scipy.stats.beta(a = alpha,b=beta )
-# el_difference_critical_value = el_difference_dist.ppf([0.95])
+rna_skew_dist = scipy.stats.norm(loc=rna_skew_mean, scale=rna_skew_std)
+rna_skew_critical_values = rna_skew_dist.ppf([0.05,0.95]) # given percentiles get value
+el_difference_dist = scipy.stats.beta(a = alpha,b=beta )
+el_difference_critical_value = el_difference_dist.ppf([0.95])
 
-# print(df_plotting[df_plotting["chrom"]!="X"].sort_values(by="repli_difference",ascending=False))
-# colors = []
-# for index,row in df_plotting[df_plotting["chrom"]=="15"].iterrows():
-# 	# label if hap1 is early or late
-# 	if (row["rna_skew"] >= rna_skew_critical_values[1]) and (row["early_skew"] >= 0) and (row["early_skew"] > row["late_skew"]) and (row["repli_difference"] >= el_difference_critical_value):
-# 		colors += ["red"]
-# 	elif (row["rna_skew"] >= rna_skew_critical_values[1]) and (row["late_skew"] >= 0) and (row["late_skew"] > row["early_skew"]) and (row["repli_difference"]>= el_difference_critical_value):
-# 		colors += ["green"]
-# 	# label if hap2 is early or late
-# 	elif (row["rna_skew"] <= rna_skew_critical_values[0]) and (row["early_skew"] <= 0) and (row["early_skew"] < row["late_skew"]) and (row["repli_difference"]>= el_difference_critical_value):
-# 		colors += ["red"] ## red for early
-# 	elif (row["rna_skew"] <= rna_skew_critical_values[0]) and (row["late_skew"] <= 0) and (row["late_skew"] < row["early_skew"]) and (row["repli_difference"]>= el_difference_critical_value):
-# 		colors += ["green"] # green for late
-# 	else:
-# 		colors+=["black"]
+print(df_plotting[df_plotting["chrom"]!="X"].sort_values(by="repli_difference",ascending=False))
+colors = []
+for index,row in df_plotting[df_plotting["chrom"]=="15"].iterrows():
+	# label if hap1 is early or late
+	if (row["rna_skew"] >= rna_skew_critical_values[1]) and (row["early_skew"] >= 0) and (row["early_skew"] > row["late_skew"]) and (row["repli_difference"] >= el_difference_critical_value):
+		colors += ["red"]
+	elif (row["rna_skew"] >= rna_skew_critical_values[1]) and (row["late_skew"] >= 0) and (row["late_skew"] > row["early_skew"]) and (row["repli_difference"]>= el_difference_critical_value):
+		colors += ["green"]
+	# label if hap2 is early or late
+	elif (row["rna_skew"] <= rna_skew_critical_values[0]) and (row["early_skew"] <= 0) and (row["early_skew"] < row["late_skew"]) and (row["repli_difference"]>= el_difference_critical_value):
+		colors += ["red"] ## red for early
+	elif (row["rna_skew"] <= rna_skew_critical_values[0]) and (row["late_skew"] <= 0) and (row["late_skew"] < row["early_skew"]) and (row["repli_difference"]>= el_difference_critical_value):
+		colors += ["green"] # green for late
+	else:
+		colors+=["black"]
 
-# f,ax=plt.subplots()
-# ax.scatter(df_plotting[df_plotting["chrom"]=="15"]["rna_skew"], abs(df_plotting[df_plotting["chrom"]=="15"]["early_skew"] - df_plotting[df_plotting["chrom"]=="15"]["late_skew"]),
-# 			lw=0.2,edgecolor="black",c=colors)
-# ax.axvline(x = rna_skew_critical_values[0],linestyle="--",c="black")
-# ax.axvline(x = rna_skew_critical_values[1],linestyle="--",c="black")
-# ax.axhline(y = el_difference_critical_value,linestyle="--",c="black")
+f,ax=plt.subplots()
+ax.scatter(df_plotting[df_plotting["chrom"]=="15"]["rna_skew"], abs(df_plotting[df_plotting["chrom"]=="15"]["early_skew"] - df_plotting[df_plotting["chrom"]=="15"]["late_skew"]),
+			lw=0.2,edgecolor="black",c=colors)
+ax.axvline(x = rna_skew_critical_values[0],linestyle="--",c="black")
+ax.axvline(x = rna_skew_critical_values[1],linestyle="--",c="black")
+ax.axhline(y = el_difference_critical_value,linestyle="--",c="black")
 
-# plt.show()
-# plt.close()
+plt.show()
+plt.close()
 
 
 ####
@@ -155,51 +155,93 @@ df2_windows.loc[:,"logR"] = np.log2( (df2_windows["hap1_counts"]+1) / (df2_windo
 df_windows["arm"] = df_windows.apply(lambda x: "q" if (x["stop"] > arm_dict[x["chrom"]][0]) & (x["stop"] <= arm_dict[x["chrom"]][1]) else "p", axis=1)
 df2_windows["arm"] = df2_windows.apply(lambda x: "q" if (x["stop"] > arm_dict[x["chrom"]][0]) & (x["stop"] <= arm_dict[x["chrom"]][1]) else "p", axis=1)
 
-# plt.rc('xtick', labelsize=15)    # fontsize of the tick labels
-# plt.rc('ytick', labelsize=20)
-# plt.rc('figure', titlesize=25)
+plt.rc('xtick', labelsize=15)    # fontsize of the tick labels
+plt.rc('ytick', labelsize=20)
+plt.rc('figure', titlesize=15)
+
+### get asynchronous distributions
+early_thresholds = np.percentile(df_windows[df_windows["chrom"]!="X"]["logR"],[5,95])
+late_thresholds = np.percentile(df2_windows[df2_windows["chrom"]!="X"]["logR"],[5,95])
+
+
+asynch_early =  df_windows[(df_windows["chrom"] == chromosomes[i]) & ((df_windows["logR"] >= early_thresholds[1]) | (df_windows["logR"] <= early_thresholds[0]))]
+asynch_late =  df2_windows[(df2_windows["chrom"] == chromosomes[i]) & ((df2_windows["logR"] >= late_thresholds[1]) | (df2_windows["logR"] <= late_thresholds[0]))]
+
+print(asynch_early)
 
 for i in range(len(chromosomes)):
 	f,ax = plt.subplots(figsize=(12,2))
-	smoothed_early = sm.nonparametric.lowess(endog=df_windows[df_windows["chrom"]==chromosomes[i]]["logR"], exog=df_windows[df_windows["chrom"]==chromosomes[i]]["start"], 
-		return_sorted=False, frac = 10/len(df_windows[df_windows["chrom"]==chromosomes[i]]["start"].index))
-	smoothed_late = sm.nonparametric.lowess(endog=df2_windows[df2_windows["chrom"]==chromosomes[i]]["logR"], exog=df2_windows[df2_windows["chrom"]==chromosomes[i]]["start"],
-	 return_sorted=False, frac = 10/len(df2_windows[df2_windows["chrom"]==chromosomes[i]]["start"].index))
+	# getting error for the pericentric chromosomes b/c they dont have P arms
+	if len(df_windows[(df_windows["chrom"]==chromosomes[i]) & (df_windows["arm"]=="p")]) <= 10:
+		frac1 = 1
+	else:
+		frac1 = 10 / len(df_windows[(df_windows["chrom"]==chromosomes[i]) & (df_windows["arm"]=="p")])
+
+	if len(df2_windows[(df2_windows["chrom"]==chromosomes[i]) & (df2_windows["arm"]=="p")]) <= 10: 
+		frac2 = 1
+	else:
+		frac2 = 10 / len(df2_windows[(df2_windows["chrom"]==chromosomes[i]) & (df2_windows["arm"]=="p")])
+
+	smoothed_early_p = sm.nonparametric.lowess(endog=df_windows[(df_windows["chrom"]==chromosomes[i]) & (df_windows["arm"]=="p")]["logR"], exog=df_windows[(df_windows["chrom"]==chromosomes[i]) & (df_windows["arm"]=="p")]["start"], 
+		return_sorted=False, frac = frac1 )
+	smoothed_late_p = sm.nonparametric.lowess(endog=df2_windows[(df2_windows["chrom"]==chromosomes[i]) & (df2_windows["arm"]=="p")]["logR"], exog=df2_windows[(df2_windows["chrom"]==chromosomes[i]) & (df2_windows["arm"]=="p")]["start"],
+		return_sorted=False, frac = frac2 )
+
+	smoothed_early_q = sm.nonparametric.lowess(endog=df_windows[(df_windows["chrom"]==chromosomes[i]) & (df_windows["arm"]=="q")]["logR"], exog=df_windows[(df_windows["chrom"]==chromosomes[i]) & (df_windows["arm"]=="q")]["start"], 
+		return_sorted = False, frac = 10/len(df_windows[(df_windows["chrom"]==chromosomes[i]) & (df_windows["arm"]=="q")]["start"].index))
+	smoothed_late_q = sm.nonparametric.lowess(endog=df2_windows[(df2_windows["chrom"]==chromosomes[i]) & (df2_windows["arm"]=="q")]["logR"], exog=df2_windows[(df2_windows["chrom"]==chromosomes[i]) & (df2_windows["arm"]=="q")]["start"],
+	 return_sorted = False, frac = 10/len(df2_windows[(df2_windows["chrom"]==chromosomes[i]) & (df2_windows["arm"]=="q")]["start"].index))
+
 	## raw data repliseq
 	# ax.scatter(df_windows[df_windows["chrom"]==chromosomes[i]]["start"], df_windows[df_windows["chrom"]==chromosomes[i]]["logR"],s=5,c="pink",label="early hap1/hap2",alpha=0.6)
 	# ax.scatter(df2_windows[df2_windows["chrom"]==chromosomes[i]]["start"], df2_windows[df2_windows["chrom"]==chromosomes[i]]["logR"],s=5,c="green",label="late hap1/hap2",alpha=0.6)
 	## smoothed repliseq
 	## tiling windows rna-seq
+	df_tiling_expression.loc[:,"strand_color"] = df_tiling_expression.apply(lambda x: "pink" if x["strand"]=="+" else "blue", axis = 1)
 	ax.scatter(df_tiling_expression[df_tiling_expression["chrom"]==chromosomes[i]]["start"],
 			df_tiling_expression[df_tiling_expression["chrom"]==chromosomes[i]]["skew"],
-			label="all RNA Expression Skew",lw=-.2,edgecolor="black",alpha=0.15,c="blue",zorder=3,s=8)
-	ax.set_ylim([-.5,.5])
-	## smoothed repliseq middle
+			label="all RNA Expression Skew",lw=0.2,edgecolor="black",c=df_tiling_expression[df_tiling_expression["chrom"]==chromosomes[i]]["strand_color"],zorder=3,s=8,alpha=0.4)
+	ax.set_ylim([-.52,.52])
+	# ax.set_xticks([])
+	ax.axhline(y=0,linestyle="--",c="black")
+	# smoothed repliseq middle
 	ax3 = ax.twinx()
-	ax3.plot(df_windows[df_windows["chrom"]==chromosomes[i]]["start"],smoothed_early,c="red",zorder=1,label="early log(hap1/hap2)",lw=1)
-	ax3.plot(df2_windows[df2_windows["chrom"]==chromosomes[i]]["start"],smoothed_late,c="green",zorder=1,label="late log(hap1/hap2",lw=1)
+	if len(df_windows[(df_windows["chrom"]==chromosomes[i]) & (df_windows["arm"]=="p")] >= 10):
+		ax3.plot(df_windows[(df_windows["chrom"]==chromosomes[i]) & (df_windows["arm"]=="p")]["start"],smoothed_early_p,c="red",zorder=1,label="early log(hap1/hap2)",lw=1)
+		ax3.plot(df2_windows[(df2_windows["chrom"]==chromosomes[i]) & (df2_windows["arm"]=="p")]["start"],smoothed_late_p,c="green",zorder=1,label="late log(hap1/hap2",lw=1)
+	ax3.plot(df_windows[(df_windows["chrom"]==chromosomes[i]) & (df_windows["arm"]=="q")]["start"],smoothed_early_q,c="red",zorder=1,label="early log(hap1/hap2)",lw=1)
+	ax3.plot(df2_windows[(df2_windows["chrom"]==chromosomes[i]) & (df2_windows["arm"]=="q")]["start"],smoothed_late_q,c="green",zorder=1,label="late log(hap1/hap2",lw=1)
+
+
+
+	significant_repliseq = df_windows[(df_windows["chrom"] == chromosomes[i]) & ((df_windows["logR"] >= 0.91) | (df_windows["logR"] <= -0.8))]
+	print(significant_repliseq)
+	for index, row in significant_repliseq.iterrows():
+		ax3.axvspan(xmin=row["start"],xmax=row["stop"],facecolor="purple",alpha=0.5)
+	#### highlight regions that are significantly asynch
+	ax3.axvline()
 	ax3.set_ylim([-2.5,2.5])
+	# ax3.set_yticks([])
 	ax3.axhline(y=0, linestyle="--", c="black")
 	ax3.margins(x=0,y=0)
 
 	### lncrna goes on top
 	ax2 = ax.twinx()
 	ax2.scatter(df[df["chrom"]==chromosomes[i]]["start"], df[df["chrom"]==chromosomes[i]]["skew"],c="orange",
-		label="lncRNA Expression Skew",lw=0.2,edgecolor="black",zorder=2,s=16)
+		label="lncRNA Expression Skew",lw=0.2,edgecolor="black",zorder=2,s=15)
 	ax2.set_ylim([-.5,.5])
 	ax2.set_yticks([])
 	ax.margins(x=0,y=0)
 	ax2.margins(x=0,y=0)
 	ax.ticklabel_format(style='plain')
 	ax2.ticklabel_format(style='plain')
-	ax3.ticklabel_format(style='plain')
+	# ax3.ticklabel_format(style='plain')
+	# ax2.set_xticks([])
 
-	plt.suptitle("chromosome " + chromosomes[i])
-	plt.savefig("clone4_"+chromosomes[i]+".png", dpi=400, transparent=True, bbox_inches='tight', pad_inches = 0)
+	# plt.suptitle("chromosome " + chromosomes[i])	# plt.show()
+	plt.show()
+	# plt.savefig("4x_repli"+chromosomes[i]+".png", dpi=400, transparent=True, bbox_inches='tight', pad_inches = 0)
 	plt.close()
-
-
-
 
 # ### plots 
 # f,ax = plt.subplots()
