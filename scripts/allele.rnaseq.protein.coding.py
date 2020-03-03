@@ -250,6 +250,10 @@ if __name__ == "__main__":
 	df_combined_vlinc.loc[:,"skew"] = df_combined_vlinc.apply(lambda x: (x["hap1_reads"]  / x["total_reads"] - 0.5) if (x["hap1_reads"] >= x["hap2_reads"]) else 
 														(-x["hap2_reads"]  / x["total_reads"])	+ 0.5, axis = 1)
 
+	## output the "all vlincs" file with sig and non-sig
+	out_string = arguments.out_directory + os.path.basename(arguments.dfplus.replace(".plus.overlap.platinum.haplotypes.bed","")) + "all.vlincs.bed"
+	df_combined_vlinc.sort_values(by=["chrom","start"]).to_csv(out_string,index=None,header=None, sep="\t")
+	## now do the filtering
 	df_combined_vlinc = df_combined_vlinc[(df_combined_vlinc["skew"] <= skew_thresholds[0]) | (df_combined_vlinc["skew"] >= skew_thresholds[1])]
 	df_combined_vlinc = df_combined_vlinc[(df_combined_vlinc["binom_pval"] <= 0.001) & (df_combined_vlinc["chrom"] != "X")]
 	print(df_combined_vlinc)
