@@ -13,6 +13,13 @@ import scipy.stats
 import seaborn as sns
 import statsmodels.api as sm
 
+
+## list of imprinted genes
+df_imprinted = pd.read_table("/Users/heskett/replication_rnaseq/scripts/imprinted.genes.fixed.bed",
+	sep="\t", names=["chrom","start","stop","gene_name"],dtype={"chrom":str},
+	header=None,index_col=None)
+print(df_imprinted)
+
 ## list of chromosome names
 chromosomes = ["1","2","3","4","5","6","7","8","9","10","11","12",
 				"13","14","15","16","17","18","19","20","21","22","X"]
@@ -20,7 +27,29 @@ arms = ["p","q"]
 #### for arm level data to skip over centromeres				
 cytoband = pd.read_table("/Users/heskett/replication_rnaseq/data/cytoband.nochr.hg19.bed",sep="\t",
 							names =["chrom","start","stop","arm","band"])
-
+chromosome_length = {"1":249250621,
+"2":243199373,
+"3":198022430,
+"4":191154276,
+"5":180915260,
+"6":171115067,
+"7":159138663,
+"8":146364022,
+"9":141213431,
+"10":135534747,
+"11":135006516,
+"12":133851895,
+"13":115169878,
+"14":107349540,
+"15":102531392,
+"16":90354753,
+"17":81195210,
+"18":78077248,
+"19":59128983,
+"20":63025520,
+"21":48129895,
+"22":51304566,
+"X":155270560}
 
 def get_arms(cytoband):
 	## given a data frame with genome elements, add the arm information to a new column
@@ -205,8 +234,11 @@ for i in range(len(chromosomes)):
 	df_tiling_expression.loc[:,"strand_color"] = df_tiling_expression.apply(lambda x: "pink" if x["strand"]=="+" else "blue", axis = 1)
 	ax.scatter(df_tiling_expression[df_tiling_expression["chrom"]==chromosomes[i]]["start"],
 			df_tiling_expression[df_tiling_expression["chrom"]==chromosomes[i]]["skew"],
-			label="all RNA Expression Skew",lw=0.2,edgecolor="black",c=df_tiling_expression[df_tiling_expression["chrom"]==chromosomes[i]]["strand_color"],zorder=3,s=8,alpha=0.4)
+			label="all RNA Expression Skew",lw=0.2,edgecolor="black",
+			c=df_tiling_expression[df_tiling_expression["chrom"]==chromosomes[i]]["strand_color"],zorder=3,s=8,alpha=0.4)
 	ax.set_ylim([-.52,.52])
+	ax.set_yticks([])
+	ax.set_xlim([0, chromosome_length[chromosomes[i] ] ] )
 	# ax.set_xticks([])
 	ax.axhline(y=0,linestyle="--",c="black")
 	# smoothed repliseq middle
@@ -218,16 +250,17 @@ for i in range(len(chromosomes)):
 	ax3.plot(df2_windows[(df2_windows["chrom"]==chromosomes[i]) & (df2_windows["arm"]=="q")]["start"],smoothed_late_q,c="green",zorder=1,label="late log(hap1/hap2",lw=1)
 
 
-
 	significant_repliseq = df_windows[(df_windows["chrom"] == chromosomes[i]) & ((df_windows["logR"] >= 0.91) | (df_windows["logR"] <= -0.8))]
 	print(significant_repliseq)
-	## to plot significant repliseq--however this is outdated now. see get.significant.repliseq.py script.
-	# for index, row in significant_repliseq.iterrows():
-	# 	ax3.axvspan(xmin=row["start"],xmax=row["stop"],facecolor="purple",alpha=0.5)
-	#### highlight regions that are significantly asynch
+
 	ax3.axvline()
-	ax3.set_ylim([-2.5,2.5])
-	# ax3.set_yticks([])
+	if chromosomes[i]=="X":
+		ax3.set_ylim([-2.5,2.5])
+	else:
+		ax3.set_ylim([-2,2])
+	ax3.set_yticks([])
+	ax3.set_xlim([0, chromosome_length[chromosomes[i] ] ] )
+
 	ax3.axhline(y=0, linestyle="--", c="black")
 	ax3.margins(x=0,y=0)
 
@@ -236,15 +269,27 @@ for i in range(len(chromosomes)):
 	ax2.scatter(df[df["chrom"]==chromosomes[i]]["start"], df[df["chrom"]==chromosomes[i]]["skew"],c="orange",
 		label="lncRNA Expression Skew",lw=0.2,edgecolor="black",zorder=2,s=15)
 	ax2.set_ylim([-.5,.5])
+	ax2.set_xlim([0, chromosome_length[chromosomes[i] ] ] )
+
 	ax2.set_yticks([])
-	ax.margins(x=0,y=0)
-	ax2.margins(x=0,y=0)
-	ax.ticklabel_format(style='plain')
-	ax2.ticklabel_format(style='plain')
-	# ax3.ticklabel_format(style='plain')
 	# ax2.set_xticks([])
 
+	ax.margins(x=0,y=0)
+	ax2.margins(x=0,y=0)
+	# ax.ticklabel_format(style='plain')
+	# ax2.ticklabel_format(style='plain')
+	# ax3.ticklabel_format(style='plain')
+	# ax2.set_xticks([])
+	### add known imprinted genes as green dots
+	ax4 = ax.twinx()
+	print(df_imprinted[df_imprinted["chrom"]==chromosomes[i]])
+	for index, row in df_imprinted[df_imprinted["chrom"]==chromosomes[i]].iterrows():
+		ax4.axvspan(xmin=row["start"], xmax=row["stop"], facecolor="green", alpha=0.8)
+
 	# plt.suptitle("chromosome " + chromosomes[i])	# plt.show()
+	# plt.show()
+
+
 	plt.savefig("5x_repli"+chromosomes[i]+".png", dpi=400, transparent=True, bbox_inches='tight', pad_inches = 0)
 	plt.close()
 

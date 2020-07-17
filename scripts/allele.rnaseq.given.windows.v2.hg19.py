@@ -44,7 +44,6 @@ def get_windows(window_file, read_counts_file, is_file=True):
 
 	window_read_counts = c.map(a=a,b=b,c=[6,7],o="sum",g="/Users/heskett/replication_rnaseq/annotation.files/human_g1k_v37.fasta.fai") ## this can fail?? somehow dos2unix helped?
 	### invalid int for literal...
-	print(window_read_counts)
 	df =  window_read_counts.to_dataframe(names=["chrom", "start", "stop", "name", "score", "strand", 
 										"fraction_l1","hap1_reads", "hap2_reads"],
 										dtype={"chrom":str, "start":int, "stop":int,
@@ -224,8 +223,15 @@ if __name__ == "__main__":
 	############################
 	###########################
 	############################
+
+	#####
 	## tiling window specific program
 	if arguments.tiling_windows:
+
+	### Old method used this equation for skew: = df_plus.apply(lambda x: np.log2(x["hap1_reads"]  / x["total_reads"] / 0.5) if (x["hap1_reads"] >= x["hap2_reads"]) else 
+	##														-np.log2(x["hap2_reads"]  / x["total_reads"] / 0.5)	, axis = 1)
+
+	# new method just uses percentage
 
 		df_plus = get_tiling_windows(read_counts_file=arguments.dfplus, size = 50000)
 		df_minus = get_tiling_windows(read_counts_file=arguments.dfminus, size = 50000)
@@ -236,17 +242,17 @@ if __name__ == "__main__":
 		add_binom_pval(df_minus)
 		## treat plus and minus separately still
 		df_plus["total_reads"] = df_plus["hap1_reads"] + df_plus["hap2_reads"]
-		df_plus = df_plus[df_plus["total_reads"]>=50] # or do at least min 1 read per kb
-		df_plus.loc[:,"skew"] = df_plus.apply(lambda x: np.log2(x["hap1_reads"]  / x["total_reads"] / 0.5) if (x["hap1_reads"] >= x["hap2_reads"]) else 
-															-np.log2(x["hap2_reads"]  / x["total_reads"] / 0.5)	, axis = 1)
-		df_plus_skewed = df_plus[(df_plus["binom_pval"]<=10**-6) & (abs(df_plus["skew"])>=0.4)]
-		df_plus_skewed_merged = pybedtools.BedTool.from_dataframe(df_plus_skewed).merge(s=True)
+		df_plus = df_plus[df_plus["total_reads"]>=20] # or do at least min 1 read per kb
+		df_plus.loc[:,"skew"] = df_plus.apply(lambda x: (x["hap1_reads"]  / x["total_reads"] - 0.5) if (x["hap1_reads"] >= x["hap2_reads"]) else 
+															(-x["hap2_reads"]  / x["total_reads"] + 0.5), axis = 1)
+		df_plus_skewed = df_plus[(df_plus["binom_pval"]<=10**-6) & (abs(df_plus["skew"])>=0.1)]
+		df_plus_skewed_merged = pybedtools.BedTool.from_dataframe(df_plus_skewed).merge(s=True) ## crucial merging step right here.....
 		### do minus
 		df_minus["total_reads"] = df_minus["hap1_reads"] + df_minus["hap2_reads"]
-		df_minus = df_minus[df_minus["total_reads"]>=50] # or do at least min 1 read per kb
-		df_minus.loc[:,"skew"] = df_minus.apply(lambda x: np.log2(x["hap1_reads"]  / x["total_reads"] / 0.5) if (x["hap1_reads"] >= x["hap2_reads"]) else 
-															-np.log2(x["hap2_reads"]  / x["total_reads"] / 0.5)	, axis = 1)
-		df_minus_skewed = df_minus[(df_minus["binom_pval"]<=10**-6) & (abs(df_minus["skew"])>=0.4)]
+		df_minus = df_minus[df_minus["total_reads"]>=20] # or do at least min 1 read per kb
+		df_minus.loc[:,"skew"] = df_minus.apply(lambda x: (x["hap1_reads"]  / x["total_reads"] - 0.5) if (x["hap1_reads"] >= x["hap2_reads"]) else 
+															(-x["hap2_reads"]  / x["total_reads"] + 0.5)	, axis = 1)
+		df_minus_skewed = df_minus[(df_minus["binom_pval"]<=10**-6) & (abs(df_minus["skew"])>=0.1)]
 		df_minus_skewed_merged = pybedtools.BedTool.from_dataframe(df_minus_skewed).merge(s=True)
 		df_combined = pd.concat([df_plus,df_minus]) # non merged, but still min read filtered. use this for plotting. 
 		# df_combined = df_combined[df_combined["chrom"]!="X"]
@@ -260,14 +266,12 @@ if __name__ == "__main__":
 		df_combined_merged = pd.concat([df_plus, df_minus])
 		add_binom_pval(df_combined_merged)
 		df_combined_merged["total_reads"] = df_combined_merged["hap1_reads"] + df_combined_merged["hap2_reads"]
-		df_combined_merged.loc[:,"skew"] =df_combined_merged.apply(lambda x: np.log2(x["hap1_reads"]  / x["total_reads"] / 0.5) if (x["hap1_reads"] >= x["hap2_reads"]) else 
-															-np.log2(x["hap2_reads"]  / x["total_reads"] / 0.5)	, axis = 1)
-		df_combined_merged = df_combined_merged[(df_combined_merged["binom_pval"]<=10**-6) & (abs(df_combined_merged["skew"])>=0.4)] # use this for actual stats on 
+		df_combined_merged.loc[:,"skew"] = df_combined_merged.apply(lambda x: (x["hap1_reads"]  / x["total_reads"] - 0.5) if (x["hap1_reads"] >= x["hap2_reads"]) else 
+															(-x["hap2_reads"]  / x["total_reads"] + 0.5)	, axis = 1)
+		df_combined_merged = df_combined_merged[(df_combined_merged["binom_pval"]<=10**-6) & (abs(df_combined_merged["skew"])>=0.1)] # use this for actual stats on 
 		# non overlapping mono allelic regions
 
 		# df_combined_merged = df_combined_merged[df_combined_merged["chrom"]!="X"]
-
-
 
 	else:
 		df_plus = get_windows(window_file = arguments.window_file_plus,
@@ -278,14 +282,14 @@ if __name__ == "__main__":
 		add_binom_pval(df_combined)
 		df_combined["total_reads"] = df_combined["hap1_reads"] + df_combined["hap2_reads"]
 
-		df_combined = df_combined[df_combined["total_reads"]>=50] # or do at least min 1 read per kb
-		df_combined.loc[:,"skew"] = df_combined.apply(lambda x: np.log2(x["hap1_reads"]  / x["total_reads"] / 0.5) if (x["hap1_reads"] >= x["hap2_reads"]) else 
-															-np.log2(x["hap2_reads"]  / x["total_reads"] / 0.5)	, axis = 1)
+		df_combined = df_combined[df_combined["total_reads"]>=20] # or do at least min 1 read per kb
+		df_combined.loc[:,"skew"] = df_combined.apply(lambda x: (x["hap1_reads"]  / x["total_reads"] - 0.5) if (x["hap1_reads"] >= x["hap2_reads"]) else 
+															(-x["hap2_reads"]  / x["total_reads"])	+ 0.5, axis = 1)
 
 	# df_combined = df_plus[df_plus["chrom"]!="X"]
 
 	## hap1 is positive skew hap2 is negative skew
-
+	print(df_combined)
 	f, ax = plt.subplots(1, len(chromosomes), sharex=False,
 								sharey=False,
 								figsize=(15,1),
@@ -335,7 +339,7 @@ if __name__ == "__main__":
 		ax[i].set(xlabel=chromosomes[i]) # x axis labels or no
 		ax[i].axvline(x=int(centromere[chromosomes[i]])/10**6, linestyle = "--", lw = 0.5,color="black")
 		ax[i].set_xlim([0,lengths[i]/10**6])
-		ax[i].set_ylim([-1.1, 1.1])
+		ax[i].set_ylim([-0.5, 0.5])
 	## make some chromosomes gray
 	for i in range(len(chromosomes)):
 		if chromosomes[i] in gray_chromosomes:
@@ -345,13 +349,15 @@ if __name__ == "__main__":
 
 	if arguments.tiling_windows:
 		out_string = arguments.out_directory+os.path.basename(arguments.dfplus.replace(".plus.overlap.platinum.haplotypes.bed",""))+"."+"tiling"
+		df_combined_merged.to_csv(out_string + ".skewed.bed", sep="\t", index=None, header=None)
+
 	else: 
 		out_string = arguments.out_directory+os.path.basename(arguments.dfplus.replace(".plus.overlap.platinum.haplotypes.bed",""))+os.path.basename(arguments.window_file_plus).replace(".bed","").replace(".plus","")
+		df_combined[(df_combined["binom_pval"]<=10**-6) & (abs(df_combined["skew"])>=0.1)].to_csv(out_string + ".skewed.bed", sep="\t", index=None, header=None)
 
 	plt.savefig(out_string+".png", dpi=400, transparent=True, bbox_inches='tight', pad_inches = 0)
 
 	# combined_df = pd.concat([df_plus, df_minus])
-	df_combined_merged.to_csv(out_string + ".skewed.bed", sep="\t", index=None, header=None)
 	df_combined.to_csv(out_string + ".all.bed", sep="\t", index=None, header=None)
 	if not arguments.tiling_windows:
 		### dont need to make genome browser files for just random windows
@@ -400,7 +406,7 @@ if __name__ == "__main__":
 		ax.set(xlabel=chrom) # x axis labels or no
 		ax.axvline(x=int(centromere[chrom]) / 10**6, linestyle = "--", lw = 0.5,color="black")
 		ax.set_xlim([0, lengths[i] / 10**6] )
-		ax.set_ylim([-1.1, 1.1])
+		ax.set_ylim([-0.5, 0.5])
 		if chrom=="X":
 			chrom_index=22
 		else:
