@@ -22,6 +22,29 @@ seq directions ( do this separately for early and late)
 4. Merge again, allowing for a 100kb gap.
 5. Compare overlap between early and late significant regions. get p-values
 """
+chromosome_length = {"1":249250621,
+"2":243199373,
+"3":198022430,
+"4":191154276,
+"5":180915260,
+"6":171115067,
+"7":159138663,
+"8":146364022,
+"9":141213431,
+"10":135534747,
+"11":135006516,
+"12":133851895,
+"13":115169878,
+"14":107349540,
+"15":102531392,
+"16":90354753,
+"17":81195210,
+"18":78077248,
+"19":59128983,
+"20":63025520,
+"21":48129895,
+"22":51304566,
+"X":155270560}
 
 ratios=[249250621/249250621,
 	243199373/249250621,
@@ -119,19 +142,19 @@ def add_binom_pval(x):
 
 arm_dict = get_arms(cytoband)
 
-# df_windows = pd.read_csv("4e.100kb.slide.25kb.haplotype.counts.bed",sep="\t",header=None,index_col=None,
-# 						names=["chrom","start","stop","hap1_counts","hap2_counts"],
-# 						dtype = {"chrom":str,"start":int,"stop":int,"hap1_counts":int,"hap2_counts":int})
-# df2_windows = pd.read_csv("4l.100kb.slide.25kb.haplotype.counts.bed",sep="\t",header=None,index_col=None,
-# 						names=["chrom","start","stop","hap1_counts","hap2_counts"],
-# 						dtype = {"chrom":str,"start":int,"stop":int,"hap1_counts":int,"hap2_counts":int})
+df_windows = pd.read_csv("4e.100kb.slide.25kb.haplotype.counts.bed",sep="\t",header=None,index_col=None,
+						names=["chrom","start","stop","hap1_counts","hap2_counts"],
+						dtype = {"chrom":str,"start":int,"stop":int,"hap1_counts":int,"hap2_counts":int})
+df2_windows = pd.read_csv("4l.100kb.slide.25kb.haplotype.counts.bed",sep="\t",header=None,index_col=None,
+						names=["chrom","start","stop","hap1_counts","hap2_counts"],
+						dtype = {"chrom":str,"start":int,"stop":int,"hap1_counts":int,"hap2_counts":int})
 
-df_windows = pd.read_csv("5e.100kb.slide.25kb.haplotype.counts.bed",sep="\t",header=None,index_col=None,
-						names=["chrom","start","stop","hap1_counts","hap2_counts"],
-						dtype = {"chrom":str,"start":int,"stop":int,"hap1_counts":int,"hap2_counts":int})
-df2_windows = pd.read_csv("5l.100kb.slide.25kb.haplotype.counts.bed",sep="\t",header=None,index_col=None,
-						names=["chrom","start","stop","hap1_counts","hap2_counts"],
-						dtype = {"chrom":str,"start":int,"stop":int,"hap1_counts":int,"hap2_counts":int})
+# df_windows = pd.read_csv("5e.100kb.slide.25kb.haplotype.counts.bed",sep="\t",header=None,index_col=None,
+# 						names=["chrom","start","stop","hap1_counts","hap2_counts"],
+# 						dtype = {"chrom":str,"start":int,"stop":int,"hap1_counts":int,"hap2_counts":int})
+# df2_windows = pd.read_csv("5l.100kb.slide.25kb.haplotype.counts.bed",sep="\t",header=None,index_col=None,
+# 						names=["chrom","start","stop","hap1_counts","hap2_counts"],
+# 						dtype = {"chrom":str,"start":int,"stop":int,"hap1_counts":int,"hap2_counts":int})
 
 df_windows = df_windows[df_windows["hap1_counts"] + df_windows["hap2_counts"] >= 15]
 df2_windows = df2_windows[df2_windows["hap1_counts"] + df2_windows["hap2_counts"] >= 15]
@@ -202,7 +225,7 @@ final_df = pd.concat([early_merged_hap1, early_merged_hap2, late_merged_hap1, la
 # final_bed = pybedtools.BedTool.from_dataframe(final_df).merge(c=[7],o=["distinct"])\
 # 			.to_dataframe(names=["chrom","start","stop","type"])
 
-final_df.to_csv("5el.asynchronous.regions.bed",header=None,index=None,sep="\t")
+final_df.to_csv("4el.asynchronous.regions.bed",header=None,index=None,sep="\t")
 print(early_merged_hap1)
 print(final_df)
 
@@ -211,9 +234,12 @@ for i in range(len(chromosomes)):
 
 	ax.scatter(df_windows[df_windows["chrom"]==chromosomes[i]]["start"],df_windows[df_windows["chrom"]==chromosomes[i]]["logR"],s=3,lw=0.2,edgecolor="black")
 	ax.scatter(df2_windows[df2_windows["chrom"]==chromosomes[i]]["start"],df2_windows[df2_windows["chrom"]==chromosomes[i]]["logR"],s=3,lw=0.2,edgecolor="black")
-	ax.set_ylim([-2.5,2.5])
+	if chromosomes[i]=="X":
+		ax.set_ylim([-4,4])
+	else:
+		ax.set_ylim([-2.5,2.5])
 
-	ax.axhline(y=0)
+	ax.axhline(y=0,linestyle="--",c="black")
 	for index, row in early_merged_hap1[early_merged_hap1["chrom"]==chromosomes[i]].iterrows():
 		ax.axvspan(xmin=row["start"], xmax=row["stop"], facecolor="blue", alpha=0.15)
 	for index, row in early_merged_hap2[early_merged_hap2["chrom"]==chromosomes[i]].iterrows():
@@ -223,8 +249,11 @@ for i in range(len(chromosomes)):
 	for index, row in late_merged_hap2[late_merged_hap2["chrom"]==chromosomes[i]].iterrows():
 		ax.axvspan(xmin=row["start"], xmax=row["stop"], facecolor="blue", alpha=0.15)
 	ax.margins(x=0,y=0)
+	ax.set_xlim([0,chromosome_length[chromosomes[i]]])
+	ax.set_xticks([])
+	ax.set_yticks([])
 	# plt.show()
-	plt.savefig("5x_repliseq_significant"+chromosomes[i]+".png",sep="\t",dpi=400,transparent=True, bbox_inches='tight', pad_inches = 0)
+	plt.savefig("4x_repliseq_significant"+chromosomes[i]+".png",sep="\t",dpi=400,transparent=True, bbox_inches='tight', pad_inches = 0)
 	plt.close()
 
 # ax.scatter(df2_windows[df2_windows["chrom"]=="1"]["start"],df2_windows[df2_windows["chrom"]=="1"]["logR"],s=5,lw=0.2)

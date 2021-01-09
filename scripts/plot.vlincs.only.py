@@ -104,6 +104,23 @@ def get_arms(cytoband):
 		cytoband[(cytoband["chrom"]==chromosomes[i]) & (cytoband["arm"].str.contains("q"))]["stop"].max())
 	return arm_dict
 
+
+### repliseq
+df_asynch_4 = pd.read_csv("4el.asynchronous.regions.bed",sep="\t",
+	names=["chrom",  "start","stop", "hap1_reads", "hap2_reads","pval","type"])
+df_asynch_5 = pd.read_csv("5el.asynchronous.regions.bed",sep="\t",
+	names=["chrom",  "start","stop", "hap1_reads", "hap2_reads","pval","type"])
+#### all windows
+df_pool_tiling = pd.read_csv("gm12878.rep1.hg19Aligned.out.tiling.all.bed",sep="\t",
+	names = ["chrom",  "start","stop", "hap1_reads", "hap2_reads", "strand" ,"binom_pval", "fdr_pval", "fdr_reject", "total_reads","skew"],
+	dtype= {"chrom":str,  "start":int,"stop":int, "strand":str, "hap1_reads":int, "hap2_reads":int, "binom_pval":float, "fdr_pval":float, "fdr_reject":str, "total_reads":int,"skew":float})
+df_4_tiling = pd.read_csv("gm12878.4x.hg19Aligned.out.tiling.all.bed",sep="\t",
+	names = ["chrom",  "start","stop", "hap1_reads", "hap2_reads", "strand" ,"binom_pval", "fdr_pval", "fdr_reject", "total_reads","skew"],
+	dtype= {"chrom":str,  "start":int,"stop":int, "strand":str, "hap1_reads":int, "hap2_reads":int, "binom_pval":float, "fdr_pval":float, "fdr_reject":str, "total_reads":int,"skew":float})
+df_5_tiling = pd.read_csv("gm12878.5x.hg19Aligned.out.tiling.all.bed",sep="\t",
+	names = ["chrom",  "start","stop", "hap1_reads", "hap2_reads", "strand" ,"binom_pval", "fdr_pval", "fdr_reject", "total_reads","skew"],
+	dtype= {"chrom":str,  "start":int,"stop":int, "strand":str, "hap1_reads":int, "hap2_reads":int, "binom_pval":float, "fdr_pval":float, "fdr_reject":str, "total_reads":int,"skew":float})
+######### vlincs only
 df_pool = pd.read_csv("gm12878.rep1.hg19Aligned.outall.vlincs.bed",sep="\t",
 	names = ["chrom",  "start","stop", "name", "score", "strand","fraction_l1", "hap1_reads", "hap2_reads", "binom_pval", "fdr_pval", "fdr_reject", "total_reads","skew"],
 	dtype= {"chrom":str,  "start":int,"stop":int, "name":str, "score":str, "strand":str,"fraction_l1":float, "hap1_reads":int, "hap2_reads":int, "binom_pval":float, "fdr_pval":float, "fdr_reject":str, "total_reads":int,"skew":float})
@@ -135,16 +152,42 @@ df_switchers = pd.read_csv("all.vlincs.clone4.vs.clone5.skew.variance.bed",sep="
 
 for i in range(len(chromosomes)):
 	f,ax = plt.subplots(figsize=(12,2))
-	plt.scatter(df_pool[df_pool["chrom"]==chromosomes[i]]["start"],df_pool[df_pool["chrom"]==chromosomes[i]]["skew"],label="gm12878 pool",s=5,c="green")
-	plt.scatter(df_clone4[df_clone4["chrom"]==chromosomes[i]]["start"],df_clone4[df_clone4["chrom"]==chromosomes[i]]["skew"],label="gm12878 clone4",s=5,c="orange")
-	plt.scatter(df_clone5[df_clone5["chrom"]==chromosomes[i]]["start"],df_clone5[df_clone5["chrom"]==chromosomes[i]]["skew"],label="gm12878 clone5",s=5,c="pink")
+	## also plot tiling in gm12878 pool
+	plt.scatter(df_pool_tiling[df_pool_tiling["chrom"]==chromosomes[i]]["start"],df_pool_tiling[df_pool_tiling["chrom"]==chromosomes[i]]["skew"],
+				label="gm12878 pool windows",s=20,c="blue",lw=0.2,edgecolor="black",alpha=0.6 )
+	# plt.scatter(df_4_tiling[df_4_tiling["chrom"]==chromosomes[i]]["start"],df_4_tiling[df_4_tiling["chrom"]==chromosomes[i]]["skew"],
+	# 			label="gm12878 4 windows",s=20,c="orange",lw=0.2,edgecolor="black" ,alpha=0.6)
+	# plt.scatter(df_5_tiling[df_5_tiling["chrom"]==chromosomes[i]]["start"],df_5_tiling[df_5_tiling["chrom"]==chromosomes[i]]["skew"],
+	# 			label="gm12878 5 windows",s=20,c="green",lw=0.2,edgecolor="black",alpha=0.6 )
+	# ### repliseq here
+	# for index, row in df_asynch_4[df_asynch_4["chrom"]==chromosomes[i]].iterrows():
+	# 	if (row["type"] == "early_hap1") or (row["type"] == "late_hap2"):
+	# 		ax.axvspan(xmin=row["start"], xmax=row["stop"], facecolor="blue", alpha=0.15)
+	# 	if (row["type"] == "late_hap1") or (row["type"] == "early_hap2"):
+	# 		ax.axvspan(xmin=row["start"], xmax=row["stop"], facecolor="red", alpha=0.15)
+	# # for index, row in df_asynch_5[df_asynch_5["chrom"]==chromosomes[i]].iterrows():
+	# # 	if (row["type"] == "early_hap1") or (row["type"] == "late_hap2"):
+	# # 		ax.axvspan(xmin=row["start"], xmax=row["stop"], facecolor="blue", alpha=0.15)
+	# # 	if (row["type"] == "late_hap1") or (row["type"] == "early_hap2"):
+	# # 		ax.axvspan(xmin=row["start"], xmax=row["stop"], facecolor="red", alpha=0.15)
+
+
+
+	### significant vlincs here
+	# plt.scatter(df_pool[df_pool["chrom"]==chromosomes[i]]["start"],df_pool[df_pool["chrom"]==chromosomes[i]]["skew"],label="gm12878 pool",s=20,c="green",lw=0.2,edgecolor="black")
+	# plt.scatter(df_clone4[df_clone4["chrom"]==chromosomes[i]]["start"],df_clone4[df_clone4["chrom"]==chromosomes[i]]["skew"],label="gm12878 clone4",s=20,c="orange",lw=0.2,edgecolor="black")
+	# plt.scatter(df_clone5[df_clone5["chrom"]==chromosomes[i]]["start"],df_clone5[df_clone5["chrom"]==chromosomes[i]]["skew"],label="gm12878 clone5",s=20,c="pink",lw=0.2,edgecolor="black")
+
 	plt.axhline(y=0,linestyle="--",color="black")
-	# plt.legend()
+	plt.legend()
 	# plt.grid()
 	# for index,row in df_switchers[df_switchers["chrom"]==chromosomes[i]].iterrows():
 	# 	if row["max_skew_distance"] > 0.4:
 	# 		plt.axvspan(xmin=row["start"], xmax=row["stop"],color="red",alpha=0.2)
 	ax.margins(x=0,y=0)
-	plt.savefig("vlinc_only_"+chromosomes[i],dpi=400,transparent=True, bbox_inches='tight', pad_inches = 0)
+	plt.show()
+	# plt.savefig("vlinc_only_"+chromosomes[i],dpi=400,transparent=True, bbox_inches='tight', pad_inches = 0)
 	plt.close()
+
+
 

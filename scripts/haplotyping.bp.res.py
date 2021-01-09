@@ -25,6 +25,7 @@ if __name__ == "__main__":
     arguments = parser.parse_args()
 
     with open(arguments.bed) as f:
+        next()
         lines = f.readlines()
         data = [x.rstrip("\n").split("\t") for x in lines]
         f.close()

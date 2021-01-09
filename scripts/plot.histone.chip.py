@@ -34,6 +34,20 @@ def get_windows(peaks, allele_counts):
 	df["chrom"] = df["chrom"].astype(str)
 	return df
 
+def add_binom_pval(df):
+	df["binom_pval"] = df.apply(lambda row: scipy.stats.binom_test(row["hap1_reads"],
+							row["hap1_reads"]+row["hap2_reads"],
+							p=0.5,
+							alternative="two-sided"), # v slow for some reason 
+							axis=1)
+
+	# df["fdr_pval"]=mt.multipletests(pvals=df["binom_pval"], 
+	# 							alpha=0.01,
+	# 							method="fdr_bh")[1]
+	# df["fdr_reject"] =  mt.multipletests(pvals=df["binom_pval"], 
+	# 								alpha=0.01,
+	# 								method="fdr_bh")[0]
+	return
 
 ratios = [249250621/249250621,
 	243199373/249250621,
@@ -125,13 +139,18 @@ if __name__ == "__main__":
 		help="in bed format")
 	parser.add_argument("--allele_counts",
 		type=str,
-		metavar="[df of allele counts minus]",
+		metavar="[allele specific counts]",
 		required=True,
 		help="in bed format")
 	arguments = parser.parse_args()
+	df = get_windows(peaks = arguments.peaks, 
+					allele_counts = arguments.allele_counts)
+	add_binom_pval(df)
+	df_significant = df[df["binom_pval"] <= 0.05]
 
-	
-	print(get_windows(peaks = arguments.peaks, allele_counts = arguments.allele_counts))
+	df_significant.to_csv(os.path.basename(arguments.peaks.replace(".merged.peaks.bed",'.significant.monoallelic.peaks.bed')),
+							sep="\t",index=None)
+	print(df_significant)
 
 
 
