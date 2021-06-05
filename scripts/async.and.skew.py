@@ -15,17 +15,18 @@ import statsmodels.api as sm
 
 
 ## list of imprinted genes
-df_imprinted = pd.read_table("/Users/heskett/replication_rnaseq/scripts/imprinted.genes.fixed.bed",
-	sep="\t", names=["chrom","start","stop","gene_name"],dtype={"chrom":str},
-	header=None,index_col=None)
-print(df_imprinted)
+# df_imprinted = pd.read_table("/Users/heskett/replication_rnaseq/scripts/imprinted.genes.fixed.bed",
+# 	sep="\t", names=["chrom","start","stop","gene_name"],dtype={"chrom":str},
+# 	header=None,index_col=None)
+# print(df_imprinted)
 
+## list of chromosome names
 ## list of chromosome names
 chromosomes = ["1","2","3","4","5","6","7","8","9","10","11","12",
 				"13","14","15","16","17","18","19","20","21","22","X"]
 arms = ["p","q"]
 #### for arm level data to skip over centromeres				
-cytoband = pd.read_table("/Users/heskett/replication_rnaseq/data/cytoband.nochr.hg19.bed",sep="\t",
+cytoband = pd.read_table("/Users/mike/replication_rnaseq/scripts/cytoband.nochr.hg19.bed",sep="\t",
 							names =["chrom","start","stop","arm","band"])
 chromosome_length = {"1":249250621,
 "2":243199373,
@@ -281,10 +282,10 @@ for i in range(len(chromosomes)):
 	# ax3.ticklabel_format(style='plain')
 	# ax2.set_xticks([])
 	### add known imprinted genes as green dots
-	ax4 = ax.twinx()
-	print(df_imprinted[df_imprinted["chrom"]==chromosomes[i]])
-	for index, row in df_imprinted[df_imprinted["chrom"]==chromosomes[i]].iterrows():
-		ax4.axvspan(xmin=row["start"], xmax=row["stop"], facecolor="green", alpha=0.8)
+	# ax4 = ax.twinx()
+	# print(df_imprinted[df_imprinted["chrom"]==chromosomes[i]])
+	# for index, row in df_imprinted[df_imprinted["chrom"]==chromosomes[i]].iterrows():
+	# 	ax4.axvspan(xmin=row["start"], xmax=row["stop"], facecolor="green", alpha=0.8)
 
 	# plt.suptitle("chromosome " + chromosomes[i])	# plt.show()
 	# plt.show()

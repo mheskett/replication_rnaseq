@@ -246,14 +246,13 @@ for i in range(len(chromosomes)):
 	# smoothed repliseq middle
 	ax3 = ax.twinx()
 	if len(df_windows[(df_windows["chrom"]==chromosomes[i]) & (df_windows["arm"]=="p")]) >= 10:
-		ax3.plot(df_windows[(df_windows["chrom"]==chromosomes[i]) & (df_windows["arm"]=="p")]["start"],smoothed_early_p,c="red",zorder=1,label="early log(hap1/hap2)",lw=1)
-		ax3.plot(df2_windows[(df2_windows["chrom"]==chromosomes[i]) & (df2_windows["arm"]=="p")]["start"],smoothed_late_p,c="green",zorder=1,label="late log(hap1/hap2",lw=1)
-	ax3.plot(df_windows[(df_windows["chrom"]==chromosomes[i]) & (df_windows["arm"]=="q")]["start"],smoothed_early_q,c="red",zorder=1,label="early log(hap1/hap2)",lw=1)
-	ax3.plot(df2_windows[(df2_windows["chrom"]==chromosomes[i]) & (df2_windows["arm"]=="q")]["start"],smoothed_late_q,c="green",zorder=1,label="late log(hap1/hap2",lw=1)
+		ax3.plot(df_windows[(df_windows["chrom"]==chromosomes[i]) & (df_windows["arm"]=="p")]["start"],smoothed_early_p,c="red",zorder=1,label="early log(hap1/hap2)",lw=0.6)
+		ax3.plot(df2_windows[(df2_windows["chrom"]==chromosomes[i]) & (df2_windows["arm"]=="p")]["start"],smoothed_late_p,c="green",zorder=1,label="late log(hap1/hap2",lw=0.6)
+	ax3.plot(df_windows[(df_windows["chrom"]==chromosomes[i]) & (df_windows["arm"]=="q")]["start"],smoothed_early_q,c="red",zorder=1,label="early log(hap1/hap2)",lw=0.6)
+	ax3.plot(df2_windows[(df2_windows["chrom"]==chromosomes[i]) & (df2_windows["arm"]=="q")]["start"],smoothed_late_q,c="green",zorder=1,label="late log(hap1/hap2",lw=0.6)
 
 
 	significant_repliseq = df_windows[(df_windows["chrom"] == chromosomes[i]) & ((df_windows["logR"] >= 0.91) | (df_windows["logR"] <= -0.8))]
-	print(significant_repliseq)
 
 	ax3.axvline()
 	if chromosomes[i]=="X":
@@ -291,7 +290,7 @@ for i in range(len(chromosomes)):
 	# plt.suptitle("chromosome " + chromosomes[i])	# plt.show()
 	# plt.show()
 
-
+	plt.show()
 	plt.savefig("bouha.2.repli."+chromosomes[i]+".png", dpi=400, transparent=True, bbox_inches='tight', pad_inches = 0)
 	plt.close()
 

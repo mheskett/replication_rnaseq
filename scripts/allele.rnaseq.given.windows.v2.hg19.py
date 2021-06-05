@@ -83,7 +83,7 @@ def get_windows_from_merged(window_file, read_counts_file):
 
 def get_tiling_windows(read_counts_file, size):
 	a = pybedtools.BedTool()
-	a = a.window_maker(w=size, s=size/4, g="/Users/heskett/replication_rnaseq/annotation.files/human_g1k_v37.fasta.fai")
+	a = a.window_maker(w=size, s=size, g="/Users/heskett/replication_rnaseq/annotation.files/human_g1k_v37.fasta.fai")
 	b = pybedtools.BedTool(read_counts_file)
 	b = b.sort(faidx="/Users/heskett/replication_rnaseq/annotation.files/human_g1k_v37.fasta.fai")
 	c = pybedtools.BedTool()
