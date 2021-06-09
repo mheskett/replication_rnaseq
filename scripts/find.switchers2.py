@@ -13,6 +13,7 @@ from matplotlib.patches import Rectangle
 import statsmodels.api as sm
 from matplotlib.lines import Line2D
 import statsmodels.stats.multitest as mt
+import pickle
 chromosomes = ["1","2","3","4","5","6","7","8","9","10","11","12",
 				"13","14","15","16","17","18","19","20","21","22","X"]
 arms = ["p","q"]
@@ -94,12 +95,23 @@ df = pd.concat(dfs)
 
 
 
+
+######
+
+
 #######
 unique_genes = list(df["name"].drop_duplicates())
 switchers = [] # list of rows that are switchers
 nonswitchers=[]
 df_significant_rows = df[df["binom_pval"]<=0.001]
 df_nonsignificant_rows = df[df["binom_pval"] >=0.001]
+model = pickle.load(open("eb.variance.coding.model.sav", 'rb'))
+df["significant_deviation"] = df.apply(lambda x: True if abs(x["hap1_counts"] - x["total_reads"]/2) >= model.predict(np.array([x["total_reads"]]).reshape(1,-1))*2.5 else False,
+	axis=1)
+df_significant_rows = df[df["significant_deviation"]==True]
+df_nonsignificant_rows = df[df["significant_deviation"]==False]
+
+
 ### switchers algorithm
 for i in range(len(unique_genes)):
 	samples = df_significant_rows[df_significant_rows["name"]==unique_genes[i]]

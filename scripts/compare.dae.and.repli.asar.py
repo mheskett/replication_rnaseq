@@ -182,9 +182,20 @@ repli_df["sig_repli"]=["True" if x > sig_repli else "False" for x in repli_df["l
 repli_df["arm"] = repli_df.apply(lambda x: "q" if (x["stop"] > arm_dict[x["chrom"]][0]) & (x["stop"] <= arm_dict[x["chrom"]][1]) else "p", axis=1)
 color_vector = ["Red" if (row["logr_hap1"] >= row["logr_hap2"]) else "Blue" for index,row in repli_df.iterrows() ] # red if hap1 early, blue if hap2 early
 repli_df["repli_color"] = color_vector
-
 asynchronous_regions = repli_df[repli_df["sig_repli"]=="True"]
+#####
+zscore = lambda x: (x - x.mean()) / x.std()
+
+# for i in repli_df["samples"].unique():
+#     mean=repli_df[(repli_df["chrom"]!="X")&(repli_df["sample"]==i)]["logr_diff_abs"].mean()
+#     std=repli_df[(repli_df["chrom"]!="X")&(repli_df["sample"]==i)]["logr_diff_abs"].std()
+
+
+repli_df = repli_df[repli_df["chrom"]!="X"]
+repli_df["logr_diff_abs_sample_zscore"] = repli_df.groupby("sample")["logr_diff_abs"].transform(zscore)
+print(repli_df)
 ###################################
+
 ### now get all the TLs an DAE TLs in EB2 and EB10
 vlinc_files=["/Users/mike/replication_rnaseq/all.final.data/bouha.2.all.bouha.vlinc.calls.bed",
 "/Users/mike/replication_rnaseq/all.final.data/bouha.3.all.bouha.vlinc.calls.bed",

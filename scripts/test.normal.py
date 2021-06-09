@@ -11,7 +11,7 @@ import matplotlib.pyplot as plt
 import pybedtools
 import scipy.stats
 from scipy.stats import norm
-
+import pickle
 import seaborn as sns
 from sys import argv
 import glob
@@ -185,8 +185,6 @@ print(df)
 group_size = []
 prev_group = 0
 current = 0
-
-
 for i in range(1,5000):
 	current = i
 	sample_size = len(df[df["total_reads"].between(prev_group,current)])
@@ -217,8 +215,10 @@ x = np.array(df["total_reads"]).reshape((-1, 1))
 y = np.array(abs(df["hap1_counts"] - df["total_reads"]/2))
 model = LinearRegression()
 model.fit(x, y)
+print(model.get_params())
 y_pred = model.predict(np.array(range(0,5000)).reshape(-1,1))
 ### get significant thresholds?
+### get equation for this line to export into a function for other files
 min_deviation=[]
 for i in range(0,5000):
 	min_deviation += [model.predict(np.array([i]).reshape(1,-1))*2.5]
@@ -229,5 +229,84 @@ plt.plot(range(0,5000),min_deviation,linestyle="--",c="red")
 plt.show()
 
 
+# save the model to disk
+filename = 'eb.variance.nc.model.sav'
+pickle.dump(model, open(filename, 'wb'))
+ 
+# some time later...
+ 
+# load the model from disk
+loaded_model = pickle.load(open(filename, 'rb'))
 
+###############
+# repeat for coding
+
+coding_files=["bouha2.protein.coding.all.counts.bed",
+"bouha3.protein.coding.all.counts.bed",
+"bouha4.protein.coding.all.counts.bed",
+"bouha10.protein.coding.all.counts.bed",
+"bouha13.protein.coding.all.counts.bed",
+"bouha15.protein.coding.all.counts.bed"]
+coding_dfs = []
+for i in range(len(coding_files)):
+	coding_df = pd.read_csv(coding_files[i],sep="\t",
+							names= ["chrom","start","stop","name","score","strand","hap1_counts","hap2_counts"],
+							dtype = {"chrom":str,"start":int,"stop":int,"hap1_counts":int,"hap2_counts":int})
+	coding_df["total_reads"] = coding_df["hap1_counts"] + coding_df["hap2_counts"]
+	coding_df["skew"] = coding_df.apply(helper_func, axis = 1)
+	coding_df["sample"] = coding_files[i][0:7]
+	add_binom_pval(coding_df)
+	coding_dfs += [coding_df]
+df_coding = pd.concat(coding_dfs)
+
+#######
+df_coding = df_coding[df_coding["total_reads"]>=10]
+df_coding = df_coding[df_coding["chrom"]!="X"]
+group_size = []
+prev_group = 0
+current = 0
+for i in range(1,10000):
+	current = i
+	sample_size = len(df_coding[df_coding["total_reads"].between(prev_group,current)])
+	if sample_size < 100:
+		continue
+	if sample_size >=100:
+		group_size+=[current]
+		prev_group= current
+print(group_size)
+
+reads_vector = group_size
+print("STD for all is : ", abs(df_coding[df_coding["total_reads"]>=10]["skew"]).std())
+df_coding["deviant_reads"] = abs(df_coding["hap1_counts"] - df_coding["total_reads"]/2)
+variance_by_reads=[]
+for i in range(len(reads_vector)):
+	if i==0:
+		variance_by_reads += [abs(df_coding[df_coding["total_reads"].between(0,reads_vector[i])]["deviant_reads"]).std()]
+	else:
+		variance_by_reads += [abs(df_coding[df_coding["total_reads"].between(reads_vector[i-1],reads_vector[i])]["deviant_reads"]).std()]
+f,ax=plt.subplots()
+ax.scatter(reads_vector,
+	variance_by_reads)
+plt.show()
+plt.close()
+##############
+df_coding["color"] = ["red" if x<=0.01 else "blue" for x in df_coding["binom_pval"]]
+x = np.array(df["total_reads"]).reshape((-1, 1))
+y = np.array(abs(df["hap1_counts"] - df["total_reads"]/2))
+model = LinearRegression()
+model.fit(x, y)
+print(model.get_params())
+y_pred = model.predict(np.array(range(0,10000)).reshape(-1,1))
+### get significant thresholds?
+### get equation for this line to export into a function for other files
+min_deviation=[]
+for i in range(0,10000):
+	min_deviation += [model.predict(np.array([i]).reshape(1,-1))*2.5]
+plt.scatter(df_coding["total_reads"],abs(df_coding["hap1_counts"] - df_coding["total_reads"]/2),c=df_coding["color"],s=15,lw=0.02,edgecolor="black")
+# plt.plot(range(0,10000),[1/2*x for x in list(range(0,10000))],linestyle="--")
+plt.plot(range(0,10000),y_pred,linestyle="--")
+plt.plot(range(0,10000),min_deviation,linestyle="--",c="red")
+plt.show()
+filename = 'eb.variance.coding.model.sav'
+pickle.dump(model, open(filename, 'wb'))
 

@@ -118,6 +118,14 @@ for i in range(len(rna_files)):
 df = pd.concat(dfs)
 df = df[df["total_reads"]>=15]
 print("number TLs in gm12878",len(df))
+f,ax=plt.subplots(1,1,figsize=(2.5,4))
+ax.scatter(np.log2(df["total_reads"]),abs(df["skew"]),c="red",s=20,lw=0.2,edgecolor="black")
+ax.scatter(np.log2(df[df["chrom"]!="X"]["total_reads"]),abs(df[df["chrom"]!="X"]["skew"]),c="mediumblue",s=20,lw=0.2,edgecolor="black")
+ax.set_ylim([0,0.5])
+# ax.set_xticks([])
+plt.savefig("fig1.scatter.png",
+			dpi=400,transparent=True, bbox_inches='tight', pad_inches = 0)
+plt.show()
 #######
 tmp = pybedtools.BedTool.from_dataframe(df[(df["fdr_reject"]==True) & (abs(df["skew"])>=0.1)].loc[:,["chrom","start","stop","name","rpkm","strand"]])
 merged_df = tmp.sort().merge().to_dataframe()
@@ -137,10 +145,11 @@ print("fraction of a haploid genome coding monoallelic", sum_bases(merged_coding
 fig, ax = plt.subplots(figsize=(2.5,2))
 # sns.kdeplot(abs(coding_df[coding_df["chrom"]!="X"]["skew"]),cut=0,lw=4,c="blue",ax=ax)
 # sns.kdeplot(abs(coding_df[coding_df["chrom"]=="X"]["skew"]),cut=0,lw=4,c="red",ax=ax)
-sns.kdeplot(abs(df[df["chrom"]!="X"]["skew"]),cut=0,lw=4,c="orange",ax=ax)
-sns.kdeplot(abs(df[df["chrom"]=="X"]["skew"]),cut=0,lw=4,c="blue",ax=ax)
+sns.kdeplot(abs(df[df["chrom"]!="X"]["skew"]),cut=0,lw=4,c="mediumblue",ax=ax)
+sns.kdeplot(abs(df[df["chrom"]=="X"]["skew"]),cut=0,lw=4,c="mediumblue",linestyle=(0,(5,1)),ax=ax)
 plt.xticks(np.linspace(0,0.5,6))
 plt.xlim([0,0.5])
 plt.savefig("skew.histogram.png",
 			dpi=400,transparent=True, bbox_inches='tight', pad_inches = 0)
 plt.show()
+
