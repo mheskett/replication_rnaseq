@@ -112,6 +112,8 @@ all_files_repli = ["/Users/mike/replication_rnaseq/all.final.data/bouha.10.repli
 "/Users/mike/replication_rnaseq/all.final.data/bouha.2.repli.500kb.bed",
 "/Users/mike/replication_rnaseq/all.final.data/gm12878.4.repli.500kb.bed",
 "/Users/mike/replication_rnaseq/all.final.data/gm12878.5.repli.500kb.bed"]
+
+
 filenames_repli=[os.path.basename(x)[0:15] for x in all_files_repli]
 repli_li = []
 for i in range(len(all_files_repli)):
@@ -139,17 +141,48 @@ repli_df.loc[:,"logr"] = repli_df.apply(lambda x: np.log2((x["hap1_early"]+x["ha
 repli_df["arm"] = repli_df.apply(lambda x: "q" if (x["stop"] > arm_dict[x["chrom"]][0]) & (x["stop"] <= arm_dict[x["chrom"]][1]) else "p", axis=1)
 color_vector = ["Red" if (row["logr_hap1"] >= row["logr_hap2"]) else "Blue" for index,row in repli_df.iterrows() ] # red if hap1 early, blue if hap2 early
 repli_df["repli_color"] = color_vector
+
+## remove X
+repli_df= repli_df[repli_df["chrom"]!="X"]
 #############################
 #### tasks. plot all repli samples normalized with allele specific and non allele specific. normalized
 #### look for sample specific e/l switchers
 #### plot individual cell lines non-normalized to look for AS-RT
 #### find AS-RT switching
-df_normalized_logr = quantile_normalize(repli_df.pivot(index=["chrom","start","stop"],columns="sample",values="logr")).reset_index()
-df_normalized_logr["arm"] = df_normalized_logr.apply(lambda x: "q" if (x["stop"] > arm_dict[x["chrom"]][0]) & (x["stop"] <= arm_dict[x["chrom"]][1]) else "p", axis=1)
+df_normalized_logr_hap1 = quantile_normalize(repli_df.pivot(index=["chrom","start","stop"],columns="sample",values="logr_hap1")).reset_index()
+df_normalized_logr_hap2 = quantile_normalize(repli_df.pivot(index=["chrom","start","stop"],columns="sample",values="logr_hap2")).reset_index()
+df_normalized_logr_hap1["bouha.2.bouha.10"] = df_normalized_logr_hap1["bouha.2.repli.5"] - df_normalized_logr_hap1["bouha.10.repli."]
+df_normalized_logr_hap1["gm12878.4.gm12878.5"] = df_normalized_logr_hap1["gm12878.4.repli"] - df_normalized_logr_hap1["gm12878.5.repli"]
+df_normalized_logr_hap2["bouha.2.bouha.10"] = df_normalized_logr_hap2["bouha.2.repli.5"] - df_normalized_logr_hap2["bouha.10.repli."]
+df_normalized_logr_hap2["gm12878.4.gm12878.5"] = df_normalized_logr_hap2["gm12878.4.repli"] - df_normalized_logr_hap2["gm12878.5.repli"]
+print(df_normalized_logr_hap1)
+df_normalized_logr_hap1["arm"] = df_normalized_logr_hap1.apply(lambda x: "q" if (x["stop"] > arm_dict[x["chrom"]][0]) & (x["stop"] <= arm_dict[x["chrom"]][1]) else "p", axis=1)
+df_normalized_logr_hap2["arm"] = df_normalized_logr_hap2.apply(lambda x: "q" if (x["stop"] > arm_dict[x["chrom"]][0]) & (x["stop"] <= arm_dict[x["chrom"]][1]) else "p", axis=1)
+
 df_logr = repli_df.pivot(index=["chrom","start","stop"],columns="sample",values="logr").reset_index()
 df_logr["arm"] = df_logr.apply(lambda x: "q" if (x["stop"] > arm_dict[x["chrom"]][0]) & (x["stop"] <= arm_dict[x["chrom"]][1]) else "p", axis=1)
+####
+## calculate the sum of the absolute difference between hap1s and hap2s
+zscore = lambda x: (x - x.mean()) / x.std()
+
+sum_difference_gm = np.log2(abs(df_normalized_logr_hap1["gm12878.4.gm12878.5"]) + abs(df_normalized_logr_hap2["gm12878.4.gm12878.5"]) )
+sum_difference_eb = np.log2(abs(df_normalized_logr_hap1["bouha.2.bouha.10"]) + abs(df_normalized_logr_hap2["bouha.2.bouha.10"]) )
+df_normalized_logr_hap1["bouha.epigenetic.difference"] = sum_difference_eb.transform(zscore)
+df_normalized_logr_hap1["gm.epigenetic.difference"] = sum_difference_gm.transform(zscore)
+###
 
 
+
+plt.subplots(figsize=(2,2))
+# plt.hist(df_normalized_logr_hap1["bouha.epigenetic.difference"],lw=4,bins=30)
+# plt.hist(df_normalized_logr_hap1["gm.epigenetic.difference"],lw=4,bins=30)
+sns.kdeplot(df_normalized_logr_hap1["bouha.epigenetic.difference"],cut=0)
+sns.kdeplot(df_normalized_logr_hap1["gm.epigenetic.difference"],cut=0)
+
+plt.xlim([-3.5,3.5])
+# plt.xticks()
+plt.savefig("sum.epigenetic.differences.png",dpi=400,transparent=True, bbox_inches='tight', pad_inches = 0)
+plt.close()
 ####
 color_dict = {"gm12878.4.repli":"plum","gm12878.5.repli":"olivedrab","bouha.10.repli.":"y",
 "bouha.2.repli.5":"b"}
@@ -159,74 +192,99 @@ legend = [Line2D([0], [0], marker='o', color='w', label='gm12878.4',markerfaceco
 Line2D([0], [0], marker='o', color='w', label='gm12878.5',markerfacecolor='olivedrab', markersize=10),
 Line2D([0], [0], marker='o', color='w', label='bouha10',markerfacecolor='y', markersize=10),
 Line2D([0], [0], marker='o', color='w', label='bouha2',markerfacecolor='b', markersize=10)]
-#### to commpare non allele specific samples against each other before and after normalization
-# unnormalized smoothed
-## good plot!
-for j in range(len(chromosomes)):
-    f,ax=plt.subplots(2,1,figsize=(12,4))
-    for i in range(len(filenames_repli)):
-        tmp = df_logr[(df_logr["chrom"]==chromosomes[j])].loc[:,["chrom","start","stop",filenames_repli[i],"arm"]]
-        ax[0].plot(tmp[tmp["arm"]=="p"]["start"],smooth_vector(list(tmp[tmp["arm"]=="p"]["start"]),list(tmp[tmp["arm"]=="p"][filenames_repli[i]])),c=color_dict[filenames_repli[i]])
-        ax[0].plot(tmp[tmp["arm"]=="q"]["start"],smooth_vector(list(tmp[tmp["arm"]=="q"]["start"]),list(tmp[tmp["arm"]=="q"][filenames_repli[i]])),c=color_dict[filenames_repli[i]])
+comparisons = ["bouha.2.bouha.10","gm12878.4.gm12878.5"]
+####
+####
 
-    #normalized smoothed
-    for i in range(len(filenames_repli)):
-        tmp = df_normalized_logr[(df_normalized_logr["chrom"]==chromosomes[j])].loc[:,["chrom","start","stop",filenames_repli[i],"arm"]]
-        ax[1].plot(tmp[tmp["arm"]=="p"]["start"],smooth_vector(list(tmp[tmp["arm"]=="p"]["start"]),list(tmp[tmp["arm"]=="p"][filenames_repli[i]])),c=color_dict[filenames_repli[i]])
-        ax[1].plot(tmp[tmp["arm"]=="q"]["start"],smooth_vector(list(tmp[tmp["arm"]=="q"]["start"]),list(tmp[tmp["arm"]=="q"][filenames_repli[i]])),c=color_dict[filenames_repli[i]])
-    # plt.legend(handles=legend)
-    # plt.show()
-    plt.close()
+print(df_normalized_logr_hap1)
+for i in range(len(chromosomes)):
+    f,ax=plt.subplots(figsize=(10,2))
+    df_chrom=df_normalized_logr_hap1[df_normalized_logr_hap1["chrom"]==chromosomes[i]]
 
-##################
-## try: k-means clustering of logr diff. two clusters total for all autosomes.
-###
-
-# try: taking z-scores (log (logr diff +1))
-logged_logr_diff_abs = np.log2(repli_df[(repli_df["sample"]==filenames_repli[0]) & (repli_df["logr_diff_abs"]!=0)]["logr_diff_abs"])
-zscores = scipy.stats.zscore(repli_df[(repli_df["sample"]==filenames_repli[0]) & (repli_df["logr_diff_abs"]!=0)]["logr_diff_abs"])
-plt.hist(logged_logr_diff_abs,bins=20)
-plt.show()
-## AS repliseq in individual samples
-for i in range(len(filenames_repli)):
-    tmp= repli_df[(repli_df["sample"]==filenames_repli[i])  & (repli_df["logr_diff_abs"]!=0)]
-    ## try log and then zscore
-    tmp["zscore"]=list(scipy.stats.zscore(np.log2(tmp[(tmp["chrom"]!="X")]["logr_diff_abs"])))\
-    + [3]*len(tmp[tmp["chrom"]=="X"])
-    print(tmp[(tmp["zscore"]>=2) * (tmp["chrom"]!="X")])
-    ## tried kmeans
-    autosome_cluster_labels = KMeans(n_clusters=2).fit_predict(tmp[tmp["chrom"]!="X"]["logr_diff_abs"].values.reshape(-1,1))
-    tmp["label"]= list(autosome_cluster_labels) + [2]*len(tmp[tmp["chrom"]=="X"])
-    tmp["label"] = tmp["label"].astype(int)
-    ###
-    col = {0:(1,0,0,0),1:"blue",2:"green"}
-    tmp["label_color"] = [col[x] for x in tmp["label"]]
-    for j in range(len(chromosomes)):
-        tmp_chrom = tmp[tmp["chrom"]==chromosomes[j]]
-        f,ax=plt.subplots(1,1, figsize=(12,2) )
-
-        ax.plot(tmp_chrom[tmp_chrom["arm"]=="p"]["start"],
-            smooth_vector(list(tmp_chrom[tmp_chrom["arm"]=="p"]["start"]),
-            list(tmp_chrom[tmp_chrom["arm"]=="p"]["logr_hap1"])),
+    ax.plot(df_chrom[df_chrom["arm"]=="p"]["start"],
+        smooth_vector(list(df_chrom[df_chrom["arm"]=="p"]["start"]),
+        list(abs(df_chrom[df_chrom["arm"]=="p"]["bouha.epigenetic.difference"]))),
+        c="red")
+    ax.plot(df_chrom[df_chrom["arm"]=="q"]["start"],
+        smooth_vector(list(df_chrom[df_chrom["arm"]=="q"]["start"]),
+            list(abs(df_chrom[df_chrom["arm"]=="q"]["bouha.epigenetic.difference"]))),
             c="red")
-        ax.plot(tmp_chrom[tmp_chrom["arm"]=="q"]["start"],
-            smooth_vector(list(tmp_chrom[tmp_chrom["arm"]=="q"]["start"]),
-                list(tmp_chrom[tmp_chrom["arm"]=="q"]["logr_hap1"])),
+    ax.plot(df_chrom[df_chrom["arm"]=="p"]["start"],
+        smooth_vector(list(df_chrom[df_chrom["arm"]=="p"]["start"]),
+        list(abs(df_chrom[df_chrom["arm"]=="p"]["gm.epigenetic.difference"]))),
+        c="blue")
+    ax.plot(df_chrom[df_chrom["arm"]=="q"]["start"],
+        smooth_vector(list(df_chrom[df_chrom["arm"]=="q"]["start"]),
+            list(abs(df_chrom[df_chrom["arm"]=="q"]["gm.epigenetic.difference"]))),
+            c="blue")
+    ax.set_xticks(np.linspace(0, chromosome_length[chromosomes[i]], 16))
+    ax.set_xlim([0,chromosome_length[chromosomes[i]]])
+plt.close()
+for i in range(len(comparisons)):
+    for j in range(len(chromosomes)):
+        haplotype1 = df_normalized_logr_hap1[df_normalized_logr_hap1["chrom"]==chromosomes[j]]
+        haplotype2 = df_normalized_logr_hap2[df_normalized_logr_hap2["chrom"]==chromosomes[j]]
+        f,ax=plt.subplots(1,1, figsize=(10,2) )
+
+        ax.plot(haplotype1[haplotype1["arm"]=="p"]["start"],
+            smooth_vector(list(haplotype1[haplotype1["arm"]=="p"]["start"]),
+            list(abs(haplotype1[haplotype1["arm"]=="p"][comparisons[i]]))),
+            c="red")
+        ax.plot(haplotype1[haplotype1["arm"]=="q"]["start"],
+            smooth_vector(list(haplotype1[haplotype1["arm"]=="q"]["start"]),
+                list(abs(haplotype1[haplotype1["arm"]=="q"][comparisons[i]]))),
                 c="red")
-        ax.plot(tmp_chrom[tmp_chrom["arm"]=="p"]["start"],
-            smooth_vector(list(tmp_chrom[tmp_chrom["arm"]=="p"]["start"]),
-                list(tmp_chrom[tmp_chrom["arm"]=="p"]["logr_hap2"])),
+        ax.plot(haplotype2[haplotype2["arm"]=="p"]["start"],
+            smooth_vector(list(haplotype2[haplotype2["arm"]=="p"]["start"]),
+                list(abs(haplotype2[haplotype2["arm"]=="p"][comparisons[i]]))),
             c="blue")
-        ax.plot(tmp_chrom[tmp_chrom["arm"]=="q"]["start"],
-            smooth_vector(list(tmp_chrom[tmp_chrom["arm"]=="q"]["start"]),
-                list(tmp_chrom[tmp_chrom["arm"]=="q"]["logr_hap2"])),
+        ax.plot(haplotype2[haplotype2["arm"]=="q"]["start"],
+            smooth_vector(list(haplotype2[haplotype2["arm"]=="q"]["start"]),
+                list(abs(haplotype2[haplotype2["arm"]=="q"][comparisons[i]]))),
             c="blue")
-        # for index,row in tmp_chrom[tmp_chrom["zscore"]>=2].iterrows():
+        ax.set_xticks(np.linspace(0, chromosome_length[chromosomes[j]], 16))
+        ax.set_xlim([0,chromosome_length[chromosomes[j]]])
+        # for index,row in haplotype1[haplotype1["zscore"]>=2].iterrows():
+        #     rect=Rectangle((row["start"], -5), width=row["stop"]-row["start"], height=10,
+        #              facecolor=row["repli_color"],fill=True)
+        #     ax.add_patch(rect)  
+        # for index,row in haplotype2[haplotype2["zscore"]>=2].iterrows():
         #     rect=Rectangle((row["start"], -5), width=row["stop"]-row["start"], height=10,
         #              facecolor=row["repli_color"],fill=True)
         #     ax.add_patch(rect)
-        ax.set_xticks(np.linspace(0, chromosome_length[chromosomes[j]], 16))
-        ax.set_xlim([0, chromosome_length[chromosomes[j]]])
-        plt.savefig("as.repli.plot."+str(filenames_repli[i])+str(chromosomes[j])+ ".png",
+
+        plt.savefig("haplotype.diff."+comparisons[i]+str(chromosomes[j])+ ".png",
         dpi=400,transparent=True, bbox_inches='tight', pad_inches = 0)
         plt.close()
+plt.close()
+############################
+# plot two samples hap1 hap2
+filenames_repli = filenames_repli[2:]
+for j in range(len(chromosomes)):
+    f,ax=plt.subplots(1,1, figsize=(10,2) )
+    for i in range(len(filenames_repli)):
+        haplotype1 = df_normalized_logr_hap1[df_normalized_logr_hap1["chrom"]==chromosomes[j]  ]
+        haplotype2 = df_normalized_logr_hap2[df_normalized_logr_hap2["chrom"]==chromosomes[j] ]
+        styles=["solid","dotted","dashed","dashdot"]
+        # ax.plot(haplotype1[haplotype1["arm"]=="p"]["start"],
+        #     smooth_vector(list(haplotype1[haplotype1["arm"]=="p"]["start"]),
+        #     list(haplotype1[haplotype1["arm"]=="p"][filenames_repli[i]])),
+        #     c="red",linestyle=styles[i])
+        # ax.plot(haplotype1[haplotype1["arm"]=="q"]["start"],
+        #     smooth_vector(list(haplotype1[haplotype1["arm"]=="q"]["start"]),
+        #         list(haplotype1[haplotype1["arm"]=="q"][filenames_repli[i]])),
+        #         c="red",linestyle=styles[i])
+        ax.plot(haplotype2[haplotype2["arm"]=="p"]["start"],
+            smooth_vector(list(haplotype2[haplotype2["arm"]=="p"]["start"]),
+                list(haplotype2[haplotype2["arm"]=="p"][filenames_repli[i]])),
+            c="blue",linestyle=styles[i])
+        ax.plot(haplotype2[haplotype2["arm"]=="q"]["start"],
+            smooth_vector(list(haplotype2[haplotype2["arm"]=="q"]["start"]),
+                list(haplotype2[haplotype2["arm"]=="q"][filenames_repli[i]])),
+            c="blue",linestyle=styles[i])
+        ax.set_xticks(np.linspace(0, chromosome_length[chromosomes[j]], 16))
+        ax.set_xlim([0,chromosome_length[chromosomes[j]]])       
+    plt.show()
+    plt.close()
+
+

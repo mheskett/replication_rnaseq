@@ -106,7 +106,7 @@ nonswitchers=[]
 df_significant_rows = df[df["binom_pval"]<=0.001]
 df_nonsignificant_rows = df[df["binom_pval"] >=0.001]
 model = pickle.load(open("eb.variance.coding.model.sav", 'rb'))
-df["significant_deviation"] = df.apply(lambda x: True if abs(x["hap1_counts"] - x["total_reads"]/2) >= model.predict(np.array([x["total_reads"]]).reshape(1,-1))*2.5 else False,
+df["significant_deviation"] = df_coding.apply(lambda x: True if abs(x["hap1_counts"] - x["total_reads"]/2) >= model.predict(np.array([x["total_reads"]]).reshape(1,-1))*2.5 else False,
 	axis=1)
 df_significant_rows = df[df["significant_deviation"]==True]
 df_nonsignificant_rows = df[df["significant_deviation"]==False]
