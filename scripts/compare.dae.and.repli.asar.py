@@ -1,22 +1,15 @@
-import os
-import re
 import csv
+import os
 import numpy as np
 import pandas as pd
-import argparse
-import re
 from matplotlib.patches import Rectangle
 import seaborn as sns
 import matplotlib.pyplot as plt
 import pybedtools
 import scipy.stats
-import seaborn as sns
 from scipy.stats import norm
-
-from sys import argv
-import glob
+import pickle
 import statsmodels.api as sm
-from sklearn.cluster import KMeans
 from matplotlib.collections import PatchCollection
 from matplotlib.patches import Rectangle
 import statsmodels.api as sm
@@ -155,6 +148,9 @@ all_files_repli = ["/Users/mike/replication_rnaseq/all.final.data/bouha.10.repli
 "/Users/mike/replication_rnaseq/all.final.data/bouha.2.repli.500kb.bed",
 "/Users/mike/replication_rnaseq/all.final.data/gm12878.4.repli.500kb.bed",
 "/Users/mike/replication_rnaseq/all.final.data/gm12878.5.repli.500kb.bed"]
+all_files_repli = ["/Users/mike/replication_rnaseq/all.final.data/bouha.10.repli.500kb.bed",
+"/Users/mike/replication_rnaseq/all.final.data/bouha.2.repli.500kb.bed"]
+
 filenames_repli=[os.path.basename(x)[0:15] for x in all_files_repli]
 repli_li = []
 for i in range(len(all_files_repli)):
@@ -180,29 +176,23 @@ repli_df.loc[:,"logr"] = repli_df.apply(lambda x: np.log2((x["hap1_early"]+x["ha
 sig_repli = np.percentile(a = repli_df[repli_df["chrom"]!="X"]["logr_diff_abs"], q = 95)
 repli_df["sig_repli"]=["True" if x > sig_repli else "False" for x in repli_df["logr_diff_raw"]]
 repli_df["arm"] = repli_df.apply(lambda x: "q" if (x["stop"] > arm_dict[x["chrom"]][0]) & (x["stop"] <= arm_dict[x["chrom"]][1]) else "p", axis=1)
-color_vector = ["Red" if (row["logr_hap1"] >= row["logr_hap2"]) else "Blue" for index,row in repli_df.iterrows() ] # red if hap1 early, blue if hap2 early
+color_vector = ["Red" if (row["logr_hap1"] >= row["logr_hap2"]) else "mediumblue" for index,row in repli_df.iterrows() ] # red if hap1 early, blue if hap2 early
 repli_df["repli_color"] = color_vector
-asynchronous_regions = repli_df[repli_df["sig_repli"]=="True"]
+asynchronous_regions = repli_df[repli_df["sig_repli"]=="True"] ## percentile  hmethod
 #####
 zscore = lambda x: (x - x.mean()) / x.std()
-
-# for i in repli_df["samples"].unique():
-#     mean=repli_df[(repli_df["chrom"]!="X")&(repli_df["sample"]==i)]["logr_diff_abs"].mean()
-#     std=repli_df[(repli_df["chrom"]!="X")&(repli_df["sample"]==i)]["logr_diff_abs"].std()
-
-
 repli_df = repli_df[repli_df["chrom"]!="X"]
 repli_df["logr_diff_abs_sample_zscore"] = repli_df.groupby("sample")["logr_diff_abs"].transform(zscore)
-print(repli_df)
+asynchronous_regions = repli_df[repli_df["logr_diff_abs_sample_zscore"]>=2.5]
 ###################################
 
 ### now get all the TLs an DAE TLs in EB2 and EB10
 vlinc_files=["/Users/mike/replication_rnaseq/all.final.data/bouha.2.all.bouha.vlinc.calls.bed",
-"/Users/mike/replication_rnaseq/all.final.data/bouha.3.all.bouha.vlinc.calls.bed",
-"/Users/mike/replication_rnaseq/all.final.data/bouha.4.all.bouha.vlinc.calls.bed",
-"/Users/mike/replication_rnaseq/all.final.data/bouha.10.all.bouha.vlinc.calls.bed",
-"/Users/mike/replication_rnaseq/all.final.data/bouha.13.all.bouha.vlinc.calls.bed",
-"/Users/mike/replication_rnaseq/all.final.data/bouha.15.all.bouha.vlinc.calls.bed"]
+# "/Users/mike/replication_rnaseq/all.final.data/bouha.3.all.bouha.vlinc.calls.bed",
+# "/Users/mike/replication_rnaseq/all.final.data/bouha.4.all.bouha.vlinc.calls.bed",
+"/Users/mike/replication_rnaseq/all.final.data/bouha.10.all.bouha.vlinc.calls.bed"]#,
+# "/Users/mike/replication_rnaseq/all.final.data/bouha.13.all.bouha.vlinc.calls.bed",
+# "/Users/mike/replication_rnaseq/all.final.data/bouha.15.all.bouha.vlinc.calls.bed"]
 dfs = []
 for i in range(len(vlinc_files)):
     df = pd.read_csv(vlinc_files[i],sep="\t",
@@ -219,6 +209,13 @@ switchers = [] # list of rows that are switchers
 nonswitchers=[]
 df_significant_rows = df[df["binom_pval"]<=0.001]
 df_nonsignificant_rows = df[df["binom_pval"] >=0.001]
+model = pickle.load(open("eb.variance.coding.model.sav", 'rb'))
+df["significant_deviation"] = df.apply(lambda x: True if abs(x["hap1_counts"] - x["total_reads"]/2) >= model.predict(np.array([x["total_reads"]]).reshape(1,-1))*2.5 else False,
+    axis=1)
+df_significant_rows = df[df["significant_deviation"]==True]
+df_nonsignificant_rows = df[df["significant_deviation"]==False]
+df=df[df["total_reads"]>=10]
+
 ### switchers algorithm
 for i in range(len(unique_genes)):
     samples = df_significant_rows[df_significant_rows["name"]==unique_genes[i]]
@@ -245,28 +242,112 @@ df["color"]=[color_dict[x] for x in df["sample"]]
 
 
 ##########
-print("standard deviation of logr difference")
-
-
-
 #########
 ### organize this code because its actually pretty decent!
-tmp1 = intersect_tables(df[(df["fdr_reject"]==True) & (df["chrom"]!="X") & (abs(df["skew"])>=0.1) & (df["sample"].isin(["bouha.2.","bouha.10"]))],asynchronous_regions)
-f,ax = plt.subplots(figsize=(4,4))
-plt.scatter(abs(tmp1["skew"]),tmp1["logr_diff_abs1"],s=30,edgecolor="black",lw=0.2)
-# plt.show()
+all_intersected = intersect_tables(df[(df["chrom"]!="X") & (df["sample"].isin(["bouha.2.","bouha.10"]))],repli_df)
+all_intersected = all_intersected[all_intersected["total_reads"]>=15]
+#################
+## this is fig 4a
+f,ax = plt.subplots(figsize=(4,2.5))
+plotting_df = all_intersected
+plotting_df["color"] = [(0.0, 0.0, 0.803921568627451, 1.0) if ((row["significant_deviation"]==True) & (row["logr_diff_abs_sample_zscore1"]>=2.5)) else (0.0, 0.0, 0.803921568627451, 0.1) for index,row in plotting_df.iterrows()]
+plotting_df = plotting_df[plotting_df.groupby("name")['logr_diff_abs1'].transform(max) == plotting_df['logr_diff_abs1']]
+plt.scatter(abs(plotting_df["skew"]),plotting_df["logr_diff_abs1"],c=plotting_df["color"],s=20,edgecolor="black",lw=0.2)
+plt.xlim([0,.52])
+plt.ylim([0,4])
+plt.yticks([0,1,2,3,4])
+plt.xticks([0,.1,.2,.3,.4,.5])
+plt.savefig("fig.4.repli.as.png",dpi=400,transparent=True, bbox_inches='tight', pad_inches = 0)
 plt.close()
+
+
+### histogram for fig 4a
+f,ax=plt.subplots(figsize=(2,2))
+sns.kdeplot(plotting_df["logr_diff_abs1"],cut=0,c="mediumblue",lw=4)
+plt.xlim([0,3])
+plt.xticks([0,1,2,3])
+plt.savefig("fig.4.repli.as.histo.png",dpi=400,transparent=True, bbox_inches='tight', pad_inches = 0)
+plt.close()
+
+
+
 ##########
+
+## fig 4b
 repli_diff = repli_df.pivot(index=["chrom","start","stop"],columns="sample",values="logr_diff_raw").reset_index()
 repli_diff["bouha2.bouha10"] = repli_diff["bouha.2.repli.5"] - repli_diff["bouha.10.repli."]
-tmp = intersect_tables(df[(df["fdr_reject"]==True) & (df["chrom"]!="X") & (abs(df["skew"])>=0.1) & (df["sample"].isin(["bouha.2.","bouha.10"]))],
-    repli_diff)
+repli_diff["logr_diff_diff_bouha2_bouha10_zscore"] = abs(repli_diff["bouha2.bouha10"]).transform(zscore)
+tmp = intersect_tables(df[(df["chrom"]!="X") & (df["sample"].isin(["bouha.2.","bouha.10"]))],repli_diff)
+tmp = tmp[tmp.groupby("name")["logr_diff_diff_bouha2_bouha10_zscore1"].transform(max) == tmp["logr_diff_diff_bouha2_bouha10_zscore1"]]
+print(tmp)
 #######
-f,ax = plt.subplots(figsize=(4,4))
-plt.scatter(abs(tmp["skew"]),abs(tmp["bouha2.bouha101"]),s=30,edgecolor="black",lw=0.2)
-# plt.show()
+f,ax = plt.subplots(figsize=(4,2.5))
+tmp["color"] = [(0.0, 0.0, 0.803921568627451, 1.0) if ((row["significant_deviation"]==True) & (row["logr_diff_diff_bouha2_bouha10_zscore1"]>=2.5)) 
+                else (0.0, 0.0, 0.803921568627451, 0.1) for index,row in tmp.iterrows()]
+plt.scatter(abs(tmp["skew"]),abs(tmp["bouha2.bouha101"]),c=tmp["color"],s=20,edgecolor="black",lw=0.2)
+plt.xlim([0,.52])
+plt.xticks([0,.1,.2,.3,.4,.5])
+plt.ylim([0,4])
+plt.yticks([0,1,2,3,4])
+plt.savefig("fig.4b.repli.epigenetic.as.png",dpi=400,transparent=True, bbox_inches='tight', pad_inches = 0)
 plt.close()
 head = tmp.sort_values("bouha2.bouha101").head(20).append(tmp.sort_values("bouha2.bouha101").tail(20))
+#####
+#histogram for 4b
+### histogram for fig 4a
+f,ax=plt.subplots(figsize=(2,2))
+sns.kdeplot(abs(tmp["bouha2.bouha101"]),cut=0,c="mediumblue",lw=4)
+plt.xlim([0,3])
+plt.xticks([0,1,2,3])
+plt.savefig("fig.4.epigenetic.repli.as.histo.png",dpi=400,transparent=True, bbox_inches='tight', pad_inches = 0)
+plt.close()
+
+#################
+## create p value?
+## given the CDF of the lncRNA DAE and the AS-RT, whats the pval? joint distribution of two normals?
+## dual plot of ASRT regions and DAE lncrna
+print("intersected:   ###############")
+tmp1 = intersect_tables(df[(df["significant_deviation"]==True) & (df["chrom"]!="X")],repli_df[repli_df["logr_diff_abs_sample_zscore"]>=2])
+
+# tmp1 = tmp1[(tmp1["sample"]=="bouha.2.") & (tmp1["sample1"]=="bouha.2.repli.5")]
+most_asrt = tmp1.sort_values(["logr_diff_abs1"]).head(20)
+sample_pairs = [("bouha.2.","bouha.2.repli.5"),("bouha.10","bouha.10.repli.")]
+####
+for i in range(len(sample_pairs)): 
+    lnc_as = tmp1[(tmp1["sample"]==sample_pairs[i][0]) & (tmp1["sample1"]==sample_pairs[i][1])]
+    most_asrt = lnc_as.sort_values(["logr_diff_abs1"]).head(20)
+    for index,row in most_asrt.drop_duplicates(["chrom","start","stop"]).iterrows():
+        f,ax = plt.subplots(1,1,figsize=(4,2),sharex=False)
+        start=row["start"]
+        stop=row["stop"]
+        chrom=str(row["chrom"])
+        plt.suptitle(chrom+":"+sample_pairs[i][0])
+        ax.tick_params(axis='x', labelsize= 8)
+        ax2=ax.twinx()
+        ax2.axhline(y=0,linestyle="--",lw=0.4,c="black")
+        ax2.set_xlim([max(0,start-2000000),stop+2000000])
+        ax2.set_ylim([-0.6,0.6])
+        ax2.set_xticks(np.linspace(max(0,start-2000000),stop+2000000, 8))
+
+        repli_tmp =repli_df[(repli_df["chrom"]==chrom)&(repli_df["sample"]==sample_pairs[i][1])]
+        ## unsmoothed
+        ax.plot(repli_tmp["start"],repli_tmp["logr_diff_abs"],c="black",linewidth=2)#smooth_vector(list(bouha2["start"]),list(bouha2["logr_diff_abs"])))
+        ####
+        for index2,row2 in most_asrt[(most_asrt["chrom"]==chrom) & (most_asrt["start"]==start) & (most_asrt["stop"]==stop) ].iterrows():
+            rect=Rectangle((row2["start"], row2["skew"]-.05), width=row2["stop"]-row2["start"], height=0.1,
+                         facecolor="black", edgecolor="black",hatch="/",fill=False) ## plot vlincs as rectangles
+            ax2.add_patch(rect)
+        for index3, row3 in repli_tmp[repli_tmp["logr_diff_abs_sample_zscore"]>=2].iterrows():
+            rect=Rectangle((row3["start"], -5), width=row3["stop"]-row3["start"], height=8,
+                         facecolor=row3["repli_color"],alpha=0.5,fill=True)   
+            ax.add_patch(rect)
+
+        ##########0 
+        ax.set_ylim([0,max(max(repli_tmp[(repli_tmp["start"]>=start-3000000) & (repli_tmp["start"]<=stop+3000000)]["logr_diff_abs"]),
+            max(repli_tmp[(repli_tmp["start"]>=start-3000000) & (repli_tmp["start"]<=stop+3000000)]["logr_diff_abs"]) )+0.1])
+        plt.savefig("vlinc.logr.diff."+sample_pairs[i][0]+str(chrom)+"."+str(start)+"."+str(stop)+".png",
+            dpi=400,transparent=True, bbox_inches='tight', pad_inches = 0)
+        plt.close()
 
 #################
 most_asrt = tmp1.sort_values(["logr_diff_abs1"]).head(20)
@@ -317,9 +398,12 @@ for index,row in most_asrt.drop_duplicates(["chrom","start","stop"]).iterrows():
 ## plot lncRNA rectangles and allele specific RT
 #  problem is that smoothing data shifts that compared to on smooth data
 # use absolute value of logr diff diff for error bars
+head = tmp[(abs(tmp["logr_diff_diff_bouha2_bouha10_zscore1"])>=2.5) & (tmp["significant_deviation"]==True)]
+
+# head = head.sort_values("logr_diff_diff_bouha2_bouha10_zscore1").head(20).append(head.sort_values("bouha2.bouha101").tail(20))
+print(head)
+head["color"] = ["orange" if row["sample"]=="bouha.10" else "mediumblue" for index,row in head.iterrows()]
 standard_deviation = repli_diff["bouha2.bouha10"].std()
-print("head")
-print(head.drop_duplicates(["chrom","start","stop"]))
 for index,row in head.drop_duplicates(["chrom","start","stop"]).iterrows():
     f,ax = plt.subplots(2,1,figsize=(2,4),sharex=False)
     start=row["start"]
@@ -347,12 +431,12 @@ for index,row in head.drop_duplicates(["chrom","start","stop"]).iterrows():
     # for index,row in bouha2.iterrows():
     ### shuld smooth this right below
     ax[0].plot(repli_diff[repli_diff["chrom"]==chrom]["start"],
-    repli_diff[repli_diff["chrom"]==chrom]["bouha2.bouha10"])
+    repli_diff[repli_diff["chrom"]==chrom]["bouha2.bouha10"],c="black",lw=2)
     # plot standard deviation on the logr diff diff plot
     ax[0].fill_between(repli_diff[repli_diff["chrom"]==chrom]["start"],
         repli_diff[repli_diff["chrom"]==chrom]["bouha2.bouha10"]- standard_deviation/2, 
-    repli_diff[repli_diff["chrom"]==chrom]["bouha2.bouha10"] + standard_deviation/2,
-                 color='blue', alpha=0.1)
+        repli_diff[repli_diff["chrom"]==chrom]["bouha2.bouha10"] + standard_deviation/2,
+                 color='gray', alpha=0.5)
     try:
         ax[0].set_ylim([-max(repli_diff[repli_diff["chrom"]==chrom]["bouha2.bouha10"]),
             max(repli_diff[repli_diff["chrom"]==chrom]["bouha2.bouha10"])])

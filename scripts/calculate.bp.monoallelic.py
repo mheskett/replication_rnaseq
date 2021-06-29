@@ -146,7 +146,7 @@ fig, ax = plt.subplots(figsize=(2.5,2))
 # sns.kdeplot(abs(coding_df[coding_df["chrom"]!="X"]["skew"]),cut=0,lw=4,c="blue",ax=ax)
 # sns.kdeplot(abs(coding_df[coding_df["chrom"]=="X"]["skew"]),cut=0,lw=4,c="red",ax=ax)
 sns.kdeplot(abs(df[df["chrom"]!="X"]["skew"]),cut=0,lw=4,c="mediumblue",ax=ax)
-sns.kdeplot(abs(df[df["chrom"]=="X"]["skew"]),cut=0,lw=4,c="mediumblue",linestyle=(0,(5,1)),ax=ax)
+sns.kdeplot(abs(df[df["chrom"]=="X"]["skew"]),cut=0,lw=4,c="red",ax=ax)
 plt.xticks(np.linspace(0,0.5,6))
 plt.xlim([0,0.5])
 plt.savefig("skew.histogram.png",

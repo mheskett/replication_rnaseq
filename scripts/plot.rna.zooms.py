@@ -80,6 +80,26 @@ def get_arms(cytoband):
 		arm_dict[chromosomes[i]] = (cytoband[(cytoband["chrom"]==chromosomes[i]) & (cytoband["arm"].str.contains("p"))]["stop"].max(),
 		cytoband[(cytoband["chrom"]==chromosomes[i]) & (cytoband["arm"].str.contains("q"))]["stop"].max())
 	return arm_dict
+
+
+def helper_func_plus(x):
+	if x["total_plus"]==0:
+		return 0
+	elif x["hap1_counts_plus"] >= x["hap2_counts_plus"]:
+		return x["hap1_counts_plus"]  / x["total_plus"] - 0.5
+	else:
+		return -x["hap2_counts_plus"]  / x["total_plus"] + 0.5
+	return
+
+def helper_func_minus(x):
+	if x["total_minus"]==0: # try this for filtering
+		return 0
+	elif x["hap1_counts_minus"] >= x["hap2_counts_minus"]:
+		return x["hap1_counts_minus"]  / x["total_minus"] - 0.5
+	else:
+		return -x["hap2_counts_minus"]  / x["total_minus"] + 0.5
+	return
+
 #########################
 
 rna_files=[
@@ -126,24 +146,6 @@ for j in range(len(rna_files)):
 	df["total_plus"] = df["hap1_counts_plus"] + df["hap2_counts_plus"]
 	df["total_minus"] = df["hap1_counts_minus"] + df["hap2_counts_minus"]
 
-	def helper_func_plus(x):
-		if x["total_plus"]==0:
-			return 0
-		elif x["hap1_counts_plus"] >= x["hap2_counts_plus"]:
-			return x["hap1_counts_plus"]  / x["total_plus"] - 0.5
-		else:
-			return -x["hap2_counts_plus"]  / x["total_plus"] + 0.5
-		return
-
-	def helper_func_minus(x):
-		if x["total_minus"]==0: # try this for filtering
-			return 0
-		elif x["hap1_counts_minus"] >= x["hap2_counts_minus"]:
-			return x["hap1_counts_minus"]  / x["total_minus"] - 0.5
-		else:
-			return -x["hap2_counts_minus"]  / x["total_minus"] + 0.5
-		return
-
 
 	df["skew_plus"] = df.apply(helper_func_plus, axis = 1)
 	df["skew_minus"] = df.apply(helper_func_minus, axis = 1)
@@ -175,7 +177,6 @@ for j in range(len(rna_files)):
 	plt.scatter(df["total_plus"], abs(df["skew_plus"]),s=8,lw=0.05,color=df["color_plus"],edgecolor="black")
 	plt.scatter(df["total_minus"], abs(df["skew_minus"]),s=8,lw=0.05,color=df["color_minus"],edgecolor="black")
 	plt.xlim([0,5000])
-	plt.show()
 	plt.close()
 	###
 	regions=[
@@ -187,7 +188,7 @@ for j in range(len(rna_files)):
 	        ["10",0,135534747],
 	        ["10",18500000,21000000],
 	        ["10",75000000,81000000],
-	        ["10",108000000,112000000]
+	        ["10",108000000,112000000],
 	        ["1",187047872,187088572], ## regions that matt validated with fish
 			["1",187194601,187239328],
  			["1",187416000,187459201],

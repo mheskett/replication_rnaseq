@@ -11,6 +11,7 @@ import matplotlib.pyplot as plt
 import pybedtools
 import scipy.stats
 import glob
+import pickle
 from matplotlib.collections import PatchCollection
 from matplotlib.patches import Rectangle
 import statsmodels.api as sm
@@ -81,6 +82,10 @@ def helper_func(x):
         return -x["hap2_counts"]  / x["total_reads"] + 0.5
     return
 
+
+
+###
+model = pickle.load(open("eb.variance.coding.model.sav", 'rb'))
 arm_dict = get_arms(cytoband)
 
 rna_files=["/Users/mike/replication_rnaseq/all.final.data/gm12878.rep1.vlincs.all.bed"]
@@ -95,13 +100,20 @@ for i in range(len(rna_files)):
     add_binom_pval(df)
     dfs += [df]
 df = pd.concat(dfs)
-df = df[df["total_reads"]>=15]
+df = df[df["total_reads"]>=10]
 print("number TLs in gm12878",len(df))
-f,ax=plt.subplots(1,1,figsize=(2.5,4))
-ax.scatter(np.log2(df["total_reads"]),abs(df["skew"]),c="red",s=20,lw=0.2,edgecolor="black")
-ax.scatter(np.log2(df[df["chrom"]!="X"]["total_reads"]),abs(df[df["chrom"]!="X"]["skew"]),c="mediumblue",s=20,lw=0.2,edgecolor="black")
+df["significant_deviation"] = df.apply(lambda x: True if abs(x["hap1_counts"] - x["total_reads"]/2) >= model.predict(np.array([x["total_reads"]]).reshape(1,-1))*2.5 else False,
+    axis=1)
+df_auto = df[df["chrom"]!="X"] 
+df_auto["color"] = [(0,0,1,1) if x==True else (0,0,1,0.1) for x in df_auto["significant_deviation"]]
+df["color"] = [(1,0,0,1) if x==True else (1,0,0,0.1) for x in df["significant_deviation"]]
+
+f,ax=plt.subplots(1,1,figsize=(5,2.5))
+ax.scatter(np.log2(df[df["chrom"]=="X"]["total_reads"]),abs(df[df["chrom"]=="X"]["skew"]),c=df[df["chrom"]=="X"]["color"],s=20,lw=0.2,edgecolor="black")
+ax.scatter(np.log2(df_auto["total_reads"]),abs(df_auto["skew"]),c=df_auto["color"],s=20,lw=0.2,edgecolor="black")
 ax.set_ylim([0,0.5])
 # ax.set_xticks([])
 plt.savefig("fig1.scatter.png",
             dpi=400,transparent=True, bbox_inches='tight', pad_inches = 0)
-plt.show()
+print(" num autosomal TLs with normal Z method: ",len(df_auto[df_auto["significant_deviation"]==True]))
+print("bases tLE with moraml Z method: ", sum_bases(df_auto[df_auto["significant_deviation"]==True]))
