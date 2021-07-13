@@ -101,6 +101,14 @@ for i in range(len(rna_files)):
     dfs += [df]
 df = pd.concat(dfs)
 df = df[df["total_reads"]>=10]
+#############################
+
+
+
+
+
+
+####################
 print("number TLs in gm12878",len(df))
 df["significant_deviation"] = df.apply(lambda x: True if abs(x["hap1_counts"] - x["total_reads"]/2) >= model.predict(np.array([x["total_reads"]]).reshape(1,-1))*2.5 else False,
     axis=1)
@@ -117,3 +125,35 @@ plt.savefig("fig1.scatter.png",
             dpi=400,transparent=True, bbox_inches='tight', pad_inches = 0)
 print(" num autosomal TLs with normal Z method: ",len(df_auto[df_auto["significant_deviation"]==True]))
 print("bases tLE with moraml Z method: ", sum_bases(df_auto[df_auto["significant_deviation"]==True]))
+print("number DAE TLs per megabase ", len(df_auto[df_auto["significant_deviation"]==True])/3000)
+##################
+
+df_auto.to_csv("gm12878.rep1.vlincs.dae.list.bed",sep="\t")
+
+for i in range(len(chromosomes)):
+    f,ax = plt.subplots(1,1,figsize=(10,2),sharex=False)
+    plt.suptitle(chromosomes[i])
+    # tmp = nonswitchers[nonswitchers["chrom"]==chromosomes[i]]
+    # ax.scatter(tmp["start"],tmp["skew"],c=tmp["color"],zorder=1,lw=0.2,edgecolor="black",s=30)
+    ax.axhline(y=0,linestyle="--",lw=0.4,c="black")
+    ax.set_xlim([0, chromosome_length[chromosomes[i]]])
+    ax.set_ylim([-.52,.52])
+    ax.set_yticks(np.arange(-0.5,.6,.1))
+    ax.set_xticks(np.linspace(0, chromosome_length[chromosomes[i]], 16))
+    tmp  = df_auto[df_auto["chrom"]==chromosomes[i]]
+    for index,row in tmp[(tmp["chrom"]==chromosomes[i])].iterrows():
+        rect=Rectangle((row["start"], row["skew"]-.05), width=row["stop"]-row["start"], height=0.1,
+                     facecolor=row["color"],fill=False,hatch="/",edgecolor=row["color"])
+        ax.add_patch(rect)
+    plt.savefig(os.path.basename(rna_files[0])+"vlinc.only."+str(chromosomes[i])+".png",
+        dpi=400,transparent=True, bbox_inches='tight', pad_inches = 0)
+    plt.close()
+
+
+#### do intergenic analysis plot
+df_genes = pd.read_csv("/Users/mike/replication_rnaseq/scripts/ucsc.genes.cds.only.filtered.bed",sep="\t",header=None,index_col=None,
+    names=["chrom","start","stop","name","score","strand"])
+print(df_genes.drop_duplicates(["chrom","start","stop"]))
+
+
+

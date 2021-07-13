@@ -1,30 +1,21 @@
-import os
-import re
 import csv
+import os
 import numpy as np
 import pandas as pd
-import argparse
-import re
 from matplotlib.patches import Rectangle
 import seaborn as sns
 import matplotlib.pyplot as plt
 import pybedtools
 import scipy.stats
-import seaborn as sns
 from scipy.stats import norm
-
-from sys import argv
-import glob
+import pickle
 import statsmodels.api as sm
-from sklearn.cluster import KMeans
 from matplotlib.collections import PatchCollection
 from matplotlib.patches import Rectangle
 import statsmodels.api as sm
 import statsmodels.stats.multitest as mt
 chromosomes = ["1","2","3","4","5","6","7","8","9","10","11","12",
                 "13","14","15","16","17","18","19","20","21","22","X"]
-autosomes = ["1","2","3","4","5","6","7","8","9","10","11","12",
-                "13","14","15","16","17","18","19","20","21","22"]
 arms = ["p","q"]
 #### for arm level data to skip over centromeres                
 cytoband = pd.read_table("/Users/mike/replication_rnaseq/scripts/cytoband.nochr.hg19.bed",sep="\t",
@@ -50,8 +41,8 @@ chromosome_length = {"1":249250621,
 "19":59128983,
 "20":63025520,
 "21":48129895,
-"22":51304566}#,
-#"X":155270560}
+"22":51304566,
+"X":155270560}
 
 def intersect_tables(df1,df2):
     ### return all df1 rows that intersect df2 by >0bs
@@ -152,10 +143,14 @@ def smooth_vector(x,y):
     return y_smooth
 
 arm_dict = get_arms(cytoband)
+############## get the repliseq with logr diff for each sample
 all_files_repli = ["/Users/mike/replication_rnaseq/all.final.data/bouha.10.repli.500kb.bed",
 "/Users/mike/replication_rnaseq/all.final.data/bouha.2.repli.500kb.bed",
 "/Users/mike/replication_rnaseq/all.final.data/gm12878.4.repli.500kb.bed",
 "/Users/mike/replication_rnaseq/all.final.data/gm12878.5.repli.500kb.bed"]
+all_files_repli = ["/Users/mike/replication_rnaseq/all.final.data/bouha.10.repli.500kb.bed",
+"/Users/mike/replication_rnaseq/all.final.data/bouha.2.repli.500kb.bed"]
+
 filenames_repli=[os.path.basename(x)[0:15] for x in all_files_repli]
 repli_li = []
 for i in range(len(all_files_repli)):
@@ -181,45 +176,72 @@ repli_df.loc[:,"logr"] = repli_df.apply(lambda x: np.log2((x["hap1_early"]+x["ha
 sig_repli = np.percentile(a = repli_df[repli_df["chrom"]!="X"]["logr_diff_abs"], q = 95)
 repli_df["sig_repli"]=["True" if x > sig_repli else "False" for x in repli_df["logr_diff_raw"]]
 repli_df["arm"] = repli_df.apply(lambda x: "q" if (x["stop"] > arm_dict[x["chrom"]][0]) & (x["stop"] <= arm_dict[x["chrom"]][1]) else "p", axis=1)
-color_vector = ["Red" if (row["logr_hap1"] >= row["logr_hap2"]) else "Blue" for index,row in repli_df.iterrows() ] # red if hap1 early, blue if hap2 early
+color_vector = ["Red" if (row["logr_hap1"] >= row["logr_hap2"]) else "mediumblue" for index,row in repli_df.iterrows() ] # red if hap1 early, blue if hap2 early
 repli_df["repli_color"] = color_vector
-asynchronous_regions = repli_df[repli_df["sig_repli"]=="True"]
+asynchronous_regions = repli_df[repli_df["sig_repli"]=="True"] ## percentile  hmethod
 #####
 zscore = lambda x: (x - x.mean()) / x.std()
-
-# for i in repli_df["samples"].unique():
-#     mean=repli_df[(repli_df["chrom"]!="X")&(repli_df["sample"]==i)]["logr_diff_abs"].mean()
-#     std=repli_df[(repli_df["chrom"]!="X")&(repli_df["sample"]==i)]["logr_diff_abs"].std()
-
-### this is figure 4a
-
 repli_df = repli_df[repli_df["chrom"]!="X"]
 repli_df["logr_diff_abs_sample_zscore"] = repli_df.groupby("sample")["logr_diff_abs"].transform(zscore)
-print(repli_df)
-samples=repli_df["sample"].unique()
+asynchronous_regions = repli_df[repli_df["logr_diff_abs_sample_zscore"]>=2.5]
 
-for i in range(len(samples)):
-	for j in range(len(autosomes)):
-		f,ax = plt.subplots(1,1,figsize=(10,2))
-		df_chrom_p = repli_df[(repli_df["sample"]==samples[i])&(repli_df["chrom"]==autosomes[j])&(repli_df["arm"]=="p")]
-		df_chrom_q = repli_df[(repli_df["sample"]==samples[i])&(repli_df["chrom"]==autosomes[j])&(repli_df["arm"]=="q")]
-		print(df_chrom_p)
-		print(df_chrom_q)
-		max_val = max(repli_df[(repli_df["sample"]==samples[i])&(repli_df["chrom"]==autosomes[j])]["logr_diff_abs_sample_zscore"])
-		min_val = min(repli_df[(repli_df["sample"]==samples[i])&(repli_df["chrom"]==autosomes[j])]["logr_diff_abs_sample_zscore"])
-		ax.plot(df_chrom_p["start"],df_chrom_p["logr_diff_abs_sample_zscore"],c="black")
-		ax.plot(df_chrom_q["start"],df_chrom_q["logr_diff_abs_sample_zscore"],c="black")
 
-		for index,row in df_chrom_p[(df_chrom_p["logr_diff_abs_sample_zscore"]>=2.5)].iterrows():
-			rect=Rectangle((row["start"],min_val),width=row["stop"]-row["start"],height=max_val+abs(min_val),
-				facecolor=row["repli_color"],alpha=0.6,fill="True")
-			ax.add_patch(rect)		
-		for index,row in df_chrom_q[(df_chrom_q["logr_diff_abs_sample_zscore"]>=2.5)].iterrows():
-			rect=Rectangle((row["start"],min_val),width=row["stop"]-row["start"],height=max_val+abs(min_val),
-				facecolor=row["repli_color"],alpha=0.6,fill="True")
-			ax.add_patch(rect)
-		ax.set_ylim([min_val,max_val])
-		ax.set_xlim([0,chromosome_length[autosomes[j]]])
-		ax.set_xticks(np.linspace(0,chromosome_length[autosomes[j]],16))
-		# plt.show()
-		plt.savefig(samples[i]+"as.repli."+str(autosomes[j])+".png",dpi=400,transparent=True, bbox_inches='tight', pad_inches = 0)
+
+### now get all the TLs an DAE TLs in EB2 and EB10
+vlinc_files=["/Users/mike/replication_rnaseq/all.final.data/bouha.2.all.bouha.vlinc.calls.bed",
+# "/Users/mike/replication_rnaseq/all.final.data/bouha.3.all.bouha.vlinc.calls.bed",
+# "/Users/mike/replication_rnaseq/all.final.data/bouha.4.all.bouha.vlinc.calls.bed",
+"/Users/mike/replication_rnaseq/all.final.data/bouha.10.all.bouha.vlinc.calls.bed"]#,
+# "/Users/mike/replication_rnaseq/all.final.data/bouha.13.all.bouha.vlinc.calls.bed",
+# "/Users/mike/replication_rnaseq/all.final.data/bouha.15.all.bouha.vlinc.calls.bed"]
+dfs = []
+for i in range(len(vlinc_files)):
+    df = pd.read_csv(vlinc_files[i],sep="\t",
+                            names= ["chrom","start","stop","name","rpkm","strand","l1_fraction","hap1_counts","hap2_counts"],
+                            dtype = {"chrom":str,"start":int,"stop":int,"hap1_counts":int,"hap2_counts":int})
+    df["total_reads"] = df["hap1_counts"] + df["hap2_counts"]
+    df["skew"] = df.apply(helper_func, axis = 1)
+    df["sample"] = os.path.basename(vlinc_files[i])[0:8]
+    add_binom_pval(df)
+    dfs += [df]
+df = pd.concat(dfs)
+unique_genes = list(df["name"].drop_duplicates())
+switchers = [] # list of rows that are switchers
+nonswitchers=[]
+df_significant_rows = df[df["binom_pval"]<=0.001]
+df_nonsignificant_rows = df[df["binom_pval"] >=0.001]
+model = pickle.load(open("eb.variance.coding.model.sav", 'rb'))
+df["significant_deviation"] = df.apply(lambda x: True if abs(x["hap1_counts"] - x["total_reads"]/2) >= model.predict(np.array([x["total_reads"]]).reshape(1,-1))*2.5 else False,
+    axis=1)
+df_significant_rows = df[df["significant_deviation"]==True]
+df_nonsignificant_rows = df[df["significant_deviation"]==False]
+df=df[df["total_reads"]>=10]
+
+### switchers algorithm
+for i in range(len(unique_genes)):
+    samples = df_significant_rows[df_significant_rows["name"]==unique_genes[i]]
+    # samples = samples[(samples["binom_pval_plus"]<=0.05) | (samples["binom_pval_minus"] <=0.05)]
+    if len(samples)<=1:
+        continue
+    # samples = samples.reset_index(drop=True)
+    # print(samples)
+    hap1_skew,hap2_skew= False,False
+    for index,row in samples.iterrows():
+        if (row["skew"]>=0.1):
+            hap1_skew = True
+        if (row["skew"]<=-0.1):
+            hap2_skew = True
+    if hap1_skew and hap2_skew:
+        switchers += [samples]
+    elif hap1_skew ^ hap2_skew:
+        nonswitchers += [samples]
+switchers = pd.concat(switchers)
+color_dict = {"bouha.4.":"r","bouha.15":"c","bouha.10":"orange","bouha.3.":"g",
+"bouha.2.":"b","bouha.13":"green"}
+switchers["color"]= [color_dict[x] for x in switchers["sample"]]
+df["color"]=[color_dict[x] for x in df["sample"]]
+###################
+
+
+
+## quantile normalize hap1 and hap2?

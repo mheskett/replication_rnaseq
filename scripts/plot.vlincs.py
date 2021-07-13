@@ -113,30 +113,8 @@ for index,row in df.iterrows():
 			color_vector +=[ (0,0,1,.05) ]
 	if (row["fdr_reject"]==False) & (row["chrom"]=="X"):
 			color_vector +=[ (0,0,1,.05)]
-# color_vector= []
-# for index,row in df.iterrows():
-# 	if (row["binom_pval"]<=.05) & (abs(row["skew"]>0.1)) & (row["chrom"]!="X"):
-# 			color_vector +=[ (0,0,1,1) ]
-# 	if (row["binom_pval"]<=.05) & (abs(row["skew"]>0.1)) & (row["chrom"]=="X"):
-# 			color_vector +=[ (1,0,0,1) ]
-# 	if (row["binom_pval"]<=.05) & (abs(row["skew"]<=0.1)) & (row["chrom"]!="X"):
-# 			color_vector +=[ (0,0,1,.05) ]
-# 	if (row["binom_pval"]<=.05) & (abs(row["skew"]<=0.1)) & (row["chrom"]=="X"):
-# 			color_vector +=[ (1,0,0,.05) ]
-# 	if (row["binom_pval"]>.05) & (row["chrom"]!="X"):
-# 			color_vector +=[ (0,0,1,.05) ]
-# 	if (row["binom_pval"]>.05) & (row["chrom"]=="X"):
-# 			color_vector +=[ (0,0,1,.05)]
+
 df["color"] = color_vector
-## example plots
-## filtering
-f,ax=plt.subplots(figsize=(6,3))
-plt.scatter(np.log2(df[df["chrom"]!="X"]["total_reads"]), abs(df[df["chrom"]!="X"]["skew"]),s=15,lw=0.05,color=df[df["chrom"]!="X"]["color"],edgecolor="black")
-plt.scatter(np.log2(df[df["chrom"]=="X"]["total_reads"]), abs(df[df["chrom"]=="X"]["skew"]),s=15,lw=0.05,color=df[df["chrom"]=="X"]["color"],edgecolor="black")
-plt.xlim([3,16])
-plt.xticks(range(3,17))
-plt.savefig(os.path.basename("gm12878.parent.rpkm.skew")+".png",dpi=400,transparent=True, bbox_inches='tight', pad_inches = 0)
-###
 
 for i in range(len(chromosomes)):
 	f,ax = plt.subplots(1,1,figsize=(10,2),sharex=False)

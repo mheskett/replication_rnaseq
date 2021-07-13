@@ -125,7 +125,36 @@ ax.set_ylim([0,0.5])
 # ax.set_xticks([])
 plt.savefig("fig1.scatter.png",
 			dpi=400,transparent=True, bbox_inches='tight', pad_inches = 0)
-plt.show()
+# plt.show()
+#################
+## fig 1c 
+for i in range(len(chromosomes)):
+	f,ax=plt.subplots(1,1,figsize=(10,2))
+	ax.axhline(y=0,linestyle="--",lw=0.4,c="black")
+	ax.set_xlim([0, chromosome_length[chromosomes[i]]])
+	ax.set_ylim([-0.52,0.52])
+	ax.set_xticks(np.linspace(start,stop, 16))
+	ax.set_yticks([-0.5,-.25,0,.25,.5])
+	print(np.linspace(start,stop,4))
+## vlincs########################
+	vlincs_tmp = df_vlinc[(df_vlinc["chrom"]==chrom) & (df_vlinc["start"]>=start-2000000) & 
+					(df_vlinc["stop"]<=stop+2000000)]
+	########################## vlincs
+	ax.axhline(y=0,linestyle="--",c="black",lw=0.2)
+	print(vlincs_tmp)
+	for index,row in vlincs_tmp.iterrows():
+		rect=Rectangle((row["start"], row["skew"]-.05), width=row["stop"]-row["start"], height=0.1,
+	                 facecolor=row["color"], edgecolor=row["color"],hatch="/",fill=False) ## plot vlincs as rectangles
+		ax.add_patch(rect)
+	plt.savefig("gm12878.rep1.protein.vlinc."+str(chrom)+"."+str(start)+"."+str(stop)+".png",
+	dpi=400,transparent=True, bbox_inches='tight', pad_inches = 0)
+	plt.close()
+
+
+
+
+
+#######
 #######
 tmp = pybedtools.BedTool.from_dataframe(df[(df["fdr_reject"]==True) & (abs(df["skew"])>=0.1)].loc[:,["chrom","start","stop","name","rpkm","strand"]])
 merged_df = tmp.sort().merge().to_dataframe()

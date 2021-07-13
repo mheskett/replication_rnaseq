@@ -302,7 +302,7 @@ y_pred = model.predict(np.array(range(0,10000)).reshape(-1,1))
 min_deviation=[]
 for i in range(0,10000):
 	min_deviation += [model.predict(np.array([i]).reshape(1,-1))*2.5]
-plt.scatter(df_coding["total_reads"],abs(df_coding["hap1_counts"] - df_coding["total_reads"]/2),c=df_coding["color"],s=15,lw=0.02,edgecolor="black")
+plt.scatter(df_coding["total_reads"],abs(df_coding["hap1_counts"] - df_coding["total_reads"]/2),c="mediumblue",s=15,lw=0.02,edgecolor="black")
 # plt.plot(range(0,10000),[1/2*x for x in list(range(0,10000))],linestyle="--")
 plt.plot(range(0,10000),y_pred,linestyle="--")
 plt.plot(range(0,10000),min_deviation,linestyle="--",c="red")

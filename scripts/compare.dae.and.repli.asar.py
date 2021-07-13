@@ -168,6 +168,7 @@ for i in range(len(all_files_repli)):
     df_repli["sample"] = filenames_repli[i]
     repli_li.append(df_repli)
 repli_df = pd.concat(repli_li)
+
 repli_df.loc[:,"logr_hap1"] = repli_df.apply(lambda x: np.log2((x["hap1_early"]+1) / (x["hap1_late"]+1)), axis=1 )
 repli_df.loc[:,"logr_hap2"] = repli_df.apply(lambda x: np.log2((x["hap2_early"]+1) / (x["hap2_late"]+1)), axis=1 )
 repli_df.loc[:,"logr_diff_abs"] = abs(repli_df["logr_hap1"] - repli_df["logr_hap2"]) ## 
@@ -313,16 +314,18 @@ tmp1 = intersect_tables(df[(df["significant_deviation"]==True) & (df["chrom"]!="
 most_asrt = tmp1.sort_values(["logr_diff_abs1"]).head(20)
 sample_pairs = [("bouha.2.","bouha.2.repli.5"),("bouha.10","bouha.10.repli.")]
 ####
+plt.rc('xtick', labelsize=4)
+plt.rc('ytick', labelsize=8) 
 for i in range(len(sample_pairs)): 
     lnc_as = tmp1[(tmp1["sample"]==sample_pairs[i][0]) & (tmp1["sample1"]==sample_pairs[i][1])]
     most_asrt = lnc_as.sort_values(["logr_diff_abs1"]).head(20)
     for index,row in most_asrt.drop_duplicates(["chrom","start","stop"]).iterrows():
-        f,ax = plt.subplots(1,1,figsize=(4,2),sharex=False)
+        f,ax = plt.subplots(1,1,figsize=(2,2),sharex=False)
         start=row["start"]
         stop=row["stop"]
         chrom=str(row["chrom"])
         plt.suptitle(chrom+":"+sample_pairs[i][0])
-        ax.tick_params(axis='x', labelsize= 8)
+        ax.tick_params(axis='x', labelsize= 4)
         ax2=ax.twinx()
         ax2.axhline(y=0,linestyle="--",lw=0.4,c="black")
         ax2.set_xlim([max(0,start-2000000),stop+2000000])
@@ -331,7 +334,7 @@ for i in range(len(sample_pairs)):
 
         repli_tmp =repli_df[(repli_df["chrom"]==chrom)&(repli_df["sample"]==sample_pairs[i][1])]
         ## unsmoothed
-        ax.plot(repli_tmp["start"],repli_tmp["logr_diff_abs"],c="black",linewidth=2)#smooth_vector(list(bouha2["start"]),list(bouha2["logr_diff_abs"])))
+        ax.plot(repli_tmp["start"],repli_tmp["logr_diff_abs_sample"],c="black",linewidth=2)#smooth_vector(list(bouha2["start"]),list(bouha2["logr_diff_abs"])))
         ####
         for index2,row2 in most_asrt[(most_asrt["chrom"]==chrom) & (most_asrt["start"]==start) & (most_asrt["stop"]==stop) ].iterrows():
             rect=Rectangle((row2["start"], row2["skew"]-.05), width=row2["stop"]-row2["start"], height=0.1,
@@ -341,10 +344,11 @@ for i in range(len(sample_pairs)):
             rect=Rectangle((row3["start"], -5), width=row3["stop"]-row3["start"], height=8,
                          facecolor=row3["repli_color"],alpha=0.5,fill=True)   
             ax.add_patch(rect)
-
+        plt.rc('xtick', labelsize=4)
+        plt.rc('ytick', labelsize=8) 
         ##########0 
-        ax.set_ylim([0,max(max(repli_tmp[(repli_tmp["start"]>=start-3000000) & (repli_tmp["start"]<=stop+3000000)]["logr_diff_abs"]),
-            max(repli_tmp[(repli_tmp["start"]>=start-3000000) & (repli_tmp["start"]<=stop+3000000)]["logr_diff_abs"]) )+0.1])
+        ax.set_ylim([0,max(max(repli_tmp[(repli_tmp["start"]>=start-3000000) & (repli_tmp["start"]<=stop+3000000)]["logr_diff_abs_sample"]),
+            max(repli_tmp[(repli_tmp["start"]>=start-3000000) & (repli_tmp["start"]<=stop+3000000)]["logr_diff_abs_sample"]) )+0.1])
         plt.savefig("vlinc.logr.diff."+sample_pairs[i][0]+str(chrom)+"."+str(start)+"."+str(stop)+".png",
             dpi=400,transparent=True, bbox_inches='tight', pad_inches = 0)
         plt.close()
