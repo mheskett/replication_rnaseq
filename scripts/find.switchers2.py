@@ -93,24 +93,18 @@ for i in range(len(vlinc_files)):
 	dfs += [df]
 df = pd.concat(dfs)
 
-
-
-
 ######
-
-
 #######
 unique_genes = list(df["name"].drop_duplicates())
 switchers = [] # list of rows that are switchers
 nonswitchers=[]
-df_significant_rows = df[df["binom_pval"]<=0.001]
-df_nonsignificant_rows = df[df["binom_pval"] >=0.001]
+# df_significant_rows = df[df["binom_pval"]<=0.001]
+# df_nonsignificant_rows = df[df["binom_pval"] >=0.001]
 model = pickle.load(open("eb.variance.coding.model.sav", 'rb'))
-df["significant_deviation"] = df_coding.apply(lambda x: True if abs(x["hap1_counts"] - x["total_reads"]/2) >= model.predict(np.array([x["total_reads"]]).reshape(1,-1))*2.5 else False,
+df["significant_deviation"] = df.apply(lambda x: True if abs(x["hap1_counts"] - x["total_reads"]/2) >= model.predict(np.array([x["total_reads"]]).reshape(1,-1))*2.5 else False,
 	axis=1)
 df_significant_rows = df[df["significant_deviation"]==True]
 df_nonsignificant_rows = df[df["significant_deviation"]==False]
-
 
 ### switchers algorithm
 for i in range(len(unique_genes)):
@@ -148,10 +142,32 @@ genes = [x.split(",")[0] for x in genes ]
 # print(len(genes))
 #plotting shit
 
+
+
 color_dict = {"bouha.4.":"r","bouha.15":"c","bouha.10":"y","bouha.3.":"g",
 "bouha.2.":"b","bouha.13":"m"}
+hatch_ditct = {"bouha.4.":"//","bouha.15":"||","bouha.10":"\\\\","bouha.3.":"--",
+"bouha.2.":"oo","bouha.13":".."}
 switchers["color"]= [color_dict[x] for x in switchers["sample"]]
 nonswitchers["color"]= [color_dict[x] for x in nonswitchers["sample"]]
+switchers["hatch"] = [hatch_ditct[x] for x in switchers["sample"]]
+
+## big scatterplot
+switchers["unique_pos"] = [row["chrom"]+":"+str(row["start"]) for index,row in switchers.iterrows()]
+f,ax=plt.subplots(1,1,figsize=(10,2))
+ax.scatter(switchers["unique_pos"],switchers["skew"],c=switchers["color"],s=25,edgecolor="black",lw=0.1,zorder=3)
+for index,row in switchers.drop_duplicates(["unique_pos"]).iterrows():
+	ax.axvline(x=row["unique_pos"],linestyle="--",lw=0.4,c="black")
+plt.xticks(rotation = 315,fontsize=5)
+ax.margins(x=.015,y=0)
+ax.set_ylim([-0.52,.52])
+ax.axhline(y=0,linestyle="--",lw=0.4,c="black")
+ax.set_yticks([-0.5,-.25,0,.25,.5])
+plt.savefig("bouha.vlinc.switchers.all.png",
+		dpi=400,transparent=True, bbox_inches='tight', pad_inches = 0)
+plt.close()
+
+
 legend = [Line2D([0], [0], marker='o', color='w', label='gm12878.4',markerfacecolor='plum', markersize=10),
 Line2D([0], [0], marker='o', color='w', label='gm12878.5',markerfacecolor='olivedrab', markersize=10),
 Line2D([0], [0], marker='o', color='w', label='bouha13',markerfacecolor='r', markersize=10),
@@ -167,8 +183,8 @@ for i in range(len(chromosomes)):
 	plt.suptitle(chromosomes[i])
 	tmp = switchers[switchers["chrom"]==chromosomes[i]]
 	for index,row in tmp.iterrows():
-		rect=Rectangle((row["start"], row["skew"]-.05), width=row["stop"]-row["start"], height=0.1,
-	                 facecolor=row["color"], edgecolor=row["color"],hatch="/",fill=False) ## plot vlincs as rectangles
+		rect=Rectangle((row["start"], row["skew"]-.025), width=row["stop"]-row["start"], height=0.05,
+	                 facecolor=row["color"],fill=True) ## plot vlincs as rectangles
 		# rectvar = Rectangle((row["start"], row["skew"]-.05), width=row["stop"]-row["start"], height=0.16,
 	 #                 facecolor="gray", edgecolor="gray",hatch="/",fill=False) ## plot vlincs as rectangles
 		ax.add_patch(rect)
@@ -283,18 +299,17 @@ for index,row in unique_locations.iterrows():
 	ax.set_ylim([-.52,.52])
 	ax.tick_params(axis="x", labelsize=6,labelrotation=335) 
 	print("plotting vlincs ")
+	### july addition: make the rectangles thinner and add jitter?
 	for index,row in switchers[(switchers["chrom"]==chrom) & (switchers["start"]>=start-2000000) & (switchers["stop"]<=stop+2000000)
 					& (switchers["fdr_pval"]<=0.01)].iterrows():
-		rect=Rectangle((row["start"], row["skew"]-.05), width=row["stop"]-row["start"], height=0.1,
-                     facecolor=row["color"], edgecolor=row["color"],alpha=0.8,fill=False,hatch="/",lw=1)
+		rect=Rectangle((row["start"], row["skew"]-.025), width=row["stop"]-row["start"], height=0.05,
+                     facecolor=row["color"], edgecolor="black",alpha=1,fill=True,lw=0.5) #
 		ax.add_patch(rect)
 	plt.savefig("bouha.vlinc.switchers.region."+str(chrom)+"."+str(start)+".png",
 		dpi=400,transparent=True, bbox_inches='tight', pad_inches = 0)
 	plt.close()
 
-
 ###############
-
 
 all_files_repli = ["/Users/mike/replication_rnaseq/all.final.data/bouha.10.repli.500kb.bed",
 "/Users/mike/replication_rnaseq/all.final.data/bouha.2.repli.500kb.bed"]

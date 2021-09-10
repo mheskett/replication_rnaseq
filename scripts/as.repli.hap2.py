@@ -7,7 +7,6 @@ import seaborn as sns
 import matplotlib.pyplot as plt
 import pybedtools
 import matplotlib.patheffects as path_effects
-
 import scipy.stats
 from scipy.stats import norm
 import pickle
@@ -280,9 +279,9 @@ for index,row in tmp.drop_duplicates(["chrom","start","stop"]).iterrows():
         ax.add_patch(rect)
 
     hap1 = df_normalized_logr_hap1[(df_normalized_logr_hap1["chrom"]==chrom) 
-            &(df_normalized_logr_hap1["start"]>=start-3000000) & (df_normalized_logr_hap1["stop"]<=stop+3000000) ]
+            &(df_normalized_logr_hap1["start"]>=start-2000000) & (df_normalized_logr_hap1["stop"]<=stop+2000000) ]
     hap2 = df_normalized_logr_hap2[(df_normalized_logr_hap2["chrom"]==chrom)  
-        &(df_normalized_logr_hap2["start"]>=start-3000000) & (df_normalized_logr_hap2["stop"]<=stop+3000000)]
+        &(df_normalized_logr_hap2["start"]>=start-2000000) & (df_normalized_logr_hap2["stop"]<=stop+2000000)]
     ax.set_xlim([max(0,start-2000000),stop+2000000])
     ax.set_xticks(np.linspace(max(0,start-2000000),stop+2000000, 6))
     ax.set_ylim([min(min(hap1["bouha.2.repli.5"]),min(hap2["bouha.2.repli.5"]),min(hap1["bouha.10.repli."]),min(hap2["bouha.10.repli."])),
@@ -307,5 +306,5 @@ for index,row in tmp.drop_duplicates(["chrom","start","stop"]).iterrows():
 
     plt.close()
 
-
+## counter
 

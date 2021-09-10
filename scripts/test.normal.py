@@ -222,7 +222,7 @@ y_pred = model.predict(np.array(range(0,5000)).reshape(-1,1))
 min_deviation=[]
 for i in range(0,5000):
 	min_deviation += [model.predict(np.array([i]).reshape(1,-1))*2.5]
-plt.scatter(df["total_reads"],abs(df["hap1_counts"] - df["total_reads"]/2),c=df["color"],s=15,lw=0.02,edgecolor="black")
+plt.scatter(df["total_reads"],abs(df["hap1_counts"] - df["total_reads"]/2),c="mediumblue",s=15,lw=0.1,edgecolor="black")
 # plt.plot(range(0,10000),[1/2*x for x in list(range(0,10000))],linestyle="--")
 plt.plot(range(0,5000),y_pred,linestyle="--")
 plt.plot(range(0,5000),min_deviation,linestyle="--",c="red")
@@ -290,7 +290,7 @@ ax.scatter(reads_vector,
 plt.show()
 plt.close()
 ##############
-df_coding["color"] = ["red" if x<=0.01 else "blue" for x in df_coding["binom_pval"]]
+# df_coding["color"] = ["red" if x<=0.01 else "blue" for x in df_coding["binom_pval"]]
 x = np.array(df["total_reads"]).reshape((-1, 1))
 y = np.array(abs(df["hap1_counts"] - df["total_reads"]/2))
 model = LinearRegression()

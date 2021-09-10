@@ -10,7 +10,6 @@ import scipy.stats
 import matplotlib.pyplot as plt
 import pybedtools
 import scipy.stats
-import glob
 import pickle
 from matplotlib.collections import PatchCollection
 from matplotlib.patches import Rectangle
@@ -19,6 +18,13 @@ from matplotlib.lines import Line2D
 import statsmodels.stats.multitest as mt
 import pybedtools
 import statistics
+
+def closest_gene(df_lnc,df_coding):
+    a = pybedtools.BedTool.from_dataframe(df_lnc).sort()
+    b = pybedtools.BedTool.from_dataframe(df_coding).sort()
+    result = a.closest(b,d=True).to_dataframe(names=list(df_lnc.columns) + [x+'1' for x in df_coding.columns]+["dist"],
+        dtype={"chrom":str})
+    return result
 
 def intersect_tables(df1,df2):
     ### return all df1 rows that intersect df2 by >0bs
@@ -112,75 +118,11 @@ for i in range(len(rna_files)):
     dfs += [df]
 df = pd.concat(dfs)
 df = df[df["total_reads"]>=10]
-#############################
-####################
-print("number TLs in gm12878",len(df))
 df["significant_deviation"] = df.apply(lambda x: True if abs(x["hap1_counts"] - x["total_reads"]/2) >= model.predict(np.array([x["total_reads"]]).reshape(1,-1))*2.5 else False,
     axis=1)
 df_auto = df[df["chrom"]!="X"] 
-df_auto["color"] = [(0,0,1,1) if x==True else (0,0,1,0.1) for x in df_auto["significant_deviation"]]
-df["color"] = [(1,0,0,1) if x==True else (1,0,0,0.1) for x in df["significant_deviation"]]
 
-f,ax=plt.subplots(1,1,figsize=(5,2.5))
-ax.scatter(np.log2(df[df["chrom"]=="X"]["total_reads"]),abs(df[df["chrom"]=="X"]["skew"]),c=df[df["chrom"]=="X"]["color"],s=20,lw=0.2,edgecolor="black")
-ax.scatter(np.log2(df_auto["total_reads"]),abs(df_auto["skew"]),c=df_auto["color"],s=20,lw=0.2,edgecolor="black")
-ax.set_ylim([0,0.5])
-# ax.set_xticks([])
-plt.savefig("fig1.scatter.png",
-            dpi=400,transparent=True, bbox_inches='tight', pad_inches = 0)
-print(" num autosomal TLs with normal Z method: ",len(df_auto[df_auto["significant_deviation"]==True]))
-print("bases tLE with moraml Z method: ", sum_bases(df_auto[df_auto["significant_deviation"]==True]))
-print("number DAE TLs per megabase ", len(df_auto[df_auto["significant_deviation"]==True])/3000)
-##################
-
-df_auto.to_csv("gm12878.rep1.vlincs.dae.list.bed",sep="\t")
-
-for i in range(len(chromosomes)):
-    f,ax = plt.subplots(1,1,figsize=(10,2),sharex=False)
-    plt.suptitle(chromosomes[i])
-    # tmp = nonswitchers[nonswitchers["chrom"]==chromosomes[i]]
-    # ax.scatter(tmp["start"],tmp["skew"],c=tmp["color"],zorder=1,lw=0.2,edgecolor="black",s=30)
-    ax.axhline(y=0,linestyle="--",lw=0.4,c="black")
-    ax.set_xlim([0, chromosome_length[chromosomes[i]]])
-    ax.set_ylim([-.52,.52])
-    ax.set_yticks(np.arange(-0.5,.6,.1))
-    ax.set_xticks(np.linspace(0, chromosome_length[chromosomes[i]], 16))
-    tmp  = df_auto[df_auto["chrom"]==chromosomes[i]]
-    for index,row in tmp[(tmp["chrom"]==chromosomes[i])].iterrows():
-        rect=Rectangle((row["start"], row["skew"]-.05), width=row["stop"]-row["start"], height=0.1,
-                     facecolor=row["color"],fill=False,hatch="/",edgecolor=row["color"])
-        ax.add_patch(rect)
-    plt.savefig(os.path.basename(rna_files[0])+"vlinc.only."+str(chromosomes[i])+".png",
-        dpi=400,transparent=True, bbox_inches='tight', pad_inches = 0)
-    plt.close()
-
-plt.close()
-#### do intergenic analysis plot
-df_genes = pd.read_csv("/Users/mike/replication_rnaseq/scripts/ucsc.genes.cds.only.filtered.bed",sep="\t",header=None,index_col=None,
-    names=["chrom","start","stop","name","score","strand"])
-df_genes = df_genes.drop_duplicates(["chrom","start","strand"])
-
-lnc_intersect_coding = intersect_tables(df_auto[df_auto["significant_deviation"]==True],df_genes)
-
-lnc_start_to_coding_anything = [min(abs(row["start"]-row["start1"]),abs(row["start"]-row["stop1"])) 
-                                    if row["strand"]=="+" else min(abs(row["stop"]-row["start1"]),abs(row["stop"]-row["stop1"])) for index,row in lnc_intersect_coding.iterrows()]
-
-def closest_gene(df_lnc,df_coding):
-    a = pybedtools.BedTool.from_dataframe(df_lnc).sort()
-    b = pybedtools.BedTool.from_dataframe(df_coding).sort()
-    result = a.closest(b,d=True).to_dataframe(names=list(df_lnc.columns) + [x+'1' for x in df_coding.columns]+["dist"])
-    return result
-
-dae_lnc_closest_gene = closest_gene(df_auto[df_auto["significant_deviation"]==True],df_genes)
-print("average distance of DAE TLs to coding gene: ",statistics.mean(dae_lnc_closest_gene["dist"]))
-print("median distance of DAE TLs to coding gene: ",statistics.median(dae_lnc_closest_gene["dist"]))
-
-# print(dae_lnc_closest_gene)
-# plt.figure()
-# sns.kdeplot(dae_lnc_closest_gene["dist"],cut=0)
-
-# plt.show()
-
+#####################################'
 ## do a quick plot of coding & lncrna
 ####
 coding_files=["gm12878.rep1.protein.coding.all.counts.bed"]
@@ -204,6 +146,9 @@ df_coding = df_coding[df_coding["chrom"]!="X"]
 df_coding["significant_deviation"] = df_coding.apply(lambda x: True if abs(x["hap1_counts"] - x["total_reads"]/2) >= model.predict(np.array([x["total_reads"]])\
     .reshape(1,-1))*2.5 else False,
     axis=1)
+
+#####
+# plot all lncs and genes
 for i in range(len(chromosomes)):
     f,ax = plt.subplots(1,1,figsize=(10,2),sharex=False)
     plt.suptitle(chromosomes[i])
@@ -218,23 +163,56 @@ for i in range(len(chromosomes)):
     
     for index,row in tmp_lnc.iterrows():
         rect=Rectangle((row["start"], row["skew"]-.05), width=row["stop"]-row["start"], height=0.1,
-                     facecolor="blue",fill=False,hatch="/",edgecolor="blue")
+                     facecolor="mediumblue",fill=True,edgecolor="black")
         ax.add_patch(rect)
     tmp_coding = df_coding[(df_coding["chrom"]==chromosomes[i]) & (df_coding["significant_deviation"]==True)]
     for index,row in tmp_coding.iterrows():
         rect=Rectangle((row["start"], row["skew"]-.05), width=row["stop"]-row["start"], height=0.1,
-                     facecolor="red",fill=False,hatch="/",edgecolor="red")
+                     facecolor="red",fill=True,hatch="/",edgecolor="red")
         ax.add_patch(rect)
     # plt.savefig(os.path.basename(rna_files[0])+"vlinc.only."+str(chromosomes[i])+".png",
     #     dpi=400,transparent=True, bbox_inches='tight', pad_inches = 0)
-    plt.show()
+    # plt.show()
     plt.close()
 ## what about this: get closest gene and check cis-trans relationships with lncRNAs
 dae_lnc_coding = closest_gene(df_auto[df_auto["significant_deviation"]==True],df_coding[df_coding["significant_deviation"]==True])
 dae_lnc_coding["cis_trans"] = dae_lnc_coding.apply(lambda x: "cis" if np.sign(x["skew"])==np.sign(x["skew1"]) else "trans",axis=1)
-print(dae_lnc_coding.groupby("cis_trans").count())
-print("average distance for lncRNA that have cis dae coding genes nearest to them ",dae_lnc_coding[dae_lnc_coding["cis_trans"]=="cis"]["dist"].mean())
-print("average distance for lncRNA that have trans dae coding genes nearest to them ",dae_lnc_coding[dae_lnc_coding["cis_trans"]=="trans"]["dist"].mean())
+cis_genes = dae_lnc_coding[dae_lnc_coding["cis_trans"]=="cis"].sort_values(["dist"])
+cis_genes_head = cis_genes.head(30)
+print(cis_genes_head)
+for index,row in cis_genes_head.iterrows():
+    f,ax = plt.subplots(1,1,figsize=(4,2),sharex=False)
+    chrom=row["chrom"]
+    start=row["start"]
+    stop=row["stop"]
+    print(chrom,start,stop)
+    # plt.suptitle()
+    # tmp = nonswitchers[nonswitchers["chrom"]==chromosomes[i]]
+    # ax.scatter(tmp["start"],tmp["skew"],c=tmp["color"],zorder=1,lw=0.2,edgecolor="black",s=30)
+    ax.axhline(y=0, linestyle="--", lw=0.4, c="black")
+    ax.set_xlim([start-100000, stop+100000])
+    ax.set_ylim([-.52,.52])
+    ax.set_yticks(np.arange(-0.5,.6,.1))
+    ax.set_xticks(np.linspace(start-100000, stop+100000, 4))
+    tmp_lnc = df_auto[(df_auto["chrom"]==chrom) & (df_auto["start"].between(start-100000,start+100000)) ]
+    for index2,row2 in tmp_lnc.iterrows():
+        rect=Rectangle((row2["start"], row2["skew"]-.025), width=row2["stop"]-row2["start"], height=0.05,
+                     facecolor="red" if row2["strand"]=="+" else "blue",fill=True,edgecolor="black",lw=0.5)
+        ax.add_patch(rect)
+        ax.text(row2["start"]+10000,row2["skew"]-0.1,str("TL:")+str(chrom),size=10) ## to get the gene names
 
-print("median distance for lncRNA that have cis dae coding genes nearest to them ",dae_lnc_coding[dae_lnc_coding["cis_trans"]=="cis"]["dist"].median())
-print("median distance for lncRNA that have trans dae coding genes nearest to them ",dae_lnc_coding[dae_lnc_coding["cis_trans"]=="trans"]["dist"].median())
+    tmp_coding = df_coding[(df_coding["chrom"]==chrom) & (df_coding["start"].between(start-1000000,start+1000000)) ]
+    for index3,row3 in tmp_coding.iterrows():
+        rect=Rectangle((row3["start"], row3["skew"]-.025), width=row3["stop"]-row3["start"], height=0.05,
+                     facecolor="red" if row2["strand"]=="+" else "blue",fill=True,edgecolor="black",lw=0.5)
+        ax.add_patch(rect)
+        ax.text(row3["start"]+10000,row3["skew"]-0.1,row3["name"][0:15],size=10) ## to get the gene names
+    # plt.savefig(os.path.basename(rna_files[0])+"vlinc.only."+str(chromosomes[i])+".png",
+    #     dpi=400,transparent=True, bbox_inches='tight', pad_inches = 0)
+    plt.show()
+    plt.close()
+        # x = range(start,stop)
+        #     y = range(row["start"],row["stop"])
+        #     # if range(max(x[0], y[0]), min(x[-1], y[-1])+1):
+        #     #   ax.text(row["start"]+10000,row["skew"]-0.1,row["name"][0:15],size=5) ## to get the gene names
+
