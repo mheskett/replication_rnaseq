@@ -200,6 +200,24 @@ zscore = lambda x: (x - x.mean()) / x.std()
 repli_df = repli_df[repli_df["chrom"]!="X"]
 repli_df = repli_df[repli_df.loc[:,["hap1_early","hap2_early","hap1_late","hap2_late"]].sum(axis=1)>=200]
 repli_df["logr_diff_abs_sample_zscore"] = repli_df.groupby("sample")["logr_diff_abs"].transform(zscore)
-all_sample_dart = repli_df[repli_df["logr_diff_abs_sample_zscore"]>=2.5]
-print(all_sample_dart.sort_values(["chrom","start","sample"]))
-sns.heatmap()
+all_sample_dart = repli_df[repli_df["logr_diff_abs_sample_zscore"]>=3]
+print(all_sample_dart)
+# zscores_table = repli_df.pivot(index=["chrom","start","stop"],columns="sample",values="logr_diff_abs_sample_zscore")
+# sig_zscores_table = all_sample_dart.pivot(index=["chrom","start","stop"],columns="sample",values="logr_diff_abs_sample_zscore").reset_index()
+sig_dart_table = all_sample_dart.pivot(index=["chrom","start","stop"],columns="sample",values="logr_diff_raw").fillna(0)
+sig_dart_table_1 = sig_dart_table.reset_index()
+sig_dart_table_1 = sig_dart_table_1[sig_dart_table_1["chrom"]=="1"].set_index(["chrom","start","stop"])
+
+plt.figure(figsize=(6,1))
+plt.xticks(rotation = 315) # Rotates X-Axis Ticks by 45-degrees
+sns.heatmap(sig_dart_table_1.transpose(),cmap="RdBu_r",vmin=-.01,vmax=.01)
+plt.savefig("all.samples.dart.chr1.png", dpi=400, transparent=True, bbox_inches='tight', pad_inches = 0)
+plt.close()
+
+plt.figure(figsize=(10,1))
+plt.xticks(rotation = 315) # Rotates X-Axis Ticks by 45-degrees
+sns.clustermap(sig_dart_table.transpose(),cmap="RdBu_r",vmin=-.01,vmax=.01,col_cluster=True,row_cluster=False,cbar=False)
+plt.savefig("all.samples.dart.test.png", dpi=400, transparent=True, bbox_inches='tight', pad_inches = 0)
+plt.close()
+
+

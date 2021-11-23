@@ -210,102 +210,80 @@ repli_df= repli_df[repli_df["chrom"]!="X"]
 #### look for sample specific e/l switchers
 #### plot individual cell lines non-normalized to look for AS-RT
 #### find AS-RT switching
-df_normalized_logr_hap1 = quantile_normalize(repli_df.pivot(index=["chrom","start","stop"],columns="sample",values="logr_hap1")).reset_index()
-df_normalized_logr_hap2 = quantile_normalize(repli_df.pivot(index=["chrom","start","stop"],columns="sample",values="logr_hap2")).reset_index()
-df_normalized_logr_hap1["bouha.2.bouha.10"] = df_normalized_logr_hap1["bouha.2.repli.5"] - df_normalized_logr_hap1["bouha.10.repli."]
-df_normalized_logr_hap1["gm12878.4.gm12878.5"] = df_normalized_logr_hap1["gm12878.4.repli"] - df_normalized_logr_hap1["gm12878.5.repli"]
-df_normalized_logr_hap2["bouha.2.bouha.10"] = df_normalized_logr_hap2["bouha.2.repli.5"] - df_normalized_logr_hap2["bouha.10.repli."]
-df_normalized_logr_hap2["gm12878.4.gm12878.5"] = df_normalized_logr_hap2["gm12878.4.repli"] - df_normalized_logr_hap2["gm12878.5.repli"]
-print(df_normalized_logr_hap1)
-print(df_normalized_logr_hap2)
-df_normalized_logr_hap1["arm"] = df_normalized_logr_hap1.apply(lambda x: "q" if (x["stop"] > arm_dict[x["chrom"]][0]) & (x["stop"] <= arm_dict[x["chrom"]][1]) else "p", axis=1)
-df_normalized_logr_hap2["arm"] = df_normalized_logr_hap2.apply(lambda x: "q" if (x["stop"] > arm_dict[x["chrom"]][0]) & (x["stop"] <= arm_dict[x["chrom"]][1]) else "p", axis=1)
+df_normalized_logr_hap1 = repli_df.pivot(index=["chrom","start","stop"],columns="sample",values="logr_hap1").add_suffix(".hap1")
+df_normalized_logr_hap2 = repli_df.pivot(index=["chrom","start","stop"],columns="sample",values="logr_hap2").add_suffix(".hap2")
+df_normalized_combined = quantile_normalize(pd.concat([df_normalized_logr_hap1,df_normalized_logr_hap2])).reset_index()
+df_normalized_combined = df_normalized_combined.set_index(["chrom","start","stop"])
+df_normalized_combined["std"] = df_normalized_combined.std(axis=1)
+df_normalized_combined["std_gm12878"] = df_normalized_combined.loc[:,[x for x in df_normalized_combined.columns if "gm" in x]].std(axis=1)
+df_normalized_combined["std_bouha"] = df_normalized_combined.loc[:,[x for x in df_normalized_combined.columns if "bouha" in x ]].std(axis=1)
 
-df_logr = repli_df.pivot(index=["chrom","start","stop"],columns="sample",values="logr").reset_index()
-df_logr["arm"] = df_logr.apply(lambda x: "q" if (x["stop"] > arm_dict[x["chrom"]][0]) & (x["stop"] <= arm_dict[x["chrom"]][1]) else "p", axis=1)
-####
-## calculate the sum of the absolute difference between hap1s and hap2s
 zscore = lambda x: (x - x.mean()) / x.std()
+df_normalized_combined["std_zscore"] = np.log2(df_normalized_combined["std"]).transform(zscore)
+df_normalized_combined["gm_std_zscore"] = np.log2(df_normalized_combined["std_gm12878"]).transform(zscore)
+df_normalized_combined["bouha_std_zscore"] = np.log2(df_normalized_combined["std_bouha"]).transform(zscore)
 
-sum_difference_gm = abs(df_normalized_logr_hap1["gm12878.4.gm12878.5"]) + abs(df_normalized_logr_hap2["gm12878.4.gm12878.5"])
-sum_difference_eb = abs(df_normalized_logr_hap1["bouha.2.bouha.10"]) + abs(df_normalized_logr_hap2["bouha.2.bouha.10"]) 
-df_normalized_logr_hap1["bouha.epigenetic.difference.raw"] = sum_difference_eb
-df_normalized_logr_hap1["gm.epigenetic.difference.raw"] = sum_difference_gm
-
-df_normalized_logr_hap1["bouha.epigenetic.difference"] = sum_difference_eb.transform(zscore)
-df_normalized_logr_hap1["gm.epigenetic.difference"] = sum_difference_gm.transform(zscore)
-###
-
-plt.subplots(figsize=(2,2))
-sns.kdeplot(df_normalized_logr_hap1["bouha.epigenetic.difference"],cut=0)
-sns.kdeplot(df_normalized_logr_hap1["gm.epigenetic.difference"],cut=0)
-plt.xlim([-3.5,3.5])
-plt.savefig("sum.epigenetic.differences.png",dpi=400,transparent=True, bbox_inches='tight', pad_inches = 0)
-plt.close()
-####
-
-color_dict = {"bouha.4.":"r","bouha.15":"c","bouha.10":"orange","bouha.3.":"g",
-"bouha.2.":"mediumblue","bouha.13":"green"}
-comparisons = ["bouha.2.bouha.10","gm12878.4.gm12878.5"]
-
-#######
-tmp = intersect_tables(df[df["significant_deviation"]==True],df_normalized_logr_hap1[df_normalized_logr_hap1["bouha.epigenetic.difference"]>=2]).sort_values(["bouha.epigenetic.difference1"],ascending=False)
-print(tmp)
-tmp["color"]=[color_dict[x] for x in tmp["sample"]]
-
-for index,row in tmp.drop_duplicates(["chrom","start","stop"]).iterrows():
-    f,ax = plt.subplots(1,1,figsize=(2,2),sharex=False)
-    plt.rc('xtick', labelsize=4) 
-    plt.rc('ytick', labelsize=8) 
-    start=row["start"]
-    stop=row["stop"]
-    chrom=str(row["chrom"])
-    plt.suptitle(chrom)
-    ax_lnc = ax.twinx()
-    for index2, row2 in tmp[(tmp["chrom"]==chrom) & (tmp["start"]==start) & (tmp["stop"]==stop) ].iterrows():
-        rect=Rectangle((row2["start"], row2["skew"]-.05), width=row2["stop"]-row2["start"], height=0.05,
-                     facecolor=row2["color"], edgecolor="black",fill=True,lw=.5)
-        shadow = Shadow(rect, 10000,-0.0015 )                                        
-        ax_lnc.add_patch(shadow)
-        ax_lnc.add_patch(rect)
-    # ax_lnc.axhline(y=0,linestyle="--",lw=0.4,c="black")
-    ax_lnc.set_xlim([max(0,start-2000000),stop+2000000])
-    ax_lnc.set_ylim([-0.6,0.6])
-    ax_lnc.set_yticks([-0.5,-.25,0,.25,.5])
-    ax_lnc.set_xticks(np.linspace(max(0,start-2000000),stop+2000000, 6))
-
-    for index3,row3 in df_normalized_logr_hap1[(df_normalized_logr_hap1["chrom"]==chrom) & (df_normalized_logr_hap1["bouha.epigenetic.difference"]>=2)].iterrows():
-        rect=Rectangle((row3["start"]-250000, -10), width=row3["stop"]-row3["start"]+500000, height=20,
-                 facecolor="lightgray",alpha=1,fill=True) 
+df_normalized_combined = df_normalized_combined.reset_index()
+df_normalized_combined["arm"] = df_normalized_combined.apply(lambda x: "q" if (x["stop"] > arm_dict[x["chrom"]][0]) & (x["stop"] <= arm_dict[x["chrom"]][1]) else "p", axis=1)
+# sns.kdeplot(df_normalized_combined["std_zscore"],cut=0)
+# plt.show()
+for j in range(len(chromosomes)):
+    f,ax=plt.subplots(figsize=(10,2))
+    for i in filenames_repli:
+        ax.set_xlim([0,chromosome_length[chromosomes[j]]])
+        ax.set_ylim([-4,4])
+        ax.plot(df_normalized_combined[(df_normalized_combined["chrom"]==chromosomes[j]) & (df_normalized_combined["arm"]=="p")]["start"],
+                    df_normalized_combined[(df_normalized_combined["chrom"]==chromosomes[j]) & (df_normalized_combined["arm"]=="p")][i+".hap1"],
+                    c="blue",alpha=1,lw=0.5)
+        ax.plot(df_normalized_combined[(df_normalized_combined["chrom"]==chromosomes[j]) & (df_normalized_combined["arm"]=="p")]["start"],
+                    df_normalized_combined[(df_normalized_combined["chrom"]==chromosomes[j])& (df_normalized_combined["arm"]=="p")][i+".hap2"],
+                    c="red",alpha=1,lw=0.5)
+        ax.plot(df_normalized_combined[(df_normalized_combined["chrom"]==chromosomes[j]) & (df_normalized_combined["arm"]=="q")]["start"],
+                    df_normalized_combined[(df_normalized_combined["chrom"]==chromosomes[j]) & (df_normalized_combined["arm"]=="q")][i+".hap1"],
+                    c="blue",alpha=1,lw=0.5)
+        ax.plot(df_normalized_combined[(df_normalized_combined["chrom"]==chromosomes[j]) & (df_normalized_combined["arm"]=="q")]["start"],
+                    df_normalized_combined[(df_normalized_combined["chrom"]==chromosomes[j])& (df_normalized_combined["arm"]=="q")][i+".hap2"],
+                    c="red",alpha=1,lw=0.5)
+    for index,row in df_normalized_combined[(df_normalized_combined["gm_std_zscore"]>=2.5) & (df_normalized_combined["chrom"]==chromosomes[j])].iterrows():
+        rect=Rectangle((row["start"], -10), width=row["stop"]-row["start"], height=20,
+                     facecolor="yellow",fill=True,alpha=0.6)       
+        ax.add_patch(rect)
+    for index,row in df_normalized_combined[(df_normalized_combined["bouha_std_zscore"]>=2.5) & (df_normalized_combined["chrom"]==chromosomes[j])].iterrows():
+        rect=Rectangle((row["start"], -10), width=row["stop"]-row["start"], height=20,
+                     facecolor="green",fill=True,alpha=0.6)       
         ax.add_patch(rect)
 
-    hap1 = df_normalized_logr_hap1[(df_normalized_logr_hap1["chrom"]==chrom) 
-            &(df_normalized_logr_hap1["start"]>=start-2000000) & (df_normalized_logr_hap1["stop"]<=stop+2000000) ]
-    hap2 = df_normalized_logr_hap2[(df_normalized_logr_hap2["chrom"]==chrom)  
-        &(df_normalized_logr_hap2["start"]>=start-2000000) & (df_normalized_logr_hap2["stop"]<=stop+2000000)]
-    ax.set_xlim([max(0,start-2000000),stop+2000000])
-    ax.set_xticks(np.linspace(max(0,start-2000000),stop+2000000, 6))
-    ax.set_ylim([min(min(hap1["bouha.2.repli.5"]),min(hap2["bouha.2.repli.5"]),min(hap1["bouha.10.repli."]),min(hap2["bouha.10.repli."])),
-        max(max(hap1["bouha.2.repli.5"]),max(hap2["bouha.2.repli.5"]),max(hap1["bouha.10.repli."]),max(hap2["bouha.10.repli."]))])
+    plt.savefig("all.samples.each.allele."+str(chromosomes[j])+".png",
+            dpi=400,transparent=True, bbox_inches='tight', pad_inches = 0)
+    plt.close()    
 
-    #### normalized repliseq
-    ax.plot(hap1["start"],
-            smooth_vector(hap1["start"],hap1["bouha.2.repli.5"]),
-        c="mediumblue",lw=1,zorder=1)
-    ax.plot(hap2["start"],
-        smooth_vector(hap2["start"],hap2["bouha.2.repli.5"]),
-        c="mediumblue",linestyle="--",lw=1,zorder=2)
-    ax.plot(hap1["start"],
-            smooth_vector(hap1["start"],hap1["bouha.10.repli."]),
-        c="orange",lw=1,zorder=1)
-    ax.plot(hap2["start"],
-        smooth_vector(hap2["start"],hap2["bouha.10.repli."]),
-        c="orange",linestyle="--",lw=1,zorder=2)
 
-    plt.savefig("fig4.epigenetic.diff2.bouha."+str(chrom)+"."+str(start)+ ".png",
-        dpi=400,transparent=True, bbox_inches='tight', pad_inches = 0)
+all_sig = df_normalized_combined[(df_normalized_combined["gm_std_zscore"]>=2.5) | (df_normalized_combined["bouha_std_zscore"]>=2.5)]
+for index,row in all_sig.iterrows():
+    f,ax=plt.subplots(figsize=(10,2))
+    ax.set_xlim([row["start"]-5000000,row["stop"]+5000000])
+    tmp = df_normalized_combined[(df_normalized_combined["start"].between(row["start"]-6000000,row["stop"]+6000000)) & (df_normalized_combined["chrom"]==row["chrom"])]
+    ymin = tmp.set_index(["chrom","start","stop"]).min(axis=1).min()
+    ymax = tmp.set_index(["chrom","start","stop"]).max(axis=1).max()
+    ax.set_ylim([ymin,ymax])
+    ax.set_xticks = np.linspace(max(0,row["start"]-5000000),row["stop"]+5000000, 6)
 
+    for i in filenames_repli:
+        ax.plot(tmp["start"],
+                    tmp[i+".hap1"],
+                    c="blue",alpha=1,lw=0.5,linestyle="--" if "bouha" in i else "solid")
+        ax.plot(tmp["start"],
+                    tmp[i+".hap2"],
+                    c="red",alpha=1,lw=0.5,linestyle="--" if "bouha" in i else "solid")
+    for index2,row2 in tmp.iterrows():
+        if row2["gm_std_zscore"]>=2.5:
+            rect=Rectangle((row2["start"], -10), width=row2["stop"]-row2["start"], height=20,
+                         facecolor="darkgreen",fill=True,alpha=0.5)       
+            ax.add_patch(rect)
+        if row2["bouha_std_zscore"]>=2.5:
+            rect=Rectangle((row2["start"], -10), width=row2["stop"]-row2["start"], height=20,
+                         facecolor="gold",fill=True,alpha=0.5)
+            ax.add_patch(rect)
+    plt.savefig("all.samples.each.allele."+str(row["chrom"])+"-"+str(row["start"])+".png",
+            dpi=400,transparent=True, bbox_inches='tight', pad_inches = 0)
     plt.close()
-
-## counter
-
