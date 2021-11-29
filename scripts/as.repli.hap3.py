@@ -2,20 +2,20 @@ import csv
 import os
 import numpy as np
 import pandas as pd
-from matplotlib.patches import Rectangle
 import seaborn as sns
 import matplotlib.pyplot as plt
 import pybedtools
 import matplotlib.patheffects as path_effects
 import scipy.stats
-from scipy.stats import norm
-import pickle
 import statsmodels.api as sm
+import pickle
 from matplotlib.collections import PatchCollection
 from matplotlib.patches import Rectangle
 from matplotlib.patches import Shadow
 import statsmodels.api as sm
 import statsmodels.stats.multitest as mt
+from sklearn.cluster import KMeans
+
 def add_binom_pval(df):
     df["binom_pval"] = df.apply(lambda row: scipy.stats.binom_test(row["hap1_counts"],
                             row["hap1_counts"]+row["hap2_counts"],
@@ -138,6 +138,8 @@ chromosome_length = {"1":249250621,
 "X":155270560}
 ## load vlincs
 ### now get all the TLs an DAE TLs in EB2 and EB10
+
+#### get all 6 repliseq and lncrna files in this analysis!!!
 vlinc_files=["/Users/mike/replication_rnaseq/all.final.data/bouha.2.all.bouha.vlinc.calls.bed",
 "/Users/mike/replication_rnaseq/all.final.data/bouha.3.all.bouha.vlinc.calls.bed",
 "/Users/mike/replication_rnaseq/all.final.data/bouha.4.all.bouha.vlinc.calls.bed",
@@ -166,7 +168,7 @@ df["significant_deviation"] = df.apply(lambda x: True if abs(x["hap1_counts"] - 
 df_significant_rows = df[df["significant_deviation"]==True]
 df_nonsignificant_rows = df[df["significant_deviation"]==False]
 df=df[df["total_reads"]>=10]
-
+print(df_significant_rows)
 ###
 ##############
 all_files_repli = ["/Users/mike/replication_rnaseq/all.final.data/bouha.10.repli.500kb.bed",
@@ -209,56 +211,178 @@ repli_df["repli_color"] = color_vector
 
 ## remove X
 repli_df= repli_df[repli_df["chrom"]!="X"]
+repli_df = repli_df.dropna(how="any",axis="index")
 #############################
-#### tasks. plot all repli samples normalized with allele specific and non allele specific. normalized
-#### look for sample specific e/l switchers
-#### plot individual cell lines non-normalized to look for AS-RT
-#### find AS-RT switching
+### we want to find any regions that have high variation of individual haplotypes(outlier of std dev per haplotype?), 
+### or high difference between all hap1s and all hap2s (difference of mean?)
 df_normalized_logr_hap1 = quantile_normalize(repli_df.pivot(index=["chrom","start","stop"],columns="sample",values="logr_hap1")).reset_index()
 df_normalized_logr_hap2 = quantile_normalize(repli_df.pivot(index=["chrom","start","stop"],columns="sample",values="logr_hap2")).reset_index()
-df_normalized_logr_hap1["bouha.2.bouha.10"] = df_normalized_logr_hap1["bouha.2.repli.5"] - df_normalized_logr_hap1["bouha.10.repli."]
-df_normalized_logr_hap1["gm12878.4.gm12878.5"] = df_normalized_logr_hap1["gm12878.4.repli"] - df_normalized_logr_hap1["gm12878.5.repli"]
-df_normalized_logr_hap2["bouha.2.bouha.10"] = df_normalized_logr_hap2["bouha.2.repli.5"] - df_normalized_logr_hap2["bouha.10.repli."]
-df_normalized_logr_hap2["gm12878.4.gm12878.5"] = df_normalized_logr_hap2["gm12878.4.repli"] - df_normalized_logr_hap2["gm12878.5.repli"]
-print(df_normalized_logr_hap1)
-print(df_normalized_logr_hap2)
+
+print("df_normalizedlogrihap1",df_normalized_logr_hap1)
+## youre accidentally including the chrom coordinates in setd dev calculation here dumbo
+df_normalized_logr_hap1["std_dev"] = df_normalized_logr_hap1.filter(like="bouha",axis=1).std(axis="columns")
+df_normalized_logr_hap2["std_dev"] = df_normalized_logr_hap2.filter(like="bouha",axis=1).std(axis="columns")
 df_normalized_logr_hap1["arm"] = df_normalized_logr_hap1.apply(lambda x: "q" if (x["stop"] > arm_dict[x["chrom"]][0]) & (x["stop"] <= arm_dict[x["chrom"]][1]) else "p", axis=1)
 df_normalized_logr_hap2["arm"] = df_normalized_logr_hap2.apply(lambda x: "q" if (x["stop"] > arm_dict[x["chrom"]][0]) & (x["stop"] <= arm_dict[x["chrom"]][1]) else "p", axis=1)
 
-df_logr = repli_df.pivot(index=["chrom","start","stop"],columns="sample",values="logr").reset_index()
-df_logr["arm"] = df_logr.apply(lambda x: "q" if (x["stop"] > arm_dict[x["chrom"]][0]) & (x["stop"] <= arm_dict[x["chrom"]][1]) else "p", axis=1)
+
+plt.subplots(figsize=(2,2))
+sns.kdeplot(df_normalized_logr_hap1["std_dev"],cut=0)
+plt.savefig("std.dev.hap1.png",dpi=400,transparent=True, bbox_inches='tight', pad_inches = 0)
+plt.close()
+
+plt.subplots(figsize=(2,2))
+sns.kdeplot(df_normalized_logr_hap2["std_dev"],cut=0)
+plt.savefig("std.dev.hap2.png",dpi=400,transparent=True, bbox_inches='tight', pad_inches = 0)
+plt.close()
+
 ####
 ## calculate the sum of the absolute difference between hap1s and hap2s
 zscore = lambda x: (x - x.mean()) / x.std()
 
-sum_difference_gm = abs(df_normalized_logr_hap1["gm12878.4.gm12878.5"]) + abs(df_normalized_logr_hap2["gm12878.4.gm12878.5"])
-sum_difference_eb = abs(df_normalized_logr_hap1["bouha.2.bouha.10"]) + abs(df_normalized_logr_hap2["bouha.2.bouha.10"]) 
-df_normalized_logr_hap1["bouha.epigenetic.difference.raw"] = sum_difference_eb
-df_normalized_logr_hap1["gm.epigenetic.difference.raw"] = sum_difference_gm
+# sum_difference_gm = abs(df_normalized_logr_hap1["gm12878.4.gm12878.5"]) + abs(df_normalized_logr_hap2["gm12878.4.gm12878.5"])
+# sum_difference_eb = abs(df_normalized_logr_hap1["bouha.2.bouha.10"]) + abs(df_normalized_logr_hap2["bouha.2.bouha.10"]) 
+# df_normalized_logr_hap1["bouha.epigenetic.difference.raw"] = sum_difference_eb
+# df_normalized_logr_hap1["gm.epigenetic.difference.raw"] = sum_difference_gm
+abs_diff_of_hap_means = abs(df_normalized_logr_hap1.filter(like="bouha",axis=1).mean(axis="columns") - df_normalized_logr_hap2.filter(like="bouha",axis=1).mean(axis="columns"))
+df_normalized_logr_hap1["std_dev_zscore"] = df_normalized_logr_hap1["std_dev"].transform(zscore)
+df_normalized_logr_hap2["std_dev_zscore"] = df_normalized_logr_hap2["std_dev"].transform(zscore)
+df_normalized_logr_hap1["zscore_abs_diff_hap_means"] = abs_diff_of_hap_means.transform(zscore) # same thing as below
+df_normalized_logr_hap2["zscore_abs_diff_hap_means"] = abs_diff_of_hap_means.transform(zscore) # same thing as above
 
-df_normalized_logr_hap1["bouha.epigenetic.difference"] = sum_difference_eb.transform(zscore)
-df_normalized_logr_hap1["gm.epigenetic.difference"] = sum_difference_gm.transform(zscore)
+# df_normalized_logr_hap1["gm.epigenetic.difference"] = sum_difference_gm.transform(zscore)
 ###
 
-plt.subplots(figsize=(2,2))
-sns.kdeplot(df_normalized_logr_hap1["bouha.epigenetic.difference"],cut=0)
-sns.kdeplot(df_normalized_logr_hap1["gm.epigenetic.difference"],cut=0)
-plt.xlim([-3.5,3.5])
-plt.savefig("sum.epigenetic.differences.png",dpi=400,transparent=True, bbox_inches='tight', pad_inches = 0)
-plt.close()
+# plt.subplots(figsize=(2,2))
+# sns.kdeplot(df_normalized_logr_hap1["std_dev_zscore"],c="blue",cut=0)
+# plt.xlim([-3.5,3.5])
+# plt.savefig("std.dev.zscores1.png",dpi=400,transparent=True, bbox_inches='tight', pad_inches = 0)
+# plt.close()
+# ####
+# plt.subplots(figsize=(2,2))
+# sns.kdeplot(df_normalized_logr_hap2["std_dev_zscore"],c="orange",cut=0)
+# plt.xlim([-3.5,3.5])
+# plt.savefig("std.dev.zscores2.png",dpi=400,transparent=True, bbox_inches='tight', pad_inches = 0)
+# plt.close()
+# ####
+# plt.subplots(figsize=(2,2))
+# sns.kdeplot(df_normalized_logr_hap1["zscore_abs_diff_hap_means"],c="blue",cut=0)
+# plt.xlim([-3.5,3.5])
+# plt.savefig("zscore_abs_diff_means.png",dpi=400,transparent=True, bbox_inches='tight', pad_inches = 0)
+# plt.close()
+
+color_dict_repli = {"bouha.10.repli.":"red",
+"bouha.2.repli.5":"cyan",
+"bouha.3.repli.5":"yellow",
+"bouha.4.repli.5":"green",
+"bouha.13.repli.":"plum",
+"bouha.15.repli.":"olivedrab"}
+### just plot all regions with high std dev
+combined = pd.concat([df_normalized_logr_hap1[df_normalized_logr_hap1["std_dev_zscore"]>=2.6],
+                    df_normalized_logr_hap2[df_normalized_logr_hap2["std_dev_zscore"]>=2.6]],axis=0)
+                    # df_normalized_logr_hap1[df_normalized_logr_hap1["zscore_abs_diff_hap_means"]>=3]],axis=0)
+
+
+# combined = df_normalized_logr_hap1[df_normalized_logr_hap1["zscore_abs_diff_hap_means"]>=3]
+print("combined",combined)
+print(combined[combined.isna()])## dono why so many nans......
+print(df_normalized_logr_hap1[df_normalized_logr_hap1["zscore_abs_diff_hap_means"]>=3])
+combined = combined.dropna(how="any",axis="index")
+## take the combined data frame and cluster each site as a "sample" and each RT value as an observation
+all_cluster_labels = []
+for index,row in combined.sort_values("std_dev_zscore",ascending=False).iterrows():
+    X = row.filter(like="bouha").to_numpy().reshape(-1,1)
+    kmeans = KMeans(n_clusters=2, random_state=0).fit(X)
+    all_cluster_labels +=[kmeans.labels_]
+
+# sns.clustermap(all_cluster_labels,col_cluster=True,row_cluster=False,figsize=(6,2))
+# plt.show()
+### also just try clustering samples heirarchically based on features
+# df_normalized_logr_hap1 = df_normalized_logr_hap1.dropna(how="any",axis="index")
+# sns.clustermap(df_normalized_logr_hap1[df_normalized_logr_hap1["std_dev_zscore"]>=2.6].filter(like="bouha").transpose(),
+#     col_cluster=False,
+#     row_cluster=True,
+#     cmap="RdBu_r",vmax=2,vmin=-2,
+#     figsize=(6,2))
+# plt.show()
+# plt.close()
+# plt.subplots(figsize=(12,4))
+# df_normalized_logr_hap2 = df_normalized_logr_hap2.dropna(how="any",axis="index")
+# sns.clustermap(df_normalized_logr_hap2[df_normalized_logr_hap2["std_dev_zscore"]>=2.6].filter(like="bouha").transpose(),
+#     col_cluster=False,
+#     row_cluster=True,
+#     cmap="RdBu_r",vmax=2,vmin=-2,
+#     figsize=(12,4))
+# plt.show()
+# plt.close()
+
+
+######
+##### keep all this!!!
+
+# for index,row in combined.sort_values("std_dev_zscore",ascending=False).iterrows():
+#     start=row["start"]
+#     stop=row["stop"]
+#     chrom=row["chrom"]
+#     # print("start: ",start,"stop",stop,"chrom",chrom)
+#     f,ax=plt.subplots(figsize=(10,2))
+#     for i in range(len(filenames_repli)):
+#         hap1 = df_normalized_logr_hap1[(df_normalized_logr_hap1["chrom"]==chrom) 
+#                 &(df_normalized_logr_hap1["start"]>=start-6000000) & (df_normalized_logr_hap1["stop"]<=stop+6000000) ]
+#         hap2 = df_normalized_logr_hap2[(df_normalized_logr_hap2["chrom"]==chrom)  
+#             &(df_normalized_logr_hap2["start"]>=start-6000000) & (df_normalized_logr_hap2["stop"]<=stop+6000000)]
+#         ax.plot(hap1["start"],
+#                 smooth_vector(hap1["start"],hap1[filenames_repli[i]]),
+#             c=color_dict_repli[filenames_repli[i]],lw=1,zorder=1)
+#         ax.plot(hap2["start"],
+#             smooth_vector(hap2["start"],hap2[filenames_repli[i]]),
+#             c=color_dict_repli[filenames_repli[i]],linestyle="--",lw=1,zorder=2)
+
+#         rect=Rectangle((start-250000, -10), width=stop-start+500000, height=20,
+#                  facecolor="lightgray",alpha=1,fill=True) 
+#         ax.add_patch(rect)
+#         ax.set_xlim([max(0,start-6000000),stop+6000000])
+#         ax.set_xticks(np.linspace(max(0,start-6000000),stop+6000000, 12))
+#         ax.set_ylim([-3.5,3.5])
+#         plt.suptitle("chromosome: "+str(chrom)+". Std. dev. 1: "+str( df_normalized_logr_hap1[(df_normalized_logr_hap1["chrom"]==chrom) 
+#                                                                     & (df_normalized_logr_hap1["start"]==start)]["std_dev"].values )
+#                         +"std. dev 2: "+ str( df_normalized_logr_hap2[(df_normalized_logr_hap2["chrom"]==chrom) 
+#                                                                     & (df_normalized_logr_hap2["start"]==start)]["std_dev"].values))
+#     plt.savefig("bouha.all.repliseq.outliers."+str(chrom)+"."+str(start)+ ".png",
+#             dpi=400,transparent=True, bbox_inches='tight', pad_inches = 0)
+#     plt.close()
+
+
+
 ####
+color_dict = {"bouha.4.":"green",
+"bouha.15":"olivedrab",
+"bouha.10":"red",
+"bouha.3.":"yellow",
+"bouha.2.":"cyan",
+"bouha.13":"plum"}
 
-color_dict = {"bouha.4.":"r","bouha.15":"c","bouha.10":"orange","bouha.3.":"g",
-"bouha.2.":"mediumblue","bouha.13":"green"}
-comparisons = ["bouha.2.bouha.10","gm12878.4.gm12878.5"]
+color_dict_repli = {"bouha.10.repli.":"red",
+"bouha.2.repli.5":"cyan",
+"bouha.3.repli.5":"yellow",
+"bouha.4.repli.5":"green",
+"bouha.13.repli.":"plum",
+"bouha.15.repli.":"olivedrab"}
+# #######
+tmp = intersect_tables(df[df["significant_deviation"]==True],
+                df_normalized_logr_hap1[(df_normalized_logr_hap1["std_dev_zscore"]>=2) | (df_normalized_logr_hap1["zscore_abs_diff_hap_means"]>=2)])#.sort_values(["bouha.epigenetic.difference1"],ascending=False)
 
-#######
-tmp = intersect_tables(df[df["significant_deviation"]==True],df_normalized_logr_hap1[df_normalized_logr_hap1["bouha.epigenetic.difference"]>=2]).sort_values(["bouha.epigenetic.difference1"],ascending=False)
-print(tmp)
-tmp["color"]=[color_dict[x] for x in tmp["sample"]]
+tmp2 = intersect_tables(df[df["significant_deviation"]==True],
+                df_normalized_logr_hap2[df_normalized_logr_hap2["std_dev_zscore"]>=2])
 
+tmp = pd.concat([tmp,tmp2])
+print("tmp table length ",len(tmp))
+# tmp.to_csv("testing.txt",sep="\t")
+tmp["color"]=[color_dict[x] for x in tmp["sample"]] # color dict for rna files
+
+print("starting repli and asar plotting loops")
 for index,row in tmp.drop_duplicates(["chrom","start","stop"]).iterrows():
-    f,ax = plt.subplots(1,1,figsize=(2,2),sharex=False)
+    f,ax = plt.subplots(1,1,figsize=(10,2),sharex=False)
     plt.rc('xtick', labelsize=4) 
     plt.rc('ytick', labelsize=8) 
     start=row["start"]
@@ -272,43 +396,51 @@ for index,row in tmp.drop_duplicates(["chrom","start","stop"]).iterrows():
         shadow = Shadow(rect, 10000,-0.0015 )                                        
         ax_lnc.add_patch(shadow)
         ax_lnc.add_patch(rect)
+    print("done adding asars")
     # ax_lnc.axhline(y=0,linestyle="--",lw=0.4,c="black")
-    ax_lnc.set_xlim([max(0,start-2000000),stop+2000000])
+    ax_lnc.set_xlim([max(0,start-4000000),stop+4000000])
     ax_lnc.set_ylim([-0.6,0.6])
     ax_lnc.set_yticks([-0.5,-.25,0,.25,.5])
-    ax_lnc.set_xticks(np.linspace(max(0,start-2000000),stop+2000000, 6))
-
-    for index3,row3 in df_normalized_logr_hap1[(df_normalized_logr_hap1["chrom"]==chrom) & (df_normalized_logr_hap1["bouha.epigenetic.difference"]>=2)].iterrows():
+    # ax_lnc.set_xticks(np.linspace(max(0,start-6000000),stop+6000000, 12))
+    ### fix the gray shadowing
+    for index3,row3 in df_normalized_logr_hap1[(df_normalized_logr_hap1["chrom"]==chrom) & (df_normalized_logr_hap1["std_dev_zscore"]>=2)
+                                                | (df_normalized_logr_hap1["zscore_abs_diff_hap_means"]>=2)].iterrows():
         rect=Rectangle((row3["start"]-250000, -10), width=row3["stop"]-row3["start"]+500000, height=20,
                  facecolor="lightgray",alpha=1,fill=True) 
         ax.add_patch(rect)
-
+    for index4,row4 in df_normalized_logr_hap2[(df_normalized_logr_hap2["chrom"]==chrom) & (df_normalized_logr_hap2["std_dev_zscore"]>=2)].iterrows():
+        rect=Rectangle((row4["start"]-250000, -10), width=row4["stop"]-row4["start"]+500000, height=20,
+                 facecolor="lightgray",alpha=1,fill=True) 
+        ax.add_patch(rect)
+    print("done adding asars, shadows, and background highlights")
     hap1 = df_normalized_logr_hap1[(df_normalized_logr_hap1["chrom"]==chrom) 
-            &(df_normalized_logr_hap1["start"]>=start-2000000) & (df_normalized_logr_hap1["stop"]<=stop+2000000) ]
+            &(df_normalized_logr_hap1["start"]>=start-4000000) & (df_normalized_logr_hap1["stop"]<=stop+4000000) ]
     hap2 = df_normalized_logr_hap2[(df_normalized_logr_hap2["chrom"]==chrom)  
-        &(df_normalized_logr_hap2["start"]>=start-2000000) & (df_normalized_logr_hap2["stop"]<=stop+2000000)]
-    ax.set_xlim([max(0,start-2000000),stop+2000000])
-    ax.set_xticks(np.linspace(max(0,start-2000000),stop+2000000, 6))
-    ax.set_ylim([min(min(hap1["bouha.2.repli.5"]),min(hap2["bouha.2.repli.5"]),min(hap1["bouha.10.repli."]),min(hap2["bouha.10.repli."])),
-        max(max(hap1["bouha.2.repli.5"]),max(hap2["bouha.2.repli.5"]),max(hap1["bouha.10.repli."]),max(hap2["bouha.10.repli."]))])
-
+            &(df_normalized_logr_hap2["start"]>=start-4000000) & (df_normalized_logr_hap2["stop"]<=stop+4000000)]
+    print("merely subsetting into hap1 and hap2")
+    ax.set_xlim([max(0,start-4000000),stop+4000000])
+    ax.set_xticks(np.linspace(max(0,start-4000000),stop+4000000, 12))
+    # print(hap1)
+    # ax.set_ylim([min(hap1.filter(like="bouha",axis=1).values.min(),hap2.filter(like="bouha",axis=1).values.min()),
+    #     max(hap1.filter(like="bouha",axis=1).values.max(),hap2.filter(like="bouha",axis=1).values.max())])
+    ax.set_ylim([-3.5,3.5])
+    ax.axhline(y=0,linestyle="--",c="black",lw=0.4)
+    print("how could you be getting stuck before this and after the previous....")
     #### normalized repliseq
-    ax.plot(hap1["start"],
-            smooth_vector(hap1["start"],hap1["bouha.2.repli.5"]),
-        c="mediumblue",lw=1,zorder=1)
-    ax.plot(hap2["start"],
-        smooth_vector(hap2["start"],hap2["bouha.2.repli.5"]),
-        c="mediumblue",linestyle="--",lw=1,zorder=2)
-    ax.plot(hap1["start"],
-            smooth_vector(hap1["start"],hap1["bouha.10.repli."]),
-        c="orange",lw=1,zorder=1)
-    ax.plot(hap2["start"],
-        smooth_vector(hap2["start"],hap2["bouha.10.repli."]),
-        c="orange",linestyle="--",lw=1,zorder=2)
-
-    plt.savefig("fig4.epigenetic.diff2.bouha."+str(chrom)+"."+str(start)+ ".png",
+    ## this needs to be looped and colors fixed?
+    for i in range(len(filenames_repli)):
+        print("starting to plot ",filenames_repli[i])
+        print("printing hap1 df",hap1)
+        print("printing hap2 df",hap2)
+        ax.plot(hap1["start"],
+                smooth_vector(hap1["start"],hap1[filenames_repli[i]]),
+            c=color_dict_repli[filenames_repli[i]],lw=1,zorder=1)
+        ax.plot(hap2["start"],
+            smooth_vector(hap2["start"],hap2[filenames_repli[i]]),
+            c=color_dict_repli[filenames_repli[i]],linestyle="--",lw=1,zorder=2)
+        print("plotted sample ",filenames_repli[i])
+    plt.savefig("fig4.epigenetic.diff3.all.bouha."+str(chrom)+"."+str(start)+ ".png",
         dpi=400,transparent=True, bbox_inches='tight', pad_inches = 0)
-
     plt.close()
 
 ## counter

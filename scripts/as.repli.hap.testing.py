@@ -139,11 +139,11 @@ chromosome_length = {"1":249250621,
 ## load vlincs
 ### now get all the TLs an DAE TLs in EB2 and EB10
 vlinc_files=["/Users/mike/replication_rnaseq/all.final.data/bouha.2.all.bouha.vlinc.calls.bed",
-# "/Users/mike/replication_rnaseq/all.final.data/bouha.3.all.bouha.vlinc.calls.bed",
-# "/Users/mike/replication_rnaseq/all.final.data/bouha.4.all.bouha.vlinc.calls.bed",
-"/Users/mike/replication_rnaseq/all.final.data/bouha.10.all.bouha.vlinc.calls.bed"]#,
-# "/Users/mike/replication_rnaseq/all.final.data/bouha.13.all.bouha.vlinc.calls.bed",
-# "/Users/mike/replication_rnaseq/all.final.data/bouha.15.all.bouha.vlinc.calls.bed"]
+"/Users/mike/replication_rnaseq/all.final.data/bouha.3.all.bouha.vlinc.calls.bed",
+"/Users/mike/replication_rnaseq/all.final.data/bouha.4.all.bouha.vlinc.calls.bed",
+"/Users/mike/replication_rnaseq/all.final.data/bouha.10.all.bouha.vlinc.calls.bed",
+"/Users/mike/replication_rnaseq/all.final.data/bouha.13.all.bouha.vlinc.calls.bed",
+"/Users/mike/replication_rnaseq/all.final.data/bouha.15.all.bouha.vlinc.calls.bed"]
 dfs = []
 for i in range(len(vlinc_files)):
     df = pd.read_csv(vlinc_files[i],sep="\t",
@@ -171,9 +171,12 @@ df=df[df["total_reads"]>=10]
 ##############
 all_files_repli = ["/Users/mike/replication_rnaseq/all.final.data/bouha.10.repli.500kb.bed",
 "/Users/mike/replication_rnaseq/all.final.data/bouha.2.repli.500kb.bed",
-"/Users/mike/replication_rnaseq/all.final.data/gm12878.4.repli.500kb.bed",
-"/Users/mike/replication_rnaseq/all.final.data/gm12878.5.repli.500kb.bed"]
-
+"/Users/mike/replication_rnaseq/all.final.data/bouha.3.repli.500kb.bed",
+"/Users/mike/replication_rnaseq/all.final.data/bouha.4.repli.500kb.bed",
+"/Users/mike/replication_rnaseq/all.final.data/bouha.13.repli.500kb.bed",
+"/Users/mike/replication_rnaseq/all.final.data/bouha.15.repli.500kb.bed"]#,
+# "/Users/mike/replication_rnaseq/all.final.data/gm12878.4.repli.500kb.bed",
+# "/Users/mike/replication_rnaseq/all.final.data/gm12878.5.repli.500kb.bed"]
 
 filenames_repli=[os.path.basename(x)[0:15] for x in all_files_repli]
 repli_li = []
@@ -234,16 +237,16 @@ for j in range(len(chromosomes)):
         ax.set_ylim([-4,4])
         ax.plot(df_normalized_combined[(df_normalized_combined["chrom"]==chromosomes[j]) & (df_normalized_combined["arm"]=="p")]["start"],
                     df_normalized_combined[(df_normalized_combined["chrom"]==chromosomes[j]) & (df_normalized_combined["arm"]=="p")][i+".hap1"],
-                    c="blue",alpha=1,lw=0.5)
+                    c="blue",alpha=1,lw=0.3)
         ax.plot(df_normalized_combined[(df_normalized_combined["chrom"]==chromosomes[j]) & (df_normalized_combined["arm"]=="p")]["start"],
                     df_normalized_combined[(df_normalized_combined["chrom"]==chromosomes[j])& (df_normalized_combined["arm"]=="p")][i+".hap2"],
-                    c="red",alpha=1,lw=0.5)
+                    c="red",alpha=1,lw=0.3)
         ax.plot(df_normalized_combined[(df_normalized_combined["chrom"]==chromosomes[j]) & (df_normalized_combined["arm"]=="q")]["start"],
                     df_normalized_combined[(df_normalized_combined["chrom"]==chromosomes[j]) & (df_normalized_combined["arm"]=="q")][i+".hap1"],
-                    c="blue",alpha=1,lw=0.5)
+                    c="blue",alpha=1,lw=0.3)
         ax.plot(df_normalized_combined[(df_normalized_combined["chrom"]==chromosomes[j]) & (df_normalized_combined["arm"]=="q")]["start"],
                     df_normalized_combined[(df_normalized_combined["chrom"]==chromosomes[j])& (df_normalized_combined["arm"]=="q")][i+".hap2"],
-                    c="red",alpha=1,lw=0.5)
+                    c="red",alpha=1,lw=0.3)
     for index,row in df_normalized_combined[(df_normalized_combined["gm_std_zscore"]>=2.5) & (df_normalized_combined["chrom"]==chromosomes[j])].iterrows():
         rect=Rectangle((row["start"], -10), width=row["stop"]-row["start"], height=20,
                      facecolor="yellow",fill=True,alpha=0.6)       

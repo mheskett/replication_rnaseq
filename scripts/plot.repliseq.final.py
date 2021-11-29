@@ -110,6 +110,10 @@ chromosome_length = {"1":249250621,
 ##############
 all_files_repli = ["/Users/mike/replication_rnaseq/all.final.data/bouha.10.repli.500kb.bed",
 "/Users/mike/replication_rnaseq/all.final.data/bouha.2.repli.500kb.bed",
+"/Users/mike/replication_rnaseq/all.final.data/bouha.3.repli.500kb.bed",
+"/Users/mike/replication_rnaseq/all.final.data/bouha.4.repli.500kb.bed",
+"/Users/mike/replication_rnaseq/all.final.data/bouha.13.repli.500kb.bed",
+"/Users/mike/replication_rnaseq/all.final.data/bouha.15.repli.500kb.bed",
 "/Users/mike/replication_rnaseq/all.final.data/gm12878.4.repli.500kb.bed",
 "/Users/mike/replication_rnaseq/all.final.data/gm12878.5.repli.500kb.bed"]
 filenames_repli=[os.path.basename(x)[0:15] for x in all_files_repli]
@@ -154,7 +158,7 @@ df_logr["arm"] = df_logr.apply(lambda x: "q" if (x["stop"] > arm_dict[x["chrom"]
 color_dict = {"gm12878.4.repli":"plum","gm12878.5.repli":"olivedrab","bouha.10.repli.":"y",
 "bouha.2.repli.5":"b"}
 color_dict = {"gm12878.4.repli":"red","gm12878.5.repli":"red","bouha.10.repli.":"b",
-"bouha.2.repli.5":"b"}
+"bouha.2.repli.5":"b","bouha.3.repli.5":"b","bouha.4.repli.5":"b","bouha.13.repli.":"b","bouha.15.repli.":"b"} ### add full color dict here....l
 legend = [Line2D([0], [0], marker='o', color='w', label='gm12878.4',markerfacecolor='plum', markersize=10),
 Line2D([0], [0], marker='o', color='w', label='gm12878.5',markerfacecolor='olivedrab', markersize=10),
 Line2D([0], [0], marker='o', color='w', label='bouha10',markerfacecolor='y', markersize=10),
@@ -175,7 +179,7 @@ for j in range(len(chromosomes)):
         ax[1].plot(tmp[tmp["arm"]=="p"]["start"],smooth_vector(list(tmp[tmp["arm"]=="p"]["start"]),list(tmp[tmp["arm"]=="p"][filenames_repli[i]])),c=color_dict[filenames_repli[i]])
         ax[1].plot(tmp[tmp["arm"]=="q"]["start"],smooth_vector(list(tmp[tmp["arm"]=="q"]["start"]),list(tmp[tmp["arm"]=="q"][filenames_repli[i]])),c=color_dict[filenames_repli[i]])
     # plt.legend(handles=legend)
-    # plt.show()
+    plt.show()
     plt.close()
 
 ##################
