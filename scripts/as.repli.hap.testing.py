@@ -290,3 +290,6 @@ for index,row in all_sig.iterrows():
     plt.savefig("all.samples.each.allele."+str(row["chrom"])+"-"+str(row["start"])+".png",
             dpi=400,transparent=True, bbox_inches='tight', pad_inches = 0)
     plt.close()
+
+
+#### all samples each allele, but put everything into difference between allele space?
