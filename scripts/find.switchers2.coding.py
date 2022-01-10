@@ -74,43 +74,54 @@ def helper_func(x):
 	return
 
 arm_dict = get_arms(cytoband)
+model = pickle.load(open("eb.variance.coding.model.sav", 'rb'))
 
-vlinc_files=["/Users/mike/replication_rnaseq/all.final.data/bouha.2.all.bouha.vlinc.calls.bed",
-"/Users/mike/replication_rnaseq/all.final.data/bouha.3.all.bouha.vlinc.calls.bed",
-"/Users/mike/replication_rnaseq/all.final.data/bouha.4.all.bouha.vlinc.calls.bed",
-"/Users/mike/replication_rnaseq/all.final.data/bouha.10.all.bouha.vlinc.calls.bed",
-"/Users/mike/replication_rnaseq/all.final.data/bouha.13.all.bouha.vlinc.calls.bed",
-"/Users/mike/replication_rnaseq/all.final.data/bouha.15.all.bouha.vlinc.calls.bed"]
-dfs = []
-for i in range(len(vlinc_files)):
-	df = pd.read_csv(vlinc_files[i],sep="\t",
-							names= ["chrom","start","stop","name","rpkm","strand","l1_fraction","hap1_counts","hap2_counts"],
-							dtype = {"chrom":str,"start":int,"stop":int,"hap1_counts":int,"hap2_counts":int})
-	df["total_reads"] = df["hap1_counts"] + df["hap2_counts"]
-	df["skew"] = df.apply(helper_func, axis = 1)
-	df["sample"] = os.path.basename(vlinc_files[i])[0:9]
-	add_binom_pval(df)
-	dfs += [df]
-df = pd.concat(dfs)
+coding_files=["bouha2.protein.coding.all.counts.bed",
+                "bouha3.protein.coding.all.counts.bed",
+                "bouha4.protein.coding.all.counts.bed",
+                "bouha10.protein.coding.all.counts.bed",
+                "bouha13.protein.coding.all.counts.bed",
+                "bouha15.protein.coding.all.counts.bed"]
+
+## GM FILES
+# coding_files=["gm12878.4.protein.coding.all.counts.bed",
+#                 "gm12878.5.protein.coding.all.counts.bed"]
+coding_dfs = []
+for i in range(len(coding_files)):
+    coding_df = pd.read_csv(coding_files[i],sep="\t",
+                            names= ["chrom","start","stop","name","score","strand","hap1_counts","hap2_counts"],
+                            dtype = {"chrom":str,"start":int,"stop":int,"hap1_counts":int,"hap2_counts":int})
+    coding_df["total_reads"] = coding_df["hap1_counts"] + coding_df["hap2_counts"]
+    coding_df["skew"] = coding_df.apply(helper_func, axis = 1)
+    coding_df["sample"] = coding_files[i][0:9]
+    add_binom_pval(coding_df)
+    coding_dfs += [coding_df]
+df_coding = pd.concat(coding_dfs)
+df_coding = df_coding[df_coding["total_reads"]>=20]
+df_coding = df_coding[df_coding["chrom"]!="X"]
+df_coding["reads_per_kb"] = df_coding["total_reads"] / ((df_coding["stop"] - df_coding["start"]) / 1000 )
+df_coding  = df_coding[df_coding["reads_per_kb"]>=1]
+df_coding["significant_deviation"] = df_coding.apply(lambda x: True if abs(x["hap1_counts"] - x["total_reads"]/2) >= model.predict(np.array([x["total_reads"]])\
+    .reshape(1,-1))*2.5 else False,
+    axis=1)
 
 # df["reads_per_kb"] = df["total_reads"] / ((df["stop"]-df["start"])/1000)
 # sns.kdeplot(df["reads_per_kb"],cut=0,clip=(0,10))
 # plt.show()
-df=df[df["total_reads"]>=20]
-print("number of Bouhassira tl lncrnas that pass minimum read filter ")
-print(len(df.loc[:,["chrom","start","stop"]].drop_duplicates()))
+df_coding=df_coding[df_coding["total_reads"]>=20]
+print("number of Bouhassira coding genes that pass minimum read filter ")
+print(len(df_coding.loc[:,["chrom","start","stop"]].drop_duplicates()))
 ######
 #######
-unique_genes = list(df["name"].drop_duplicates())
+unique_genes = list(df_coding["name"].drop_duplicates())
 switchers = [] # list of rows that are switchers
 nonswitchers=[]
 # df_significant_rows = df[df["binom_pval"]<=0.001]
 # df_nonsignificant_rows = df[df["binom_pval"] >=0.001]
-model = pickle.load(open("eb.variance.coding.model.sav", 'rb'))
-df["significant_deviation"] = df.apply(lambda x: True if abs(x["hap1_counts"] - x["total_reads"]/2) >= model.predict(np.array([x["total_reads"]]).reshape(1,-1))*2.5 else False,
+df_coding["significant_deviation"] = df_coding.apply(lambda x: True if abs(x["hap1_counts"] - x["total_reads"]/2) >= model.predict(np.array([x["total_reads"]]).reshape(1,-1))*2.5 else False,
 	axis=1)
-df_significant_rows = df[df["significant_deviation"]==True]
-df_nonsignificant_rows = df[df["significant_deviation"]==False]
+df_significant_rows = df_coding[df_coding["significant_deviation"]==True]
+df_nonsignificant_rows = df_coding[df_coding["significant_deviation"]==False]
 
 ### switchers algorithm
 for i in range(len(unique_genes)):
@@ -151,67 +162,56 @@ genes = [x.split(",")[0] for x in genes ]
 #####
 
 
-color_dict = {"bouha.4.a":"green",
-"bouha.15.":"royalblue",
-"bouha.10.":"red",
-"bouha.3.a":"yellow",
-"bouha.2.a":"cyan",
-"bouha.13.":"plum",
+color_dict = {"bouha4.pr":"green",
+"bouha15.p":"royalblue",
+"bouha10.p":"red",
+"bouha3.pr":"yellow",
+"bouha2.pr":"cyan",
+"bouha13.p":"plum",
 "gm12878.4":"red",
- "gm12878.5":"blue"}
-hatch_ditct = {"bouha.4.a":"//","bouha.15.":"||","bouha.10.":"\\\\","bouha.3.a":"--",
-"bouha.2.a":"oo","bouha.13.":".."}
+"gm12878.5":"blue"}
+
+hatch_ditct = {"bouha4.pr":"//","bouha15.p":"||","bouha10.p":"\\\\","bouha3.pr":"--",
+"bouha2.pr":"oo","bouha13.p":".."}
 switchers["color"]= [color_dict[x] for x in switchers["sample"]]
 nonswitchers["color"]= [color_dict[x] for x in nonswitchers["sample"]]
 switchers["hatch"] = [hatch_ditct[x] for x in switchers["sample"]]
-df["color"]= [color_dict[x] for x in df["sample"]]
+df_coding["color"]= [color_dict[x] for x in df_coding["sample"]]
 
-## big scatterplot with vertical dotted lines
-switchers["unique_pos"] = [row["chrom"]+":"+str(row["start"]) for index,row in switchers.iterrows()]
-f,ax=plt.subplots(1,1,figsize=(10,2))
-ax.scatter(switchers["unique_pos"],switchers["skew"],c=switchers["color"],s=25,edgecolor="black",lw=0.1,zorder=3)
-for index,row in switchers.drop_duplicates(["unique_pos"]).iterrows():
-	ax.axvline(x=row["unique_pos"],linestyle="--",lw=0.4,c="black")
-plt.xticks(rotation = 315,fontsize=5)
-ax.margins(x=.015,y=0)
-ax.set_ylim([-0.52,.52])
-ax.axhline(y=0,linestyle="--",lw=0.4,c="black")
-ax.set_yticks([-0.5,-.25,0,.25,.5])
-plt.savefig("bouha.vlinc.switchers.all.png",
-		dpi=400,transparent=True, bbox_inches='tight', pad_inches = 0)
-plt.close()
 
 #### make scatter plot dots including faded dots
-tmp = df[df["name"].isin(switchers["name"])]
+tmp = df_coding[df_coding["name"].isin(switchers["name"])]
 tmp["color"]= [color_dict[x] for x in tmp["sample"]]
 tmp["alpha"] = [1 if x==True else 0.1 for x in tmp["significant_deviation"]]
 tmp["unique_pos"] = [row["chrom"]+":"+str(row["start"]) for index,row in tmp.iterrows()]
 f,ax=plt.subplots(1,1,figsize=(10,2))
+print(tmp)
 ax.scatter(tmp["unique_pos"],tmp["skew"],c=tmp["color"],s=25,edgecolor="black",lw=0.1,zorder=3,alpha=tmp["alpha"])
 for index,row in tmp.drop_duplicates(["unique_pos"]).iterrows():
 	ax.axvline(x=row["unique_pos"],linestyle="--",lw=0.4,c="black")
 plt.xticks(rotation = 315,fontsize=5)
+ax.set_xticklabels(tmp.drop_duplicates(["unique_pos"])["name"])
 ax.margins(x=.015,y=0)
 ax.set_ylim([-0.52,.52])
 ax.axhline(y=0,linestyle="--",lw=0.4,c="black")
 ax.set_yticks([-0.5,-.25,0,.25,.5])
-plt.savefig("bouha.vlinc.switchers.all.test.alpha.png",
+plt.savefig("bouha.coding.switchers.all.test.alpha.png",
 		dpi=400,transparent=True, bbox_inches='tight', pad_inches = 0)
 plt.close()
 
 print("number of switching loci ")
 print(len(tmp["unique_pos"].drop_duplicates()))
-exit()######## EXIT EXIT EXIT
+exit()######## EXIT EXIT EXIT EXIT EXIT EXIT EXIT EXIT
 ## biallelic
 result=[]
 for index,row in df.iterrows():
-	if sum(list(df[df["name"]==row["name"]]["significant_deviation"]))==0:
+	if sum(list(df_coding[df_coding["name"]==row["name"]]["significant_deviation"]))==0:
 		result+=[False]
 	else:
 		result+=[True]
-df["any_significant_deviation"] = result
+df_coding["any_significant_deviation"] = result
 
-tmp = df[df["any_significant_deviation"]==False]
+tmp = df_coding[df_coding["any_significant_deviation"]==False]
 tmp["color"]= [color_dict[x] for x in tmp["sample"]]
 tmp["unique_pos"] = [row["chrom"]+":"+str(row["start"]) for index,row in tmp.iterrows()]
 f,ax=plt.subplots(1,1,figsize=(10,2))
@@ -223,7 +223,7 @@ ax.margins(x=.015,y=0)
 ax.set_ylim([-0.52,.52])
 ax.axhline(y=0,linestyle="--",lw=0.4,c="black")
 ax.set_yticks([-0.5,-.25,0,.25,.5])
-plt.savefig("bouha.vlinc.biallelic.all.test.alpha.png",
+plt.savefig("bouha.coding.biallelic.all.test.alpha.png",
 		dpi=400,transparent=True, bbox_inches='tight', pad_inches = 0)
 plt.close()
 
@@ -255,7 +255,7 @@ for i in range(len(chromosomes)):
 	plt.savefig("bouha.vlinc.switchers.region."+str(chromosomes[i])+ ".png",
 		dpi=400,transparent=True, bbox_inches='tight', pad_inches = 0)
 	plt.close()
-switchers.to_csv("bouha.vlinc.switchers.bed",sep="\t",index=False,header=False)
+switchers.to_csv("bouha.coding.switchers.bed",sep="\t",index=False,header=False)
 
 ###### nonswitchers
 for i in range(len(chromosomes)):
@@ -270,10 +270,10 @@ for i in range(len(chromosomes)):
 	ax.axhline(y=0,linestyle="--",lw=0.4,c="black")
 	ax.set_xlim([0, chromosome_length[chromosomes[i]]])
 	ax.set_xticks(np.linspace(0, chromosome_length[chromosomes[i]], 16))
-	plt.savefig("bouha.vlinc.nonswitchers.region."+str(chromosomes[i])+".png",
+	plt.savefig("bouha.coding.nonswitchers.region."+str(chromosomes[i])+".png",
 		dpi=400,transparent=True, bbox_inches='tight', pad_inches = 0)
 	plt.close()
-nonswitchers.to_csv("bouha.vlinc.nonswitchers.bed",sep="\t",index=False,header=False)
+nonswitchers.to_csv("bouha.coding.nonswitchers.bed",sep="\t",index=False,header=False)
 ##############
 ##############
 ##############
@@ -361,14 +361,14 @@ for index,row in unique_locations.iterrows():
 	ax.set_xlim([start-100000, stop+100000])
 	ax.set_ylim([-.52,.52])
 	ax.tick_params(axis="x", labelsize=6,labelrotation=335) 
-	print("plotting vlincs ")
+	print("plotting coding ")
 	### july addition: make the rectangles thinner and add jitter?
 	for index,row in switchers[(switchers["chrom"]==chrom) & (switchers["start"]>=start-2000000) & (switchers["stop"]<=stop+2000000)
 					& (switchers["fdr_pval"]<=0.01)].iterrows():
 		rect=Rectangle((row["start"], row["skew"]-.025), width=row["stop"]-row["start"], height=0.05,
                      facecolor=row["color"], edgecolor="black",alpha=1,fill=True,lw=0.5) #
 		ax.add_patch(rect)
-	plt.savefig("bouha.vlinc.switchers.region."+str(chrom)+"."+str(start)+".png",
+	plt.savefig("bouha.coding.switchers.region."+str(chrom)+"."+str(start)+".png",
 		dpi=400,transparent=True, bbox_inches='tight', pad_inches = 0)
 	plt.close()
 ###
@@ -392,7 +392,7 @@ for index,row in unique_locations.iterrows():
 		rect=Rectangle((row["start"], row["skew"]-.025), width=row["stop"]-row["start"], height=0.05,
                      facecolor=row["color"], edgecolor="black",alpha=1 if row["significant_deviation"]==True else 0.1,fill=True,lw=0.5) #
 		ax.add_patch(rect)
-	plt.savefig("bouha.vlinc.switchers.region.test.alpha."+str(chrom)+"."+str(start)+".png",
+	plt.savefig("bouha.coding.switchers.region.test.alpha."+str(chrom)+"."+str(start)+".png",
 		dpi=400,transparent=True, bbox_inches='tight', pad_inches = 0)
 	plt.close()
 
@@ -470,7 +470,7 @@ for i in range(len(chromosomes)):
 			rect=Rectangle((row["start"],-10),width=row["stop"]-row["start"],height=20,
 				facecolor=row["repli_color"],alpha=0.6,fill="True")
 			ax[j+1].add_patch(rect)
-	plt.savefig("bouha.vlinc.switchers.repli."+str(chromosomes[i])+ ".png",
+	plt.savefig("bouha.coding.switchers.repli."+str(chromosomes[i])+ ".png",
 		dpi=400,transparent=True, bbox_inches='tight', pad_inches = 0)
 	plt.show()
 ### coding non switchers with asynchrony

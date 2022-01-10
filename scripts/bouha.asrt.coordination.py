@@ -227,7 +227,7 @@ nonswitchers=[]
 df_significant_rows = df[df["binom_pval"]<=0.001]
 df_nonsignificant_rows = df[df["binom_pval"] >=0.001]
 model = pickle.load(open("eb.variance.coding.model.sav", 'rb'))
-df["significant_deviation"] = df.apply(lambda x: True if abs(x["hap1_counts"] - x["total_reads"]/2) >= model.predict(np.array([x["total_reads"]]).reshape(1,-1))*2 else False,
+df["significant_deviation"] = df.apply(lambda x: True if abs(x["hap1_counts"] - x["total_reads"]/2) >= model.predict(np.array([x["total_reads"]]).reshape(1,-1))*2.5 else False,
     axis=1)
 df_significant_rows = df[df["significant_deviation"]==True]
 df_nonsignificant_rows = df[df["significant_deviation"]==False]
@@ -323,7 +323,7 @@ repli_df["std_dev"] = repli_df.filter(like="logr_hap",axis=1).std(axis="columns"
 repli_df["any_asrt"] = [True if x>=3 else False for x in repli_df.filter(like="zscore_logr_diff_abs",axis=1).max(axis=1)]
 
 color_dict = {"bouha.4.a":"green",
-"bouha.15.":"olivedrab",
+"bouha.15.":"darkblue",
 "bouha.10.":"red",
 "bouha.3.a":"yellow",
 "bouha.2.a":"cyan",
@@ -332,7 +332,7 @@ color_dict = {"bouha.4.a":"green",
  "gm12878.5":"blue"}
 
 color_dict_coding = {"bouha4.pr":"green",
-"bouha15.p":"olivedrab",
+"bouha15.p":"darkblue",
 "bouha10.p":"red",
 "bouha3.pr":"yellow",
 "bouha2.pr":"cyan",
@@ -345,7 +345,7 @@ color_dict_repli = {"bouha.10.repli.":"red",
 "bouha.3.repli.2":"yellow",
 "bouha.4.repli.2":"green",
 "bouha.13.repli.":"plum",
-"bouha.15.repli.":"olivedrab",
+"bouha.15.repli.":"darkblue",
 "gm12878.4.repli":"red",
 "gm12878.5.repli":"blue"}
 # #######
