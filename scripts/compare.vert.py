@@ -219,6 +219,8 @@ df_normalized_logr_hap2["std_dev_zscore"] = df_normalized_logr_hap2["std_dev"].t
 df_normalized_logr_hap1["zscore_abs_diff_hap_means"] = abs_diff_of_hap_means.transform(zscore) # same thing as below
 df_normalized_logr_hap2["zscore_abs_diff_hap_means"] = abs_diff_of_hap_means.transform(zscore) # same thing as above
 
+
+
 bouha_vert = pd.read_table("bouha.vert.merged.txt",header=0)
 gm12878_vert = pd.read_table("gm12878.vert.merged.txt",header=0)
 
@@ -238,88 +240,88 @@ bouha_gm12878_shared_vert_loci.to_csv("bouha_gm12878_shared_vert_loci.txt",sep="
 
 
 
-    # for index,row in bouha_gm12878_shared_vert_loci.iterrows():
-    #     f, (ax,ax_map) = plt.subplots(3,1,figsize=(2.3,16),gridspec_kw={'height_ratios': [3, 3, 1]},sharex=True)
-    #     plt.rc('xtick', labelsize=3) 
-    #     plt.rc('ytick', labelsize=8) 
-    #     start=row["start"]
-    #     stop=row["stop"]
-    #     chrom=row["chrom"]
-    #     for j in range(len(filenames_repli[0:6])):
-    #         ## this is per sample now
-    #         tmp2 = repli_df[(repli_df["chrom"]==chrom) 
-    #                 &(repli_df["start"]>=start-4000000) & (repli_df["stop"]<=stop+4000000)]
-    #         ax[0].plot(tmp2["start"],
-    #                 smooth_vector(tmp2["start"],tmp2["logr_hap1_"+filenames_repli[j]]),
-    #                  c=color_dict_repli[filenames_repli[j]],lw=1.4,alpha=sample_alpha)
-    #         ax[0].plot(tmp2["start"],
-    #                 smooth_vector(tmp2["start"],tmp2["logr_hap2_"+filenames_repli[j]]),
-    #                 c=color_dict_repli[filenames_repli[j]],linestyle="--",lw=1.4,alpha=sample_alpha) ## -- line style is haplotype 2            
-    #         ax[0].set_ylim([-3.5,3.5])
-    #         # ax[subplot_index].set_yticks([-3,-2,-1,0,1,2,3])
-    #         ax[0].axhline(y=0,linestyle="--",c="black",lw=0.4)
-    #         ax[0].set_xlim([max(0,start-2000000),stop+2000000])
-    #         ax[0].set_xticks(np.linspace(max(0,start-2000000),stop+2000000, 6))
+for index,row in bouha_gm12878_shared_vert_loci.iterrows():
+    f, (ax,ax_map) = plt.subplots(3,1,figsize=(2.3,16),gridspec_kw={'height_ratios': [3, 3, 1]},sharex=True)
+    plt.rc('xtick', labelsize=3) 
+    plt.rc('ytick', labelsize=8) 
+    start=row["start"]
+    stop=row["stop"]
+    chrom=row["chrom"]
+    for j in range(len(filenames_repli[0:6])):
+        ## this is per sample now
+        tmp2 = repli_df[(repli_df["chrom"]==chrom) 
+                &(repli_df["start"]>=start-4000000) & (repli_df["stop"]<=stop+4000000)]
+        ax[0].plot(tmp2["start"],
+                smooth_vector(tmp2["start"],tmp2["logr_hap1_"+filenames_repli[j]]),
+                 c=color_dict_repli[filenames_repli[j]],lw=1.4,alpha=sample_alpha)
+        ax[0].plot(tmp2["start"],
+                smooth_vector(tmp2["start"],tmp2["logr_hap2_"+filenames_repli[j]]),
+                c=color_dict_repli[filenames_repli[j]],linestyle="--",lw=1.4,alpha=sample_alpha) ## -- line style is haplotype 2            
+        ax[0].set_ylim([-3.5,3.5])
+        # ax[subplot_index].set_yticks([-3,-2,-1,0,1,2,3])
+        ax[0].axhline(y=0,linestyle="--",c="black",lw=0.4)
+        ax[0].set_xlim([max(0,start-2000000),stop+2000000])
+        ax[0].set_xticks(np.linspace(max(0,start-2000000),stop+2000000, 6))
+    
+    for j in range(len(filenames_repli[6:8])):
+        ## this is per sample now
+        tmp2 = repli_df[(repli_df["chrom"]==chrom) 
+                &(repli_df["start"]>=start-4000000) & (repli_df["stop"]<=stop+4000000)]
+        ax[1].plot(tmp2["start"],
+                smooth_vector(tmp2["start"],tmp2["logr_hap1_"+filenames_repli[j]]),
+                 c=color_dict_repli[filenames_repli[j]],lw=1.4,alpha=sample_alpha)
+        ax[1].plot(tmp2["start"],
+                smooth_vector(tmp2["start"],tmp2["logr_hap2_"+filenames_repli[j]]),
+                c=color_dict_repli[filenames_repli[j]],linestyle="--",lw=1.4,alpha=sample_alpha) ## -- line style is haplotype 2            
+        ax[1].set_ylim([-3.5,3.5])
+        # ax[subplot_index].set_yticks([-3,-2,-1,0,1,2,3])
+        ax[1].axhline(y=0,linestyle="--",c="black",lw=0.4)
+        ax[1].set_xlim([max(0,start-2000000),stop+2000000])
+        ax[1].set_xticks(np.linspace(max(0,start-2000000),stop+2000000, 6))
+
+    for j in range(len(filenames_repli[0:6])):
+        xpos = j
+        ## widen up the window to consider other samples ASRT, as above
+        tmp_exact_pos = repli_df[(repli_df["chrom"]==chrom) 
+                &(repli_df["start"]>=start-500000) & (repli_df["stop"]<=stop+500000)]
+        raw_logr_diff_vector = tmp_exact_pos["logr_diff_raw_"+filenames_repli[j]]
+        idxmax = abs(raw_logr_diff_vector).idxmax()
+
+        zscore_logr_diff_vector = tmp_exact_pos["zscore_logr_diff_abs"+filenames_repli[j]]
+        sample_alpha =  1 if (zscore_logr_diff_vector.max()>=2.5) else 0
+
+        ypos = (0.05,-1) if raw_logr_diff_vector[idxmax]>0 else (-1,0.05)
+        rect_hap1=Rectangle((xpos, ypos[0]), width=0.95, height=0.90,
+             facecolor=color_dict_repli[filenames_repli[j]],fill=True,alpha=sample_alpha)
+        # rect_hap2=Rectangle((xpos, ypos[1]), width=0.95, height=0.90,
+        #      facecolor=color_dict_repli[filenames_repli[j]],fill=True,hatch="////////",alpha=sample_alpha)
         
-    #     for j in range(len(filenames_repli[6:8])):
-    #         ## this is per sample now
-    #         tmp2 = repli_df[(repli_df["chrom"]==chrom) 
-    #                 &(repli_df["start"]>=start-4000000) & (repli_df["stop"]<=stop+4000000)]
-    #         ax[1].plot(tmp2["start"],
-    #                 smooth_vector(tmp2["start"],tmp2["logr_hap1_"+filenames_repli[j]]),
-    #                  c=color_dict_repli[filenames_repli[j]],lw=1.4,alpha=sample_alpha)
-    #         ax[1].plot(tmp2["start"],
-    #                 smooth_vector(tmp2["start"],tmp2["logr_hap2_"+filenames_repli[j]]),
-    #                 c=color_dict_repli[filenames_repli[j]],linestyle="--",lw=1.4,alpha=sample_alpha) ## -- line style is haplotype 2            
-    #         ax[1].set_ylim([-3.5,3.5])
-    #         # ax[subplot_index].set_yticks([-3,-2,-1,0,1,2,3])
-    #         ax[1].axhline(y=0,linestyle="--",c="black",lw=0.4)
-    #         ax[1].set_xlim([max(0,start-2000000),stop+2000000])
-    #         ax[1].set_xticks(np.linspace(max(0,start-2000000),stop+2000000, 6))
+        ax_map[0].add_patch(rect_hap1)
+        # ax_map[subplot_index].add_patch(rect_hap2)
+        ax_map[0].set_xlim([0,6])
+        ax_map[0].set_ylim([-1,1])
+    for j in range(len(filenames_repli[6:8])):
+        xpos = j
+        ## widen up the window to consider other samples ASRT, as above
+        tmp_exact_pos = repli_df[(repli_df["chrom"]==chrom) 
+                &(repli_df["start"]>=start-500000) & (repli_df["stop"]<=stop+500000)]
+        raw_logr_diff_vector = tmp_exact_pos["logr_diff_raw_"+filenames_repli[j]]
+        idxmax = abs(raw_logr_diff_vector).idxmax()
 
-    #     for j in range(len(filenames_repli[0:6])):
-    #         xpos = j
-    #         ## widen up the window to consider other samples ASRT, as above
-    #         tmp_exact_pos = repli_df[(repli_df["chrom"]==chrom) 
-    #                 &(repli_df["start"]>=start-500000) & (repli_df["stop"]<=stop+500000)]
-    #         raw_logr_diff_vector = tmp_exact_pos["logr_diff_raw_"+filenames_repli[j]]
-    #         idxmax = abs(raw_logr_diff_vector).idxmax()
+        zscore_logr_diff_vector = tmp_exact_pos["zscore_logr_diff_abs"+filenames_repli[j]]
+        sample_alpha =  1 if (zscore_logr_diff_vector.max()>=2.5) else 0
 
-    #         zscore_logr_diff_vector = tmp_exact_pos["zscore_logr_diff_abs"+filenames_repli[j]]
-    #         sample_alpha =  1 if (zscore_logr_diff_vector.max()>=2.5) else 0
-
-    #         ypos = (0.05,-1) if raw_logr_diff_vector[idxmax]>0 else (-1,0.05)
-    #         rect_hap1=Rectangle((xpos, ypos[0]), width=0.95, height=0.90,
-    #              facecolor=color_dict_repli[filenames_repli[j]],fill=True,alpha=sample_alpha)
-    #         # rect_hap2=Rectangle((xpos, ypos[1]), width=0.95, height=0.90,
-    #         #      facecolor=color_dict_repli[filenames_repli[j]],fill=True,hatch="////////",alpha=sample_alpha)
-            
-    #         ax_map[0].add_patch(rect_hap1)
-    #         # ax_map[subplot_index].add_patch(rect_hap2)
-    #         ax_map[0].set_xlim([0,6])
-    #         ax_map[0].set_ylim([-1,1])
-    #     for j in range(len(filenames_repli[6:8])):
-    #         xpos = j
-    #         ## widen up the window to consider other samples ASRT, as above
-    #         tmp_exact_pos = repli_df[(repli_df["chrom"]==chrom) 
-    #                 &(repli_df["start"]>=start-500000) & (repli_df["stop"]<=stop+500000)]
-    #         raw_logr_diff_vector = tmp_exact_pos["logr_diff_raw_"+filenames_repli[j]]
-    #         idxmax = abs(raw_logr_diff_vector).idxmax()
-
-    #         zscore_logr_diff_vector = tmp_exact_pos["zscore_logr_diff_abs"+filenames_repli[j]]
-    #         sample_alpha =  1 if (zscore_logr_diff_vector.max()>=2.5) else 0
-
-    #         ypos = (0.05,-1) if raw_logr_diff_vector[idxmax]>0 else (-1,0.05)
-    #         rect_hap1=Rectangle((xpos, ypos[0]), width=0.95, height=0.90,
-    #              facecolor=color_dict_repli[filenames_repli[j]],fill=True,alpha=sample_alpha)
-    #         # rect_hap2=Rectangle((xpos, ypos[1]), width=0.95, height=0.90,
-    #         #      facecolor=color_dict_repli[filenames_repli[j]],fill=True,hatch="////////",alpha=sample_alpha)
-            
-    #         ax_map[0].add_patch(rect_hap1)
-    #         # ax_map[subplot_index].add_patch(rect_hap2)
-    #         ax_map[0].set_xlim([0,6])
-    #         ax_map[0].set_ylim([-1,1])
-    # plt.suptitle(chromosomes[i])
-    # plt.savefig("shared.vert."+str(chrom)+str(start)+".png",
-    #     dpi=400,transparent=True, bbox_inches='tight', pad_inches = 0)
-    # plt.close()
+        ypos = (0.05,-1) if raw_logr_diff_vector[idxmax]>0 else (-1,0.05)
+        rect_hap1=Rectangle((xpos, ypos[0]), width=0.95, height=0.90,
+             facecolor=color_dict_repli[filenames_repli[j]],fill=True,alpha=sample_alpha)
+        # rect_hap2=Rectangle((xpos, ypos[1]), width=0.95, height=0.90,
+        #      facecolor=color_dict_repli[filenames_repli[j]],fill=True,hatch="////////",alpha=sample_alpha)
+        
+        ax_map[0].add_patch(rect_hap1)
+        # ax_map[subplot_index].add_patch(rect_hap2)
+        ax_map[0].set_xlim([0,6])
+        ax_map[0].set_ylim([-1,1])
+plt.suptitle(chromosomes[i])
+plt.savefig("shared.vert."+str(chrom)+str(start)+".png",
+    dpi=400,transparent=True, bbox_inches='tight', pad_inches = 0)
+plt.close()

@@ -320,6 +320,15 @@ df_normalized_logr_hap2["std_dev_zscore"] = df_normalized_logr_hap2["std_dev"].t
 df_normalized_logr_hap1["zscore_abs_diff_hap_means"] = abs_diff_of_hap_means.transform(zscore) # same thing as below
 df_normalized_logr_hap2["zscore_abs_diff_hap_means"] = abs_diff_of_hap_means.transform(zscore) # same thing as above
 
+
+test = pd.concat([df_normalized_logr_hap1.set_index(["chrom","start","stop"]).add_suffix("_hap1"),
+            df_normalized_logr_hap2.set_index(["chrom","start","stop"]).add_suffix("_hap2")],axis=1).filter(like="bouha",axis=1).dropna(how="any",axis="rows")
+
+test["std_dev"] = test.std(axis="columns")
+test_locs = tes[test["std_dev"]>=1.06]
+# sns.kdeplot(test["std_dev"],cut=0)
+# plt.show()
+# exit()
 # ### just plot all regions with high std dev
 # combined = pd.concat([df_normalized_logr_hap1[df_normalized_logr_hap1["std_dev_zscore"]>=2.6],
 #                     df_normalized_logr_hap2[df_normalized_logr_hap2["std_dev_zscore"]>=2.6]],axis=0)
@@ -336,7 +345,23 @@ df_normalized_logr_hap2["zscore_abs_diff_hap_means"] = abs_diff_of_hap_means.tra
 # # sns.kdeplot(df_normalized_logr_hap2["std_dev"],cut=0,clip=(0,2),lw=2)
 # plt.savefig("bouha.rt.hap.std.dev.png",dpi=400,transparent=True, bbox_inches='tight', pad_inches = 0)
 
+print("median of allele std dev across windows: ", np.median(df_normalized_logr_hap1["std_dev"].dropna()))
+print("std deviation of allele std dev across windows: ", np.std(df_normalized_logr_hap1["std_dev"]) )
 
+# result=[]
+# for index,row in df_normalized_logr_hap1.iterrows():
+#     tmp1 = df_normalized_logr_hap1[(df_normalized_logr_hap1["chrom"]==row["chrom"]) & ((df_normalized_logr_hap1["start"]==row["start"]))].dropna(how="any",)
+#     tmp2 = df_normalized_logr_hap2[(df_normalized_logr_hap2["chrom"]==row["chrom"]) & ((df_normalized_logr_hap2["start"]==row["start"]))].dropna(how="any")
+#     if ~tmp1.empty and ~tmp2.empty:
+#         maxi = max(tmp1.loc[:,filenames_repli].max().max(),
+#                     tmp2.loc[:,filenames_repli].max().max())
+#         mini = min(tmp1.loc[:,filenames_repli].min().min(),
+#                     tmp2.loc[:,filenames_repli].min().min())
+#         result += [maxi-mini]
+
+# sns.kdeplot(result,cut=0)
+# plt.show()
+# exit()
 color_dict = {"bouha.4.a":"green",
 "bouha.15.":"royalblue",
 "bouha.10.":"red",
@@ -380,6 +405,8 @@ tmp = remove_blacklisted(tmp)
 tmp_merged_bed = pybedtools.BedTool.from_dataframe(tmp.drop_duplicates(["chrom","start","stop"]).loc[:,["chrom","start","stop"]])
 tmp_merged = tmp_merged_bed.merge(d=250001).to_dataframe(names=["chrom","start","stop"])
 tmp_merged["chrom"] = tmp_merged["chrom"].astype(str)
+print("number of merged windows with >3 std dev ",len(tmp_merged))
+exit()
 # tmp =  df_normalized_logr_hap1[df_normalized_logr_hap1["zscore_abs_diff_hap_means"]>=3]
 
 tmp=tmp.dropna(how="any",axis="index")
@@ -424,6 +451,33 @@ for j in range(len(chromosomes)):
         dpi=400,transparent=True, bbox_inches='tight', pad_inches = 0)
     plt.close()   
 ################
+
+#### STD DEV of each haplotype for all samples. chromosome view. red and blue for matt
+for j in range(len(chromosomes)):
+    f,ax = plt.subplots(figsize=(10,1))
+    hap1 = df_normalized_logr_hap1[(df_normalized_logr_hap1["chrom"]==chromosomes[j])]
+    hap2 = df_normalized_logr_hap2[(df_normalized_logr_hap2["chrom"]==chromosomes[j])]
+    
+    ax.axhline(y=1,linestyle="--",lw=0.5,c="black")
+    ax.plot(hap1[hap1["arm"]=="p"]["start"],
+            smooth_vector(hap1[hap1["arm"]=="p"]["start"],hap1[hap1["arm"]=="p"]["std_dev"]),c="red",lw=1)
+    ax.plot(hap1[hap1["arm"]=="q"]["start"],
+            smooth_vector(hap1[hap1["arm"]=="q"]["start"],hap1[hap1["arm"]=="q"]["std_dev"]),c="red",lw=1)
+    ax.plot(hap2[hap2["arm"]=="p"]["start"],
+            smooth_vector(hap2[hap2["arm"]=="p"]["start"],hap2[hap2["arm"]=="p"]["std_dev"]),c="blue",lw=1)
+    ax.plot(hap2[hap2["arm"]=="q"]["start"],
+            smooth_vector(hap2[hap2["arm"]=="q"]["start"],hap2[hap2["arm"]=="q"]["std_dev"]),c="blue",lw=1)
+    for index3,row3 in tmp_merged[tmp_merged["chrom"]==chromosomes[j]].iterrows():
+        rect=Rectangle((row3["start"]-250000, 0), width=row3["stop"]-row3["start"]+500000, height=5,
+                 facecolor="lightgray",alpha=1,fill=True)
+        ax.add_patch(rect)
+    ax.set_ylim([0,1.8])
+    ax.set_yticks([0,.5,1,1.5,2])
+    ax.set_xlim([0,chromosome_length[chromosomes[j]]])
+    ax.set_xticks(np.linspace(0,chromosome_length[chromosomes[j]],16))
+    plt.savefig("bouha.vert.hap"+str(chromosomes[j])+".png",
+        dpi=400,transparent=True, bbox_inches='tight', pad_inches = 0)
+    plt.close()   
 exit()
 # print("starting repli and asar plotting loops")
 plt.rc('xtick', labelsize=3) 

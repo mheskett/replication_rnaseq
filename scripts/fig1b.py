@@ -117,6 +117,7 @@ df = df[df["total_reads"]>=10]
 print("number TLs in gm12878",len(df))
 df["significant_deviation"] = df.apply(lambda x: True if abs(x["hap1_counts"] - x["total_reads"]/2) >= model.predict(np.array([x["total_reads"]]).reshape(1,-1))*2.5 else False,
     axis=1)
+df["significant_deviation"] = (df["significant_deviation"]==True) & (df["fdr_pval"]<=0.01)
 df_auto = df[df["chrom"]!="X"] 
 df_auto["color"] = [(0,0,1,1) if x==True else (0,0,1,0.1) for x in df_auto["significant_deviation"]]
 df["color"] = [(1,0,0,1) if x==True else (1,0,0,0.1) for x in df["significant_deviation"]]
@@ -128,11 +129,17 @@ ax.set_ylim([0,0.5])
 # ax.set_xticks([])
 plt.savefig("fig1.scatter.png",
             dpi=400,transparent=True, bbox_inches='tight', pad_inches = 0)
+plt.close()
 print(" num autosomal TLs with normal Z method: ",len(df_auto[df_auto["significant_deviation"]==True]))
 print("bases tLE with moraml Z method: ", sum_bases(df_auto[df_auto["significant_deviation"]==True]))
 print("number DAE TLs per megabase ", len(df_auto[df_auto["significant_deviation"]==True])/3000)
-##################
+print("number DAE TLs on X chromosome: ", len(df[(df["chrom"]=="X") & df["significant_deviation"]==True]))
+print("number dae tls on 1 chromosome: ", len(df[(df["chrom"]=="1") & df["significant_deviation"]==True]))
 
+# df_auto[df_auto["significant_deviation"]==True]["chrom"].value_counts().plot(kind="bar")
+# plt.show()
+##################
+exit()
 df_auto.to_csv("gm12878.rep1.vlincs.dae.list.bed",sep="\t")
 
 for i in range(len(chromosomes)):

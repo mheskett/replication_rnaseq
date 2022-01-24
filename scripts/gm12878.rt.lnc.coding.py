@@ -340,8 +340,14 @@ df["color"] = [color_dict[x] for x in df["sample"]]
 
 ## start with ALL repli variation areas, then add lncs and coding geens for all samps
 ## this will give all sites that have either hap1 or hap2 significant variation
-tmp =  pd.concat([df_normalized_logr_hap1[(df_normalized_logr_hap1["std_dev"]>=1)],
-                        df_normalized_logr_hap2[df_normalized_logr_hap2["std_dev"]>=1]],axis=0)
+mean1=df_normalized_logr_hap1["std_dev"].mean()
+std1=df_normalized_logr_hap1["std_dev"].std()
+print("mean of std: ",df_normalized_logr_hap1["std_dev"].mean())
+print(" std of std: ",df_normalized_logr_hap1["std_dev"].std())
+threshold = mean1 + 3*std1
+print("threshold ",threshold)
+tmp =  pd.concat([df_normalized_logr_hap1[(df_normalized_logr_hap1["std_dev"]>=threshold)],
+                        df_normalized_logr_hap2[df_normalized_logr_hap2["std_dev"]>=threshold]],axis=0)
 
 tmp = remove_blacklisted(tmp)
 
@@ -351,7 +357,8 @@ tmp_merged = tmp_merged_bed.merge(d=250001).to_dataframe(names=["chrom","start",
 tmp_merged["chrom"] = tmp_merged["chrom"].astype(str)
 
 # tmp =  df_normalized_logr_hap1[df_normalized_logr_hap1["zscore_abs_diff_hap_means"]>=3]
-print(tmp_merged)
+
+print("number of merged windows above threshold std dev ",len(tmp_merged))
 tmp=tmp.dropna(how="any",axis="index")
 tmp.to_csv("gm12878.vert.merged.txt",sep="\t",index=False,header=True)
 
@@ -387,6 +394,34 @@ for j in range(len(chromosomes)):
         dpi=400,transparent=True, bbox_inches='tight', pad_inches = 0)
     plt.close() 
 #exit()
+
+#### STD DEV of each haplotype for all samples. chromosome view. red and blue for matt
+for j in range(len(chromosomes)):
+    f,ax = plt.subplots(figsize=(10,1))
+    hap1 = df_normalized_logr_hap1[(df_normalized_logr_hap1["chrom"]==chromosomes[j])]
+    hap2 = df_normalized_logr_hap2[(df_normalized_logr_hap2["chrom"]==chromosomes[j])]
+    
+    ax.axhline(y=1,linestyle="--",lw=0.5,c="black")
+    ax.plot(hap1[hap1["arm"]=="p"]["start"],
+            smooth_vector(hap1[hap1["arm"]=="p"]["start"],hap1[hap1["arm"]=="p"]["std_dev"]),c="red",lw=1)
+    ax.plot(hap1[hap1["arm"]=="q"]["start"],
+            smooth_vector(hap1[hap1["arm"]=="q"]["start"],hap1[hap1["arm"]=="q"]["std_dev"]),c="red",lw=1)
+    ax.plot(hap2[hap2["arm"]=="p"]["start"],
+            smooth_vector(hap2[hap2["arm"]=="p"]["start"],hap2[hap2["arm"]=="p"]["std_dev"]),c="blue",lw=1)
+    ax.plot(hap2[hap2["arm"]=="q"]["start"],
+            smooth_vector(hap2[hap2["arm"]=="q"]["start"],hap2[hap2["arm"]=="q"]["std_dev"]),c="blue",lw=1)
+    for index3,row3 in tmp_merged[tmp_merged["chrom"]==chromosomes[j]].iterrows():
+        rect=Rectangle((row3["start"]-250000, 0), width=row3["stop"]-row3["start"]+500000, height=5,
+                 facecolor="lightgray",alpha=1,fill=True)
+        ax.add_patch(rect)
+    ax.set_ylim([0,1.8])
+    ax.set_yticks([0,.5,1,1.5,2])
+    ax.set_xlim([0,chromosome_length[chromosomes[j]]])
+    ax.set_xticks(np.linspace(0,chromosome_length[chromosomes[j]],16))
+    plt.savefig("gm12878.vert.hap"+str(chromosomes[j])+".png",
+        dpi=400,transparent=True, bbox_inches='tight', pad_inches = 0)
+    plt.close()  
+exit()
 thayer_fish_loci = pd.read_csv("thayer.fish.loci.txt",sep="\t",
                         names=["chrom","start","stop"],
                         dtype={"chrom":str,"start":int,"stop":int})

@@ -201,10 +201,10 @@ plt.close()
 
 print("number of switching loci ")
 print(len(tmp["unique_pos"].drop_duplicates()))
-exit()######## EXIT EXIT EXIT EXIT EXIT EXIT EXIT EXIT
+#exit()######## EXIT EXIT EXIT EXIT EXIT EXIT EXIT EXIT
 ## biallelic
 result=[]
-for index,row in df.iterrows():
+for index,row in df_coding.iterrows():
 	if sum(list(df_coding[df_coding["name"]==row["name"]]["significant_deviation"]))==0:
 		result+=[False]
 	else:
@@ -252,11 +252,14 @@ for i in range(len(chromosomes)):
 	ax.set_xlim([0, chromosome_length[chromosomes[i]]])
 	ax.set_ylim([-0.6,0.6])
 	ax.set_xticks(np.linspace(0, chromosome_length[chromosomes[i]], 16))
-	plt.savefig("bouha.vlinc.switchers.region."+str(chromosomes[i])+ ".png",
+	plt.savefig("bouha.coding.switchers.region."+str(chromosomes[i])+ ".png",
 		dpi=400,transparent=True, bbox_inches='tight', pad_inches = 0)
 	plt.close()
 switchers.to_csv("bouha.coding.switchers.bed",sep="\t",index=False,header=False)
 
+test = list(switchers["tmp"])
+print(test)
+exit()
 ###### nonswitchers
 for i in range(len(chromosomes)):
 	f,ax = plt.subplots(1,1,figsize=(10,2),sharex=False)
