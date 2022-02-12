@@ -272,7 +272,7 @@ repli_df = repli_df[repli_df["low_coverage"]==False]
 
 
 
-repli_df= repli_df[repli_df["chrom"]!="X"]
+# repli_df= repli_df[repli_df["chrom"]!="X"]
 repli_df = repli_df.dropna(how="any",axis="index")
 #############################
 ### we want to find any regions that have high variation of individual haplotypes(outlier of std dev per haplotype?), 
@@ -368,32 +368,32 @@ tmp_lnc = intersect_tables(df,tmp)
 tmp_coding = intersect_tables(df_coding,tmp) ## could add more slop here 
 
 ###### std dev by chrom
-for j in range(len(chromosomes)):
-    f,ax = plt.subplots(figsize=(10,1))
-    hap1 = df_normalized_logr_hap1[(df_normalized_logr_hap1["chrom"]==chromosomes[j])]
-    hap2 = df_normalized_logr_hap2[(df_normalized_logr_hap2["chrom"]==chromosomes[j])]
+# for j in range(len(chromosomes)):
+#     f,ax = plt.subplots(figsize=(10,1))
+#     hap1 = df_normalized_logr_hap1[(df_normalized_logr_hap1["chrom"]==chromosomes[j])]
+#     hap2 = df_normalized_logr_hap2[(df_normalized_logr_hap2["chrom"]==chromosomes[j])]
     
-    ax.axhline(y=1,linestyle="--",lw=0.5,c="black")
-    ax.plot(hap1[hap1["arm"]=="p"]["start"],
-            smooth_vector(hap1[hap1["arm"]=="p"]["start"],
-                        np.maximum(hap1[hap1["arm"]=="p"]["std_dev"],hap2[hap2["arm"]=="p"]["std_dev"])),c="black",lw=2)
+#     ax.axhline(y=1,linestyle="--",lw=0.5,c="black")
+#     ax.plot(hap1[hap1["arm"]=="p"]["start"],
+#             smooth_vector(hap1[hap1["arm"]=="p"]["start"],
+#                         np.maximum(hap1[hap1["arm"]=="p"]["std_dev"],hap2[hap2["arm"]=="p"]["std_dev"])),c="black",lw=2)
     
-    ax.plot(hap1[hap1["arm"]=="q"]["start"],
-            smooth_vector(hap1[hap1["arm"]=="q"]["start"],
-                            np.maximum(hap1[hap1["arm"]=="q"]["std_dev"],hap2[hap2["arm"]=="q"]["std_dev"])),c="black",lw=2)
+#     ax.plot(hap1[hap1["arm"]=="q"]["start"],
+#             smooth_vector(hap1[hap1["arm"]=="q"]["start"],
+#                             np.maximum(hap1[hap1["arm"]=="q"]["std_dev"],hap2[hap2["arm"]=="q"]["std_dev"])),c="black",lw=2)
 
-    for index3,row3 in tmp_merged[tmp_merged["chrom"]==chromosomes[j]].iterrows():
-        rect=Rectangle((row3["start"]-250000, 0), width=row3["stop"]-row3["start"]+500000, height=5,
-                 facecolor="lightgray",alpha=1,fill=True)
-        ax.add_patch(rect)
-    ax.set_ylim([0,1.8])
-    ax.set_yticks([0,.5,1,1.5,2])
-    ax.set_xlim([0,chromosome_length[chromosomes[j]]])
-    ax.set_xticks(np.linspace(0,chromosome_length[chromosomes[j]],16))
-    plt.savefig("gm12878.vert."+str(chromosomes[j])+".png",
-        dpi=400,transparent=True, bbox_inches='tight', pad_inches = 0)
-    plt.close() 
-#exit()
+#     for index3,row3 in tmp_merged[tmp_merged["chrom"]==chromosomes[j]].iterrows():
+#         rect=Rectangle((row3["start"]-250000, 0), width=row3["stop"]-row3["start"]+500000, height=5,
+#                  facecolor="lightgray",alpha=1,fill=True)
+#         ax.add_patch(rect)
+#     ax.set_ylim([0,1.8])
+#     ax.set_yticks([0,.5,1,1.5,2])
+#     ax.set_xlim([0,chromosome_length[chromosomes[j]]])
+#     ax.set_xticks(np.linspace(0,chromosome_length[chromosomes[j]],16))
+#     plt.savefig("gm12878.vert."+str(chromosomes[j])+".png",
+#         dpi=400,transparent=True, bbox_inches='tight', pad_inches = 0)
+#     plt.close() 
+# #exit()
 
 #### STD DEV of each haplotype for all samples. chromosome view. red and blue for matt
 for j in range(len(chromosomes)):
@@ -545,11 +545,13 @@ for index,row in tmp_merged.drop_duplicates(["chrom","start","stop"]).iterrows()
     plt.close()
 
 ## counter
+xact_locus = df[(df["chrom"]=="X") & (df["start"]>=110000000) & (df["stop"]<=114000000)]
+
 
 ## SHARED VERT FIGGIES
 shared_vert = pd.read_table("bouha_gm12878_shared_vert_loci.txt",sep="\t",header=0,index_col=False)
-for index,row in shared_vert.iterrows():
-# for index,row in thayer_fish_loci.drop_duplicates(["chrom","start","stop"]).iterrows():
+# for index,row in shared_vert.iterrows():
+for index,row in xact_locus.drop_duplicates(["chrom","start","stop"]).iterrows():
     plt.rc('xtick', labelsize=3) 
     plt.rc('ytick', labelsize=8) 
     f, (ax,ax_peaks) = plt.subplots(2,1,figsize=(2,2.3),sharex=False,

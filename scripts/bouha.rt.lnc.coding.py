@@ -299,7 +299,7 @@ repli_df = repli_df[repli_df["low_coverage"]==False]
 #     sns.kdeplot(repli_df[repli_df["sample"]==i]["total_reads"],cut=0,clip=(0,10000))
 # plt.show()
 
-repli_df= repli_df[repli_df["chrom"]!="X"]
+# repli_df= repli_df[repli_df["chrom"]!="X"]
 repli_df = repli_df.dropna(how="any",axis="index")
 #############################
 ### we want to find any regions that have high variation of individual haplotypes(outlier of std dev per haplotype?), 
@@ -325,7 +325,7 @@ test = pd.concat([df_normalized_logr_hap1.set_index(["chrom","start","stop"]).ad
             df_normalized_logr_hap2.set_index(["chrom","start","stop"]).add_suffix("_hap2")],axis=1).filter(like="bouha",axis=1).dropna(how="any",axis="rows")
 
 test["std_dev"] = test.std(axis="columns")
-test_locs = tes[test["std_dev"]>=1.06]
+test_locs = test[test["std_dev"]>=1.06]
 # sns.kdeplot(test["std_dev"],cut=0)
 # plt.show()
 # exit()
@@ -406,7 +406,6 @@ tmp_merged_bed = pybedtools.BedTool.from_dataframe(tmp.drop_duplicates(["chrom",
 tmp_merged = tmp_merged_bed.merge(d=250001).to_dataframe(names=["chrom","start","stop"])
 tmp_merged["chrom"] = tmp_merged["chrom"].astype(str)
 print("number of merged windows with >3 std dev ",len(tmp_merged))
-exit()
 # tmp =  df_normalized_logr_hap1[df_normalized_logr_hap1["zscore_abs_diff_hap_means"]>=3]
 
 tmp=tmp.dropna(how="any",axis="index")
@@ -425,31 +424,32 @@ tmp_coding[tmp_coding["significant_deviation"]==True]["name"].drop_duplicates().
 
 #### chromosome 1, just do the STD DEV of haplotypes for all samps
 
-for j in range(len(chromosomes)):
-    f,ax = plt.subplots(figsize=(10,1))
-    hap1 = df_normalized_logr_hap1[(df_normalized_logr_hap1["chrom"]==chromosomes[j])]
-    hap2 = df_normalized_logr_hap2[(df_normalized_logr_hap2["chrom"]==chromosomes[j])]
+# for j in range(len(chromosomes)):
+#     f,ax = plt.subplots(figsize=(10,2))
+#     hap1 = df_normalized_logr_hap1[(df_normalized_logr_hap1["chrom"]==chromosomes[j])]
+#     hap2 = df_normalized_logr_hap2[(df_normalized_logr_hap2["chrom"]==chromosomes[j])]
     
-    ax.axhline(y=1,linestyle="--",lw=0.5,c="black")
-    ax.plot(hap1[hap1["arm"]=="p"]["start"],
-            smooth_vector(hap1[hap1["arm"]=="p"]["start"],
-                        np.maximum(hap1[hap1["arm"]=="p"]["std_dev"],hap2[hap2["arm"]=="p"]["std_dev"])),c="black",lw=2)
+#     ax.axhline(y=1,linestyle="--",lw=0.5,c="black")
+#     ax.plot(hap1[hap1["arm"]=="p"]["start"],
+#             smooth_vector(hap1[hap1["arm"]=="p"]["start"],
+#                         np.maximum(hap1[hap1["arm"]=="p"]["std_dev"],hap2[hap2["arm"]=="p"]["std_dev"])),c="black",lw=2)
     
-    ax.plot(hap1[hap1["arm"]=="q"]["start"],
-            smooth_vector(hap1[hap1["arm"]=="q"]["start"],
-                            np.maximum(hap1[hap1["arm"]=="q"]["std_dev"],hap2[hap2["arm"]=="q"]["std_dev"])),c="black",lw=2)
+#     ax.plot(hap1[hap1["arm"]=="q"]["start"],
+#             smooth_vector(hap1[hap1["arm"]=="q"]["start"],
+#                             np.maximum(hap1[hap1["arm"]=="q"]["std_dev"],hap2[hap2["arm"]=="q"]["std_dev"])),c="black",lw=2)
 
-    for index3,row3 in tmp_merged[tmp_merged["chrom"]==chromosomes[j]].iterrows():
-        rect=Rectangle((row3["start"]-250000, 0), width=row3["stop"]-row3["start"]+500000, height=5,
-                 facecolor="lightgray",alpha=1,fill=True)
-        ax.add_patch(rect)
-    ax.set_ylim([0,1.8])
-    ax.set_yticks([0,.5,1,1.5,2])
-    ax.set_xlim([0,chromosome_length[chromosomes[j]]])
-    ax.set_xticks(np.linspace(0,chromosome_length[chromosomes[j]],16))
-    plt.savefig("bouha.vert."+str(chromosomes[j])+".png",
-        dpi=400,transparent=True, bbox_inches='tight', pad_inches = 0)
-    plt.close()   
+#     for index3,row3 in tmp_merged[tmp_merged["chrom"]==chromosomes[j]].iterrows():
+#         rect=Rectangle((row3["start"]-250000, 0), width=row3["stop"]-row3["start"]+500000, height=5,
+#                  facecolor="lightgray",alpha=1,fill=True)
+#         ax.add_patch(rect)
+#     ax.set_ylim([0,1.8])
+#     ax.set_yticks([0,.5,1,1.5,2])
+#     ax.set_xlim([0,chromosome_length[chromosomes[j]]])
+#     ax.set_xticks(np.linspace(0,chromosome_length[chromosomes[j]],16))
+#     plt.savefig("bouha.vert.old.normalization."+str(chromosomes[j])+".png",
+#         dpi=400,transparent=True, bbox_inches='tight', pad_inches = 0)
+#     plt.close()   
+# exit()
 ################
 
 #### STD DEV of each haplotype for all samples. chromosome view. red and blue for matt
@@ -475,17 +475,17 @@ for j in range(len(chromosomes)):
     ax.set_yticks([0,.5,1,1.5,2])
     ax.set_xlim([0,chromosome_length[chromosomes[j]]])
     ax.set_xticks(np.linspace(0,chromosome_length[chromosomes[j]],16))
-    plt.savefig("bouha.vert.hap"+str(chromosomes[j])+".png",
+    plt.savefig("bouha.vert.hap.specific."+str(chromosomes[j])+".png",
         dpi=400,transparent=True, bbox_inches='tight', pad_inches = 0)
     plt.close()   
-exit()
 # print("starting repli and asar plotting loops")
 plt.rc('xtick', labelsize=3) 
 plt.rc('ytick', labelsize=8) 
 
+xact_locus = df[(df["chrom"]=="X") & (df["start"]>=110000000) & (df["stop"]<=114000000)]
 ####### keep all this. just commenting out for now.
-for index,row in tmp_merged.drop_duplicates(["chrom","start","stop"]).iterrows():
-# for index,row in thayer_fish_loci.drop_duplicates(["chrom","start","stop"]).iterrows():
+# for index,row in tmp_merged.drop_duplicates(["chrom","start","stop"]).iterrows():
+for index,row in xact_locus.drop_duplicates(["chrom","start","stop"]).iterrows():
     plt.rc('xtick', labelsize=3) 
     plt.rc('ytick', labelsize=8) 
     f, (ax,ax_peaks) = plt.subplots(2,1,figsize=(2,2.3),sharex=False,
@@ -593,13 +593,14 @@ for index,row in tmp_merged.drop_duplicates(["chrom","start","stop"]).iterrows()
     # ax.hlines(y=-3,xmin=row["start"],xmax=row["stop"],linewidth=1,color="black",zorder=10)
 
     if rtqtl_label==True:
-        plt.savefig("fig4.epigenetic.coding.lnc.rt.rtQTL."+str(chrom)+"."+str(start)+ ".png",
+        plt.savefig("fig4.epigenetic.coding.lnc.rt.allele.norm.rtQTL."+str(chrom)+"."+str(start)+ ".png",
         dpi=400,transparent=True, bbox_inches='tight', pad_inches = 0)
     else:
-        plt.savefig("fig4.epigenetic.coding.lnc.rt."+str(chrom)+"."+str(start)+ ".png",
+        plt.savefig("fig4.epigenetic.coding.lnc.rt.allele.norm."+str(chrom)+"."+str(start)+ ".png",
         dpi=400,transparent=True, bbox_inches='tight', pad_inches = 0)        
     plt.close()
 
+exit()
 ####
 ### making shared figs
 ####### keep all this. just commenting out for now.
@@ -713,10 +714,10 @@ for index,row in shared_vert.iterrows():
     # ax.hlines(y=-3,xmin=row["start"],xmax=row["stop"],linewidth=1,color="black",zorder=10)
 
     if rtqtl_label==True:
-        plt.savefig("bouha.shared.vert.epigenetic.coding.lnc.rt.rtQTL."+str(chrom)+"."+str(start)+ ".png",
+        plt.savefig("bouha.shared.vert.epigenetic.coding.lnc.rt.rtQTL.allele.norm"+str(chrom)+"."+str(start)+ ".png",
         dpi=400,transparent=True, bbox_inches='tight', pad_inches = 0)
     else:
-        plt.savefig("bouha.shared.vert.epigenetic.coding.lnc.rt."+str(chrom)+"."+str(start)+ ".png",
+        plt.savefig("bouha.shared.vert.epigenetic.coding.lnc.rt.allele.norm."+str(chrom)+"."+str(start)+ ".png",
         dpi=400,transparent=True, bbox_inches='tight', pad_inches = 0)        
     plt.close()
 

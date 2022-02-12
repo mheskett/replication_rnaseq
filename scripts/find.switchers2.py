@@ -109,8 +109,8 @@ nonswitchers=[]
 model = pickle.load(open("eb.variance.coding.model.sav", 'rb'))
 df["significant_deviation"] = df.apply(lambda x: True if abs(x["hap1_counts"] - x["total_reads"]/2) >= model.predict(np.array([x["total_reads"]]).reshape(1,-1))*2.5 else False,
 	axis=1)
-df_significant_rows = df[df["significant_deviation"]==True]
-df_nonsignificant_rows = df[df["significant_deviation"]==False]
+df_significant_rows = df[(df["significant_deviation"]==True) & (df["fdr_pval"]<=0.01)]
+df_nonsignificant_rows = df[(df["significant_deviation"]==False) | (df["fdr_pval"]>=0.01)]
 
 ### switchers algorithm
 for i in range(len(unique_genes)):
@@ -134,6 +134,8 @@ for i in range(len(unique_genes)):
 
 switchers = pd.concat(switchers)
 nonswitchers = pd.concat(nonswitchers)
+
+print("num nonswitchers:", len(nonswitchers.drop_duplicates(["name"])))
 ######
 ## get the genes list
 genes = list(switchers["name"].drop_duplicates())
@@ -201,7 +203,7 @@ plt.close()
 
 print("number of switching loci ")
 print(len(tmp["unique_pos"].drop_duplicates()))
-exit()######## EXIT EXIT EXIT
+### EXIT EXIT EXIT
 ## biallelic
 result=[]
 for index,row in df.iterrows():
@@ -343,6 +345,7 @@ regions = [
 # 	plt.show()
 #### for zooming in on all regions in the switchers df
 unique_locations = switchers.loc[:,["chrom","start","stop"]].drop_duplicates()
+unique_locations_nonswitchers = nonswitchers.loc[:,["chrom","start","stop"]].drop_duplicates()
 print("number of non-coding switching loci",len(unique_locations))
 print("base pairs of noncoding switching aDE", (unique_locations["stop"] - unique_locations["start"]).sum())
 
@@ -395,6 +398,32 @@ for index,row in unique_locations.iterrows():
 	plt.savefig("bouha.vlinc.switchers.region.test.alpha."+str(chrom)+"."+str(start)+".png",
 		dpi=400,transparent=True, bbox_inches='tight', pad_inches = 0)
 	plt.close()
+
+	###
+	######## nonswitchres regions
+### with showing biallelics
+for index,row in unique_locations_nonswitchers.iterrows():
+	chrom=row["chrom"]
+	start=row["start"]
+	stop=row["stop"]
+### switchers RNA and vlincs
+	f,ax = plt.subplots(1,figsize=(1.5,2),sharex=False)
+	plt.suptitle(chrom)
+	plt.xticks(np.linspace(start-100000,stop+100000,4),rotation=70,fontsize=8)
+	# ax[0].scatter(tmp_plus["start"],tmp_plus["skew_plus"],c=tmp_plus["color"],zorder=1,lw=0.2,edgecolor="black",s=20)
+	# ax[0].scatter(tmp_minus["start"],tmp_minus["skew_minus"],c=tmp_minus["color"],lw=0.2,zorder=1,edgecolor="black",s=20)
+	ax.axhline(y=0,linestyle="--",lw=0.4,c="black")
+	ax.set_xlim([start-100000, stop+100000])
+	ax.set_ylim([-.52,.52])
+	ax.tick_params(axis="x", labelsize=6,labelrotation=335) 
+	for index,row in df[(df["chrom"]==chrom) & (df["start"]>=start-2000000) & (df["stop"]<=stop+2000000)].iterrows():
+		rect=Rectangle((row["start"], row["skew"]-.025), width=row["stop"]-row["start"], height=0.05,
+                     facecolor=row["color"], edgecolor="black",alpha=1 if row["significant_deviation"]==True else 0.1,fill=True,lw=0.5) #
+		ax.add_patch(rect)
+	plt.savefig("bouha.vlinc.nonswitchers.region.test.alpha."+str(chrom)+"."+str(start)+".png",
+		dpi=400,transparent=True, bbox_inches='tight', pad_inches = 0)
+	plt.close()
+
 
 exit()
 

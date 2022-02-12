@@ -12,6 +12,7 @@ import pybedtools
 import scipy.stats
 import glob
 import pickle
+import matplotlib.patches as mpatches
 from matplotlib.collections import PatchCollection
 from matplotlib.patches import Rectangle
 import statsmodels.api as sm
@@ -93,8 +94,6 @@ def helper_func(x):
         return -x["hap2_counts"]  / x["total_reads"] + 0.5
     return
 
-
-
 ###
 model = pickle.load(open("eb.variance.coding.model.sav", 'rb'))
 arm_dict = get_arms(cytoband)
@@ -111,7 +110,7 @@ for i in range(len(rna_files)):
     add_binom_pval(df)
     dfs += [df]
 df = pd.concat(dfs)
-df = df[df["total_reads"]>=10]
+df = df[df["total_reads"]>=20]
 #############################
 ####################
 print("number TLs in gm12878",len(df))
@@ -122,7 +121,11 @@ df_auto = df[df["chrom"]!="X"]
 df_auto["color"] = [(0,0,1,1) if x==True else (0,0,1,0.1) for x in df_auto["significant_deviation"]]
 df["color"] = [(1,0,0,1) if x==True else (1,0,0,0.1) for x in df["significant_deviation"]]
 
+tl187_coords = np.log2(df[df["name"] == "206_plus_gm12878.rep1.hg19Aligned.out.samtool.rmdup"]["total_reads"].values[0]) , df[df["name"] == "206_plus_gm12878.rep1.hg19Aligned.out.samtool.rmdup"]["skew"].values[0]
+print(tl187_coords)
 f,ax=plt.subplots(1,1,figsize=(5,2.5))
+arrow = mpatches.FancyArrowPatch((tl187_coords[0]+1, tl187_coords[1]+0.1), (tl187_coords[0], tl187_coords[1]), mutation_scale=100)
+ax.add_patch(arrow)
 ax.scatter(np.log2(df[df["chrom"]=="X"]["total_reads"]),abs(df[df["chrom"]=="X"]["skew"]),c=df[df["chrom"]=="X"]["color"],s=20,lw=0.2,edgecolor="black")
 ax.scatter(np.log2(df_auto["total_reads"]),abs(df_auto["skew"]),c=df_auto["color"],s=20,lw=0.2,edgecolor="black")
 ax.set_ylim([0,0.5])
@@ -139,8 +142,7 @@ print("number dae tls on 1 chromosome: ", len(df[(df["chrom"]=="1") & df["signif
 # df_auto[df_auto["significant_deviation"]==True]["chrom"].value_counts().plot(kind="bar")
 # plt.show()
 ##################
-exit()
-df_auto.to_csv("gm12878.rep1.vlincs.dae.list.bed",sep="\t")
+df[df["significant_deviation"]==True].to_csv("gm12878.rep1.vlincs.dae.list.bed",sep="\t",header=None,index=False)
 
 for i in range(len(chromosomes)):
     f,ax = plt.subplots(1,1,figsize=(10,2),sharex=False)

@@ -185,6 +185,8 @@ df_coding  = df_coding[df_coding["reads_per_kb"]>=1]
 df_coding["significant_deviation"] = df_coding.apply(lambda x: True if abs(x["hap1_counts"] - x["total_reads"]/2) >= model.predict(np.array([x["total_reads"]])\
     .reshape(1,-1))*2.5 else False,
     axis=1)
+df_coding["significant_deviation"] = (df_coding["significant_deviation"]==True) & (df_coding["fdr_pval"]<=0.01)
+
 
 ##### check on FHIT gene for matt
 # print("check fhit gene")
@@ -199,7 +201,7 @@ df_coding["significant_deviation"] = df_coding.apply(lambda x: True if abs(x["ha
 ######
 #### get all 6 repliseq and lncrna files in this analysis!!!
 
-vlinc_files = ["/Users/mike/replication_rnaseq/all.final.data/gm12878.5.rep1.rep2.vlincs.all.bed",
+vlinc_files = ["/Users/mike/replication_rnaseq/all.final.data/gm12878.4.rep1.rep2.vlincs.all.bed",
                 "/Users/mike/replication_rnaseq/all.final.data/gm12878.5.rep1.rep2.vlincs.all.bed"]
 dfs = []
 for i in range(len(vlinc_files)):
@@ -212,17 +214,88 @@ for i in range(len(vlinc_files)):
     add_binom_pval(df)
     dfs += [df]
 df = pd.concat(dfs)
-unique_genes = list(df["name"].drop_duplicates())
-switchers = [] # list of rows that are switchers
-nonswitchers=[]
-df_significant_rows = df[df["binom_pval"]<=0.001]
-df_nonsignificant_rows = df[df["binom_pval"] >=0.001]
 model = pickle.load(open("eb.variance.coding.model.sav", 'rb'))
 df["significant_deviation"] = df.apply(lambda x: True if abs(x["hap1_counts"] - x["total_reads"]/2) >= model.predict(np.array([x["total_reads"]]).reshape(1,-1))*2.5 else False,
     axis=1)
-df_significant_rows = df[df["significant_deviation"]==True]
-df_nonsignificant_rows = df[df["significant_deviation"]==False]
 df=df[df["total_reads"]>=20]
+df["significant_deviation"] = (df["significant_deviation"]==True) & (df["fdr_pval"]<=0.001)
+
+print("number TLs in gm12878 2 clones: ",len(df.drop_duplicates(["name"])))
+print("num autosomal DAE TL loci in 2 clones :",len(
+                                    df[(df["significant_deviation"]==True) & (df["chrom"]!="X") ]
+                                    .drop_duplicates(["name"])))
+##### switching algoithm
+df_significant_rows = df[(df["significant_deviation"]==True) & (df["fdr_pval"]<=0.01)]
+df_nonsignificant_rows = df[(df["significant_deviation"]==False) | (df["fdr_pval"]>=0.01)]
+
+print("significant rows")
+print(df_significant_rows)
+#####
+###
+## switchers algorithm
+## no switchers in gm12878 clones...
+unique_genes = list(df["name"].drop_duplicates())
+switchers = [] # list of rows that are switchers
+nonswitchers=[]
+for i in range(len(unique_genes)):
+    samples = df_significant_rows[df_significant_rows["name"]==unique_genes[i]]
+    # samples = samples[(samples["binom_pval_plus"]<=0.05) | (samples["binom_pval_minus"] <=0.05)]
+    if len(samples)<=1:
+        continue
+    # samples = samples.reset_index(drop=True)
+    # print(samples)
+    hap1_skew,hap2_skew= False,False
+    for index,row in samples.iterrows():
+        if (row["skew"]>=0.1):
+            hap1_skew = True
+        if (row["skew"]<=-0.1):
+            hap2_skew = True
+
+    if hap1_skew and hap2_skew:
+        switchers += [samples]
+    elif hap1_skew ^ hap2_skew:
+        nonswitchers += [samples]
+
+# switchers = pd.concat(switchers)
+nonswitchers = pd.concat(nonswitchers)
+print("num gm12878 nonswitchers: ", nonswitchers[nonswitchers["chrom"]!="X"].drop_duplicates(["name"]))
+########
+#####
+######
+#####
+####
+### switchers algorithm for coding_
+unique_genes_coding = list(df_coding["name"].drop_duplicates())
+
+coding_switchers = [] # list of rows that are switchers
+coding_nonswitchers=[]
+df_coding_significant_rows = df_coding[df_coding["significant_deviation"]==True]
+# print("df coding sig rows")
+# print(df_coding_significant_rows)
+for i in range(len(unique_genes_coding)):
+    samples = df_coding_significant_rows[df_coding_significant_rows["name"]==unique_genes_coding[i]]
+    # samples = samples[(samples["binom_pval_plus"]<=0.05) | (samples["binom_pval_minus"] <=0.05)]
+    if len(samples)<=1:
+        continue
+    # samples = samples.reset_index(drop=True)
+    # print(samples)
+    hap1_skew,hap2_skew= False,False
+    for index,row in samples.iterrows():
+        if (row["skew"]>=0.1):
+            hap1_skew = True
+        if (row["skew"]<=-0.1):
+            hap2_skew = True
+
+    if hap1_skew and hap2_skew:
+        coding_switchers += [samples]
+    elif hap1_skew ^ hap2_skew:
+        coding_nonswitchers += [samples]
+
+coding_switchers = pd.concat(coding_switchers)
+coding_nonswitchers = pd.concat(coding_nonswitchers)
+########
+#####
+##
 # reads per KB
 ## ok so vlncRNAs have about 0.25 reads median per KB in THIS library
 # sns.kdeplot(df["total_reads"] / ((df["stop"] - df["start"]) / 1000 ),cut=0,clip=(0,20))
@@ -290,7 +363,7 @@ repli_df["std_dev"] = repli_df.filter(like="logr_hap",axis=1).std(axis="columns"
 
 mean_std_dev = repli_df["std_dev"].mean()
 std_std_dev = repli_df["std_dev"].std()
-threshold = mean_std_dev + 3*std_std_dev
+threshold = mean_std_dev + 2.5*std_std_dev
 
 tmp = repli_df[repli_df["std_dev"]>=threshold]
 tmp_merged_bed = pybedtools.BedTool.from_dataframe(tmp.drop_duplicates(["chrom","start","stop"]).loc[:,["chrom","start","stop"]])
@@ -300,7 +373,14 @@ print("number of merged windows with >3 std dev ",len(tmp_merged))
 print(tmp_merged)
 print("number of bases with >3 std dev RT ", sum_bases(tmp_merged) )
 tmp=tmp.dropna(how="any",axis="index")
-tmp.to_csv("bouha.vert.merged.txt",sep="\t",index=False,header=True)
+tmp.to_csv("gm12878.vert.merged.txt",sep="\t",index=False,header=True)
+
+print("coding switchers intersect merged vert regions")
+switcher_vert_table = intersect_tables(coding_switchers.drop_duplicates(["name"]),tmp_merged)
+print(len(switcher_vert_table))
+
+
+
 df = df.dropna(how="any",axis="index")
 df_coding = df_coding.dropna(how="any",axis="index")
 tmp_lnc = intersect_tables(df,tmp)
@@ -461,4 +541,128 @@ for index,row in tmp_merged.drop_duplicates(["chrom","start","stop"]).iterrows()
         plt.savefig("gm12878.epigenetic.coding.lnc.rt."+str(chrom)+"."+str(start)+ ".png",
         dpi=400,transparent=True, bbox_inches='tight', pad_inches = 0)        
     plt.close()
+
+#### FOR SHARED VERT
+shared_vert = pd.read_csv("bouha_gm12878_shared_vert_loci.txt",sep="\t",header=0,dtype={"chrom":str,'start':int,"stop":int})
+for index,row in shared_vert.iterrows():
+####
+    plt.rc('xtick', labelsize=3) 
+    plt.rc('ytick', labelsize=8) 
+    f, (ax,ax_peaks) = plt.subplots(2,1,figsize=(2,2.3),sharex=False,
+                         gridspec_kw={'height_ratios': [6, 1]})
+
+#### for rtqtls
+    # chrom=row["chrom"]
+    # start=row["affected_region_start"]
+    # stop=row["affected_region_end"]
+    ####### 
+    start=row["start"]
+    stop=row["stop"]
+    chrom=str(row["chrom"])
+    plt.suptitle(chrom)
+    ax_lnc = ax.twinx()
+    # df is lncs
+    for index2, row2 in df[(df["chrom"]==chrom) & (df["start"]>=start-2000000) & (df["stop"]<=stop+2000000) 
+                            & (df["significant_deviation"]==True) ].iterrows():
+        rect=Rectangle((row2["start"], row2["skew"]-.0125), width=row2["stop"]-row2["start"], height=0.025,
+                     facecolor=row2["color"], edgecolor="black",fill=True,lw=.4)
+        # shadow = Shadow(rect, 10000,-0.0015 )                             
+        # ax_lnc.add_patch(shadow)
+        ax_lnc.add_patch(rect)
+    for index2, row2 in df[(df["chrom"]==chrom) & (df["start"]>=start-2000000) & (df["stop"]<=stop+2000000) 
+                        & (df["significant_deviation"]==False) ].iterrows():
+        rect=Rectangle((row2["start"], row2["skew"]-.0125), width=row2["stop"]-row2["start"], height=0.025,
+                 facecolor=row2["color"], edgecolor="black",fill=True,lw=.4,alpha=0.1)
+        # shadow = Shadow(rect, 10000,-0.0015 )                             
+        # ax_lnc.add_patch(shadow)
+        ax_lnc.add_patch(rect)
+    # df coding is coding genes
+    for index5, row5 in df_coding[(df_coding["chrom"]==chrom) & (df_coding["start"]>=start-2000000) & (df_coding["stop"]<=stop+2000000)
+                                 & (df_coding["significant_deviation"]==True) ].iterrows():
+        rect=Rectangle((row5["start"], row5["skew"]-.0125), width=row5["stop"]-row5["start"], height=0.025,
+                     facecolor=row5["color"], edgecolor="black",fill=True,lw=.6,linestyle="dotted")
+        # shadow = Shadow(rect, 10000,-0.0015 )                                   
+        # ax_lnc.add_patch(shadow)
+        ax_lnc.add_patch(rect)
+    for index5, row5 in df_coding[(df_coding["chrom"]==chrom) & (df_coding["start"]>=start-2000000) & (df_coding["stop"]<=stop+2000000)
+                                 & (df_coding["significant_deviation"]==False) ].iterrows():
+        rect=Rectangle((row5["start"], row5["skew"]-.0125), width=row5["stop"]-row5["start"], height=0.025,
+                     facecolor=row5["color"], edgecolor="black",fill=True,lw=.6,alpha=0.1,linestyle="dotted")
+        # shadow = Shadow(rect, 10000,-0.0015 )                                   
+        # ax_lnc.add_patch(shadow)
+        ax_lnc.add_patch(rect)
+    # print("done adding coding")
+    # ax_lnc.axhline(y=0,linestyle="--",lw=0.4,c="black")
+    ax_lnc.set_xlim([max(0,start-3000000),stop+3000000])
+    ax_lnc.set_ylim([-0.52,0.52])
+    ax_lnc.set_yticks([-0.5,-.25,0,.25,.5])
+    # ax_lnc.set_xticks(np.linspace(max(0,start-6000000),stop+6000000, 12))
+    ### fix the gray shadowing
+    for index3,row3 in repli_df[(repli_df["chrom"]==chrom) & (repli_df["std_dev"]>=threshold)].iterrows():
+        rect=Rectangle((row3["start"]-250000, -10), width=row3["stop"]-row3["start"]+500000, height=20,
+                 facecolor="lightgray",alpha=1,fill=True) 
+        ax.add_patch(rect)
+
+    # print("done adding asars, shadows, and background highlights")
+    hap1 = repli_df[(repli_df["chrom"]==chrom) 
+            &(repli_df["start"]>=start-5000000) & (repli_df["stop"]<=stop+5000000) ].set_index(["chrom","start","stop"]).filter(like="hap1",axis=1).reset_index()
+    hap2 = repli_df[(repli_df["chrom"]==chrom)  
+            &(repli_df["start"]>=start-5000000) & (repli_df["stop"]<=stop+5000000)].set_index(["chrom","start","stop"]).filter(like="hap2",axis=1).reset_index()
+    # print("merely subsetting into hap1 and hap2")
+
+    ax.set_xlim([max(0,start-3000000),stop+3000000])
+    ax.set_xticks(np.linspace(max(0,start-3000000),stop+3000000, 12))
+    # print(hap1)
+    # ax.set_ylim([min(hap1.filter(like="bouha",axis=1).values.min(),hap2.filter(like="bouha",axis=1).values.min()),
+    #     max(hap1.filter(like="bouha",axis=1).values.max(),hap2.filter(like="bouha",axis=1).values.max())])
+    ax.set_ylim([-5,2])
+    ax.set_yticks([-5,-4,-3,-2,-1,0,1,2])
+    ax.axhline(y=0,linestyle="--",c="black",lw=0.4)
+    # print("how could you be getting stuck before this and after the previous....")
+    #### normalized repliseq
+    ## this needs to be looped and colors fixed?
+    for i in range(len(filenames_repli)):
+        # print("starting to plot ", filenames_repli[i])
+        # print("printing hap1 df", hap1)
+        # print("printing hap2 df", hap2)
+        ax.plot(hap1["start"],
+                smooth_vector(hap1["start"],hap1["logr_hap1_"+filenames_repli[i]]),
+            c=color_dict_repli[filenames_repli[i]],lw=1)
+        ax.plot(hap2["start"],
+            smooth_vector(hap2["start"],hap2["logr_hap2_"+filenames_repli[i]]),
+            c=color_dict_repli[filenames_repli[i]],linestyle="--",lw=1) ## -- line style is haplotype 2
+        # print("plotted sample ",filenames_repli[i])
+
+    ### now plot the variance curve in the subplot
+
+    tmp_std = repli_df[(repli_df["chrom"]==chrom) 
+            &(repli_df["start"]>=start-5000000) & (repli_df["stop"]<=stop+5000000) ]
+    ax_peaks.plot(tmp_std["start"],
+                tmp_std["std_dev"],
+                c="black",
+                lw=0.8)
+    ax_peaks.set_ylim([0,2])
+    ax_peaks.set_yticks([0,1,2])
+    ax_peaks.set_xlim([max(0,start-3000000),stop+3000000])
+    ax_peaks.set_xticks(np.linspace(max(0,start-3000000),stop+3000000, 12))  
+    rtqtl_label=False
+    rtqtls_to_plot = rtqtls[(rtqtls["chrom"]==chrom) & (rtqtls["position"] >= start-4000000) & (rtqtls["position"]<=stop+4000000)]
+    if len(rtqtls_to_plot)>0:
+        rtqtl_label = True
+        print("rtqtl on chromosome ",chrom,start)
+        ax.text(rtqtls_to_plot["affected_region_start"],3.1,"rtQTL region",fontdict = {'family': 'serif','color':  'black','weight': 'normal','size': 6})
+        ax.hlines(y=3,xmin=rtqtls_to_plot["affected_region_start"],xmax=rtqtls_to_plot["affected_region_end"],linewidth=1,color="black",zorder=10)
+    
+    ## plot thayer fish loci
+    # ax.text(row["start"],-3.4,"FISH probe",fontdict = {'family': 'serif','color':  'black','weight': 'normal','size': 6})
+    # ax.hlines(y=-3,xmin=row["start"],xmax=row["stop"],linewidth=1,color="black",zorder=10)
+
+    if rtqtl_label==True:
+        plt.savefig("gm12878.shared.epigenetic.coding.lnc.rt.rtQTL."+str(chrom)+"."+str(start)+ ".png",
+        dpi=400,transparent=True, bbox_inches='tight', pad_inches = 0)
+    else:
+        plt.savefig("gm12878.shared.epigenetic.coding.lnc.rt."+str(chrom)+"."+str(start)+ ".png",
+        dpi=400,transparent=True, bbox_inches='tight', pad_inches = 0)        
+    plt.close()
+
 

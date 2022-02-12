@@ -185,12 +185,13 @@ for i in range(len(coding_files)):
     coding_dfs += [coding_df]
 df_coding = pd.concat(coding_dfs)
 df_coding = df_coding[df_coding["total_reads"]>=30]
-df_coding = df_coding[df_coding["chrom"]!="X"]
+# df_coding = df_coding[df_coding["chrom"]!="X"]
 df_coding["reads_per_kb"] = df_coding["total_reads"] / ((df_coding["stop"] - df_coding["start"]) / 1000 )
 df_coding  = df_coding[df_coding["reads_per_kb"]>=1]
 df_coding["significant_deviation"] = df_coding.apply(lambda x: True if abs(x["hap1_counts"] - x["total_reads"]/2) >= model.predict(np.array([x["total_reads"]])\
     .reshape(1,-1))*2.5 else False,
     axis=1)
+df_coding["significant_deviation"] = (df_coding["significant_deviation"]==True) & (df_coding["fdr_pval"]<=0.01)
 
 ##### check on FHIT gene for matt
 # print("check fhit gene")
@@ -227,14 +228,21 @@ df = pd.concat(dfs)
 unique_genes = list(df["name"].drop_duplicates())
 switchers = [] # list of rows that are switchers
 nonswitchers=[]
-df_significant_rows = df[df["binom_pval"]<=0.001]
-df_nonsignificant_rows = df[df["binom_pval"] >=0.001]
+df_significant_rows = df[df["binom_pval"]<=0.01]
+df_nonsignificant_rows = df[df["binom_pval"] >=0.01]
 model = pickle.load(open("eb.variance.coding.model.sav", 'rb'))
 df["significant_deviation"] = df.apply(lambda x: True if abs(x["hap1_counts"] - x["total_reads"]/2) >= model.predict(np.array([x["total_reads"]]).reshape(1,-1))*2.5 else False,
     axis=1)
 df_significant_rows = df[df["significant_deviation"]==True]
 df_nonsignificant_rows = df[df["significant_deviation"]==False]
 df=df[df["total_reads"]>=20]
+
+print("XACT")
+print( df[(df["chrom"]=="X") & (df["start"]>=110000000) & (df["stop"]<=114000000)] )
+
+print("XIST")
+print( df[df["name"]=="255_minus_bouha.all.rmdup.bam.X"])
+
 # reads per KB
 ## ok so vlncRNAs have about 0.25 reads median per KB in THIS library
 # sns.kdeplot(df["total_reads"] / ((df["stop"] - df["start"]) / 1000 ),cut=0,clip=(0,20))
@@ -312,10 +320,22 @@ for i in range(len(all_files_repli)):
     repli_df["zscore_logr_diff_abs"+filenames_repli[i]] = repli_df["logr_diff_abs_"+filenames_repli[i]].transform(zscore) # same thing as below
 
 repli_df["std_dev"] = repli_df.filter(like="logr_hap",axis=1).std(axis="columns")
+repli_df["std_dev_hap1"] = repli_df.filter(like="logr_hap1_",axis=1).std(axis="columns")
+repli_df["std_dev_hap2"] = repli_df.filter(like="logr_hap2_",axis=1).std(axis="columns")
 
-mean_std_dev = repli_df["std_dev"].mean()
-std_std_dev = repli_df["std_dev"].std()
-threshold = mean_std_dev + 3*std_std_dev
+## all haps
+mean_std_dev = repli_df[repli_df["chrom"]!="X"]["std_dev"].mean()
+std_std_dev = repli_df[repli_df["chrom"]!="X"]["std_dev"].std()
+threshold = mean_std_dev + 2.5*std_std_dev
+## hap1
+mean_std_dev1 = repli_df[repli_df["chrom"]!="X"]["std_dev_hap1"].mean()
+std_std_dev1 = repli_df[repli_df["chrom"]!="X"]["std_dev_hap1"].std()
+threshold1 = mean_std_dev1 + 2.5*std_std_dev1
+
+###hap2
+mean_std_dev2 = repli_df[repli_df["chrom"]!="X"]["std_dev_hap2"].mean()
+std_std_dev2 = repli_df[repli_df["chrom"]!="X"]["std_dev_hap2"].std()
+threshold2 = mean_std_dev2 + 2.5*std_std_dev2
 
 tmp = repli_df[repli_df["std_dev"]>=threshold]
 tmp_merged_bed = pybedtools.BedTool.from_dataframe(tmp.drop_duplicates(["chrom","start","stop"]).loc[:,["chrom","start","stop"]])
@@ -366,17 +386,165 @@ color_dict_repli = {"bouha.10.repli.":"red",
 df_coding["color"] = [color_dict_coding[x] for x in df_coding["sample"]]
 df["color"] = [color_dict[x] for x in df["sample"]]
 ## X specific plots?
+# fig=plt.figure(figsize=(4,1.5))
+# sns.violinplot(repli_df[repli_df["chrom"]=="X"]["std_dev"],inner="box",cut=0)
+# plt.savefig("x.chrom.rt.violin.png",
+# dpi=400,transparent=True, bbox_inches='tight', pad_inches = 0)
+# plt.close()
+
+# fig=plt.figure(figsize=(4,1.5))
+# sns.violinplot(repli_df[repli_df["chrom"]!="X"]["std_dev"],inner="box",cut=0)
+# plt.savefig("auto.violin.rt.png",
+# dpi=400,transparent=True, bbox_inches='tight', pad_inches = 0)
+# plt.close()
+# exit()
+
 
 ## x vs autosomes for RT VERT
 fig=plt.figure(figsize=(1.5,1.5))
 sns.kdeplot(repli_df[repli_df["chrom"]=="X"]["std_dev"],lw=1.3,cut=0,c="red")
 sns.kdeplot(repli_df[repli_df["chrom"]!="X"]["std_dev"],lw=1.3,cut=0,c="mediumblue")
+# plt.ylim([0,1])
 plt.xticks([0,1,2,3])
+plt.axvline(x=threshold,linestyle="--",lw=0.5,c="black")
 plt.savefig("auto.vs.x.rt.std.png",
 dpi=400,transparent=True, bbox_inches='tight', pad_inches = 0)
-exit()
-## X with subplots. keep..
 
+#### 
+### do specific loci for paper
+#####
+#####
+####
+##### do specific LOCI with DAE AND RT
+
+### XACT
+# f,ax = plt.subplots(figsize=(10,1.5))
+# hap1 = locus.set_index(["chrom","start","stop","arm"]).filter(like="hap1",axis=1).reset_index()
+# hap2 = locus.set_index(["chrom","start","stop","arm"]).filter(like="hap2",axis=1).reset_index()
+
+
+# for i in range(len(filenames_repli)):
+#     ax.plot(hap1[hap1["arm"]=="p"]["start"],
+#                 smooth_vector(hap1[hap1["arm"]=="p"]["start"],hap1[hap1["arm"]=="p"]["logr_hap1_"+filenames_repli[i]]),
+#             c=color_dict_repli[filenames_repli[i]],lw=1.2)
+#     ax.plot(hap2[hap2["arm"]=="p"]["start"],
+#             smooth_vector(hap2[hap2["arm"]=="p"]["start"],hap2[hap2["arm"]=="p"]["logr_hap2_"+filenames_repli[i]]),
+#             c=color_dict_repli[filenames_repli[i]],linestyle="--",lw=1.2) ## -- line style is haplotype 2
+
+#     ax.plot(hap1[hap1["arm"]=="q"]["start"],
+#                 smooth_vector(hap1[hap1["arm"]=="q"]["start"],hap1[hap1["arm"]=="q"]["logr_hap1_"+filenames_repli[i]]),
+#             c=color_dict_repli[filenames_repli[i]],lw=1.2)
+#     ax.plot(hap2[hap2["arm"]=="q"]["start"],
+#             smooth_vector(hap2[hap2["arm"]=="q"]["start"],hap2[hap2["arm"]=="q"]["logr_hap2_"+filenames_repli[i]]),
+#             c=color_dict_repli[filenames_repli[i]],linestyle="--",lw=1.2) ## -- line style is haplotype 2
+
+#     ## comment in or out for the background gray highlights.
+#     for index3,row3 in tmp_merged[tmp_merged["chrom"]=="X"].iterrows():
+#         rect=Rectangle((row3["start"]-250000, -5), width=row3["stop"]-row3["start"]+500000, height=10,
+#                  facecolor="lightgray",alpha=1,fill=True)
+#         ax.add_patch(rect)
+
+#     # df is lncs
+#     ax_lnc = ax.twinx()
+#     for index2, row2 in df[(df["chrom"]=="X") & (df["significant_deviation"]==True) & (df["sample"]==vlinc_samples[i])].iterrows():
+#         rect=Rectangle((row2["start"], row2["skew"]-0.025), width=row2["stop"]-row2["start"], height=0.05,
+#                      facecolor=row2["color"], edgecolor="black",fill=True,lw=.4)
+#         # shadow = Shadow(rect, 10000,-0.0015 )                             
+#         # ax_lnc.add_patch(shadow)
+#         ax_lnc.add_patch(rect)
+#     for index2, row2 in df[(df["chrom"]=="X") & (df["significant_deviation"]==False) & (df["sample"]==vlinc_samples[i])].iterrows():
+#         rect=Rectangle((row2["start"], row2["skew"]-0.025), width=row2["stop"]-row2["start"], height=0.05,
+#                  facecolor=row2["color"], edgecolor="black",fill=True,lw=.4,alpha=0.3)
+#         # shadow = Shadow(rect, 10000,-0.0015 )                             
+#         # ax_lnc.add_patch(shadow)
+#         ax_lnc.add_patch(rect)
+#     # df coding is coding genes
+#     for index5, row5 in df_coding[(df_coding["chrom"]=="X") & (df_coding["significant_deviation"]==True) & (df_coding["sample"]==coding_files[i][0:9])].iterrows():
+#         rect=Rectangle((row5["start"], row5["skew"]-0.025), width=row5["stop"]-row5["start"], height=0.05,
+#                      facecolor=row5["color"], edgecolor="black",fill=True,lw=.6,linestyle="dotted")
+#         # shadow = Shadow(rect, 10000,-0.0015 )                                   
+#         # ax_lnc.add_patch(shadow)
+#         ax_lnc.add_patch(rect)
+#     for index5, row5 in df_coding[(df_coding["chrom"]=="X") & (df_coding["significant_deviation"]==False)& (df_coding["sample"]==coding_files[i][0:9] )].iterrows():
+#         rect=Rectangle((row5["start"], row5["skew"]-0.025), width=row5["stop"]-row5["start"], height=0.05,
+#                      facecolor=row5["color"], edgecolor="black",fill=True,lw=.6,alpha=0.3,linestyle="dotted")
+#         # shadow = Shadow(rect, 10000,-0.0015 )                                   
+#         # ax_lnc.add_patch(shadow)
+#         ax_lnc.add_patch(rect)
+# ax.set_ylim([-3.5,3.5])
+# ax.set_yticks([-3,-2,-1,0,1,2,3])
+# ax.set_xlim([locus["start"].min(),locus["stop"].max()])
+# ax.set_xticks(np.linspace(locus["start"].min(),locus["stop"].max(),4))
+# ax_lnc.set_xlim([locus["start"].min(),locus["stop"].max()])
+# ax_lnc.set_ylim([-0.52,0.52])
+# ax_lnc.set_yticks([-0.5,-.25,0,.25,.5])
+# ax.axhline(y=0,linestyle="--",lw=0.5,c="black")
+
+# plt.savefig("bouha.xact.x.png",
+# dpi=400,transparent=True, bbox_inches='tight', pad_inches = 0)
+# plt.close()
+# exit()
+####
+####
+####
+####
+#######
+######
+######
+####
+# all_expressed_x = intersect_tables(df[df["chrom"]=="X"],df_coding[df_coding["chrom"]=="X"]).sort_values(["start"],ascending=True)
+# all_expressed_x = pybedtools.BedTool.from_dataframe(all_expressed_x.drop_duplicates(["chrom","start","stop"]).loc[:,["chrom","start","stop"]])
+# all_expressed_x = all_expressed_x.merge(d=250001).to_dataframe(names=["chrom","start","stop"])
+# for index,row in all_expressed_x.iterrows():
+# # for index,row in df[(df["significant_deviation"]==True) & (df["chrom"]=="X")].iterrows():
+# # for index,row in df[(df["significant_deviation"]==True) & (df["chrom"]=="X")].iterrows():
+#     chrom="X"
+#     start=row["start"]
+#     stop=row["stop"]
+#     fig,ax = plt.subplots(1,figsize=(1.5,2))
+#     for index2, row2 in df[(df["chrom"]==chrom) & (df["start"]>=start-150000) & (df["stop"]<=stop+150000) & (df["significant_deviation"]==True)].iterrows():
+#         rect=Rectangle((row2["start"], row2["skew"]-0.025), width=row2["stop"]-row2["start"], height=0.05,
+#                      facecolor=row2["color"], edgecolor="black",fill=True,lw=.4)
+#         # shadow = Shadow(rect, 10000,-0.0015 )                             
+#         # ax_lnc.add_patch(shadow)
+#         ax.add_patch(rect)
+#     for index2, row2 in df[(df["chrom"]==chrom) & (df["start"]>=start-150000) & (df["stop"]<=stop+150000)& (df["significant_deviation"]==False)].iterrows():
+#         rect=Rectangle((row2["start"], row2["skew"]-0.025), width=row2["stop"]-row2["start"], height=0.05,
+#                  facecolor=row2["color"], edgecolor="black",fill=True,lw=.4,alpha=0.3)
+#         # shadow = Shadow(rect, 10000,-0.0015 )                             
+#         # ax_lnc.add_patch(shadow)
+#         ax.add_patch(rect)
+#     # df coding is coding genes
+#     for index5, row5 in df_coding[(df_coding["chrom"]==chrom) & (df_coding["start"]>=start-150000) & (df_coding["stop"]<=stop+150000)& (df_coding["significant_deviation"]==True)].iterrows():
+#         rect=Rectangle((row5["start"], row5["skew"]-0.025), width=row5["stop"]-row5["start"], height=0.05,
+#                      facecolor=row5["color"], edgecolor="black",fill=True,lw=.6,linestyle="dotted")
+#         # shadow = Shadow(rect, 10000,-0.0015 )                                   
+#         # ax_lnc.add_patch(shadow)
+#         ax.add_patch(rect)
+#     for index5, row5 in df_coding[(df_coding["chrom"]==chrom) & (df_coding["start"]>=start-150000) & (df_coding["stop"]<=stop+150000)& (df_coding["significant_deviation"]==False)].iterrows():
+#         rect=Rectangle((row5["start"], row5["skew"]-0.025), width=row5["stop"]-row5["start"], height=0.05,
+#                      facecolor=row5["color"], edgecolor="black",fill=True,lw=.6,alpha=0.3,linestyle="dotted")
+#         ax.add_patch(rect)
+
+#     ax.tick_params(axis="x", labelsize=6,labelrotation=335) 
+#     ax.set_ylim([-.52,.52])
+#     ax.set_yticks([-.5,-.25,0,.25,.5])
+#     ax.set_xlim([max(0,start-100000),stop+100000])
+#     ax.set_xticks(np.linspace(max(0,start-100000),stop+100000,4))
+#     ax.axhline(y=0,linestyle="--",lw=0.4,c="black")
+
+#     plt.savefig("bouha.chromosome.x."+str(start)+".png",
+#         dpi=400,transparent=True, bbox_inches='tight', pad_inches = 0)
+#     plt.close()
+
+# #####
+#####
+#####
+#####
+#####
+
+
+## X with subplots. keep..
 # f,ax = plt.subplots(6,1,figsize=(10,6))
 # for i in range(len(filenames_repli)):
 #     hap1 = repli_df[(repli_df["chrom"]=="X")].set_index(["chrom","start","stop","arm"]).filter(like="hap1",axis=1).reset_index()
@@ -408,43 +576,314 @@ exit()
 # plt.show()
 # plt.close()
 ####
-#X on top of each other for whole chrom
-# f,ax = plt.subplots(figsize=(10,2))
-# for i in range(len(filenames_repli)):
-#     hap1 = repli_df[(repli_df["chrom"]=="X")].set_index(["chrom","start","stop","arm"]).filter(like="hap1",axis=1).reset_index()
-#     hap2 = repli_df[(repli_df["chrom"]=="X")].set_index(["chrom","start","stop","arm"]).filter(like="hap2",axis=1).reset_index()
-#     ax.axhline(y=0,linestyle="--",lw=0.5,c="black")
-#     ax.plot(hap1[hap1["arm"]=="p"]["start"],
-#                 smooth_vector(hap1[hap1["arm"]=="p"]["start"],hap1[hap1["arm"]=="p"]["logr_hap1_"+filenames_repli[i]]),
-#             c=color_dict_repli[filenames_repli[i]],lw=1.2)
-#     ax.plot(hap2[hap2["arm"]=="p"]["start"],
-#             smooth_vector(hap2[hap2["arm"]=="p"]["start"],hap2[hap2["arm"]=="p"]["logr_hap2_"+filenames_repli[i]]),
-#             c=color_dict_repli[filenames_repli[i]],linestyle="--",lw=1.2) ## -- line style is haplotype 2
 
-#     ax.plot(hap1[hap1["arm"]=="q"]["start"],
-#                 smooth_vector(hap1[hap1["arm"]=="q"]["start"],hap1[hap1["arm"]=="q"]["logr_hap1_"+filenames_repli[i]]),
-#             c=color_dict_repli[filenames_repli[i]],lw=1.2)
-#     ax.plot(hap2[hap2["arm"]=="q"]["start"],
-#             smooth_vector(hap2[hap2["arm"]=="q"]["start"],hap2[hap2["arm"]=="q"]["logr_hap2_"+filenames_repli[i]]),
-#             c=color_dict_repli[filenames_repli[i]],linestyle="--",lw=1.2) ## -- line style is haplotype 2
+#### make XACT figure
+####3
+#######
+locus  = repli_df[(repli_df["chrom"]=="X") & (repli_df["start"]>=110000000) & (repli_df["stop"]<=116000000)]
+# locus  = repli_df[(repli_df["chrom"]=="X") & (repli_df["start"]>=10000000) & (repli_df["stop"]<=14000000)]
+
+for index,row in locus.iterrows():
+# for index,row in thayer_fish_loci.drop_duplicates(["chrom","start","stop"]).iterrows():
+    plt.rc('xtick', labelsize=3) 
+    plt.rc('ytick', labelsize=6) 
+    f, (ax,ax_peaks,ax_peaks2,ax_peaks3) = plt.subplots(4,1,figsize=(2,2.3),sharex=False,
+                         gridspec_kw={'height_ratios': [6,1,1,1]})
+
+#### for rtqtls
+    # chrom=row["chrom"]
+    # start=row["affected_region_start"]
+    # stop=row["affected_region_end"]
+    ####### 
+    start=row["start"]
+    stop=row["stop"]
+    chrom=str(row["chrom"])
+    plt.suptitle(chrom)
+    ax_lnc = ax.twinx()
+    # df is lncs
+    for index2, row2 in df[(df["chrom"]==chrom) & (df["start"]>=start-5000000) & (df["stop"]<=stop+5000000) 
+                            & (df["significant_deviation"]==True) ].iterrows():
+        rect=Rectangle((row2["start"], row2["skew"]-.0125), width=row2["stop"]-row2["start"], height=0.025,
+                     facecolor=row2["color"], edgecolor="black",fill=True,lw=.4)
+        # shadow = Shadow(rect, 10000,-0.0015 )                             
+        # ax_lnc.add_patch(shadow)
+        ax_lnc.add_patch(rect)
+    for index2, row2 in df[(df["chrom"]==chrom) & (df["start"]>=start-5000000) & (df["stop"]<=stop+5000000) 
+                        & (df["significant_deviation"]==False) ].iterrows():
+        rect=Rectangle((row2["start"], row2["skew"]-.0125), width=row2["stop"]-row2["start"], height=0.025,
+                 facecolor=row2["color"], edgecolor="black",fill=True,lw=.4,alpha=0.1)
+        # shadow = Shadow(rect, 10000,-0.0015 )                             
+        # ax_lnc.add_patch(shadow)
+        ax_lnc.add_patch(rect)
+    # df coding is coding genes
+    for index5, row5 in df_coding[(df_coding["chrom"]==chrom) & (df_coding["start"]>=start-5000000) & (df_coding["stop"]<=stop+5000000)
+                                 & (df_coding["significant_deviation"]==True) ].iterrows():
+        rect=Rectangle((row5["start"], row5["skew"]-.0125), width=row5["stop"]-row5["start"], height=0.025,
+                     facecolor=row5["color"], edgecolor="black",fill=True,lw=.6,linestyle="dotted")
+        # shadow = Shadow(rect, 10000,-0.0015 )                                   
+        # ax_lnc.add_patch(shadow)
+        ax_lnc.add_patch(rect)
+    for index5, row5 in df_coding[(df_coding["chrom"]==chrom) & (df_coding["start"]>=start-5000000) & (df_coding["stop"]<=stop+5000000)
+                                 & (df_coding["significant_deviation"]==False) ].iterrows():
+        rect=Rectangle((row5["start"], row5["skew"]-.0125), width=row5["stop"]-row5["start"], height=0.025,
+                     facecolor=row5["color"], edgecolor="black",fill=True,lw=.6,alpha=0.1,linestyle="dotted")
+        # shadow = Shadow(rect, 10000,-0.0015 )                                   
+        # ax_lnc.add_patch(shadow)
+        ax_lnc.add_patch(rect)
+    # print("done adding coding")
+    # ax_lnc.axhline(y=0,linestyle="--",lw=0.4,c="black")
+    ax_lnc.set_xlim([max(0,start-2000000),stop+2000000])
+    ax_lnc.set_ylim([-0.52,0.52])
+    ax_lnc.set_yticks([-0.5,-.25,0,.25,.5])
+    # ax_lnc.set_xticks(np.linspace(max(0,start-6000000),stop+6000000, 12))
 
 
-#     for index3,row3 in tmp_merged[tmp_merged["chrom"]=="X"].iterrows():
-#         rect=Rectangle((row3["start"]-250000, -5), width=row3["stop"]-row3["start"]+500000, height=10,
-#                  facecolor="lightgray",alpha=1,fill=True)
-#         ax.add_patch(rect)
-#     ax.set_ylim([-3.5,3.5])
-#     ax.set_yticks([-3,-2,-1,0,1,2,3])
-#     ax.set_xlim([0,chromosome_length["X"]])
-#     ax.set_xticks(np.linspace(0,chromosome_length["X"],16))
-# plt.show()
+    # print("done adding asars, shadows, and background highlights")
+    hap1 = repli_df[(repli_df["chrom"]==chrom) 
+            &(repli_df["start"]>=start-10000000) & (repli_df["stop"]<=stop+10000000) ].set_index(["chrom","start","stop"]).filter(like="hap1",axis=1).reset_index()
+    hap2 = repli_df[(repli_df["chrom"]==chrom)  
+            &(repli_df["start"]>=start-10000000) & (repli_df["stop"]<=stop+10000000)].set_index(["chrom","start","stop"]).filter(like="hap2",axis=1).reset_index()
+    # print("merely subsetting into hap1 and hap2")
 
-### do one sample at a time, but also show all TLs with opacity
+    ax.set_xlim([max(0,start-2000000),stop+2000000])
+    # print(hap1)
+    # ax.set_ylim([min(hap1.filter(like="bouha",axis=1).values.min(),hap2.filter(like="bouha",axis=1).values.min()),
+    #     max(hap1.filter(like="bouha",axis=1).values.max(),hap2.filter(like="bouha",axis=1).values.max())])
+    ax.set_ylim([-3.5,3.5])
+    ax.set_yticks([-3,-2,-1,0,1,2,3])
+    ax.set_xticks([])
+    ax.axhline(y=0,linestyle="--",c="black",lw=0.4)
+    # print("how could you be getting stuck before this and after the previous....")
+    #### normalized repliseq
+    ## this needs to be looped and colors fixed?
+    for i in range(len(filenames_repli)):
+        # print("starting to plot ", filenames_repli[i])
+        # print("printing hap1 df", hap1)
+        # print("printing hap2 df", hap2)
+        ax.plot(hap1["start"],
+                smooth_vector(hap1["start"],hap1["logr_hap1_"+filenames_repli[i]]),
+            c=color_dict_repli[filenames_repli[i]],lw=1)
+        ax.plot(hap2["start"],
+            smooth_vector(hap2["start"],hap2["logr_hap2_"+filenames_repli[i]]),
+            c=color_dict_repli[filenames_repli[i]],linestyle="--",lw=1) ## -- line style is haplotype 2
+        # print("plotted sample ",filenames_repli[i])
+    ### Gray shadowing the Ax peaks
+    for index3,row3 in repli_df[(repli_df["chrom"]==chrom) & (repli_df["std_dev"]>=threshold)].iterrows():
+        rect=Rectangle((row3["start"]-250000, -10), width=row3["stop"]-row3["start"]+500000, height=20,
+                 facecolor="lightgray",alpha=1,fill=True) 
+        ax_peaks.add_patch(rect)
+    for index3,row3 in repli_df[(repli_df["chrom"]==chrom) & (repli_df["std_dev_hap1"]>=threshold1)].iterrows():
+        rect=Rectangle((row3["start"]-250000, -10), width=row3["stop"]-row3["start"]+500000, height=20,
+                 facecolor="lightgray",alpha=1,fill=True) 
+        ax_peaks2.add_patch(rect)
+    for index3,row3 in repli_df[(repli_df["chrom"]==chrom) & (repli_df["std_dev_hap2"]>=threshold2)].iterrows():
+        rect=Rectangle((row3["start"]-250000, -10), width=row3["stop"]-row3["start"]+500000, height=20,
+                 facecolor="lightgray",alpha=1,fill=True) 
+        ax_peaks3.add_patch(rect)
+    ### now plot the variance curve in the subplot
 
+    tmp_std = repli_df[(repli_df["chrom"]==chrom) 
+            &(repli_df["start"]>=start-5000000) & (repli_df["stop"]<=stop+5000000) ]
+    ax_peaks.plot(tmp_std["start"],
+                tmp_std["std_dev"],
+                c="black",
+                lw=0.8)
+    ax_peaks2.plot(tmp_std["start"],
+                tmp_std["std_dev_hap1"],
+                c="black",
+                lw=0.8)
+    ax_peaks3.plot(tmp_std["start"],
+                tmp_std["std_dev_hap2"],
+                c="black", linestyle="--",
+                lw=0.8)
+    ax_peaks.set_ylim([0,2])
+    ax_peaks.set_yticks([0,1,2])
+    ax_peaks.set_xlim([max(0,start-2000000),stop+2000000])
+    ax_peaks.set_xticks([])
+
+    ax_peaks2.set_ylim([0,2])
+    ax_peaks2.set_yticks([0,1,2])
+    ax_peaks2.set_xlim([max(0,start-2000000),stop+2000000])
+    ax_peaks2.set_xticks([])
+
+    ax_peaks3.set_ylim([0,2])
+    ax_peaks3.set_yticks([0,1,2])
+    ax_peaks3.set_xlim([max(0,start-2000000),stop+2000000])
+    ax_peaks3.set_xticks(np.linspace(max(0,start-2000000),stop+2000000, 6))  
+
+
+    rtqtl_label=False
+    rtqtls_to_plot = rtqtls[(rtqtls["chrom"]==chrom) & (rtqtls["position"] >= start-4000000) & (rtqtls["position"]<=stop+4000000)]
+    if len(rtqtls_to_plot)>0:
+        rtqtl_label = True
+        print("rtqtl on chromosome ",chrom,start)
+        ax.text(rtqtls_to_plot["affected_region_start"],3.1,"rtQTL region",fontdict = {'family': 'serif','color':  'black','weight': 'normal','size': 6})
+        ax.hlines(y=3,xmin=rtqtls_to_plot["affected_region_start"],xmax=rtqtls_to_plot["affected_region_end"],linewidth=1,color="black",zorder=10)
+    
+    ## plot thayer fish loci
+    # ax.text(row["start"],-3.4,"FISH probe",fontdict = {'family': 'serif','color':  'black','weight': 'normal','size': 6})
+    # ax.hlines(y=-3,xmin=row["start"],xmax=row["stop"],linewidth=1,color="black",zorder=10)
+
+    if rtqtl_label==True:
+        plt.savefig("x.locus."+str(start)+".png",
+        dpi=400,transparent=True, bbox_inches='tight', pad_inches = 0)
+    else:
+        plt.savefig("x.locus."+str(start)+".png",
+        dpi=400,transparent=True, bbox_inches='tight', pad_inches = 0)        
+    plt.close()
+
+
+#### try whole X chromosome, with lower box for hap specific variance
+#####
+#####
+#####
+plt.rc('xtick', labelsize=3) 
+plt.rc('ytick', labelsize=6) 
+f, (ax,ax_peaks,ax_peaks2,ax_peaks3) = plt.subplots(4,1,figsize=(10,1.5),sharex=False,
+                     gridspec_kw={'height_ratios': [6, 1,1,1]})
 for i in range(len(filenames_repli)):
-    f,ax = plt.subplots(figsize=(10,2))
     hap1 = repli_df[(repli_df["chrom"]=="X")].set_index(["chrom","start","stop","arm"]).filter(like="hap1",axis=1).reset_index()
     hap2 = repli_df[(repli_df["chrom"]=="X")].set_index(["chrom","start","stop","arm"]).filter(like="hap2",axis=1).reset_index()
+    ax.axhline(y=0,linestyle="--",lw=0.5,c="black")
+    ax.plot(hap1[hap1["arm"]=="p"]["start"],
+                smooth_vector(hap1[hap1["arm"]=="p"]["start"],hap1[hap1["arm"]=="p"]["logr_hap1_"+filenames_repli[i]]),
+            c=color_dict_repli[filenames_repli[i]],lw=1.2)
+    ax.plot(hap2[hap2["arm"]=="p"]["start"],
+            smooth_vector(hap2[hap2["arm"]=="p"]["start"],hap2[hap2["arm"]=="p"]["logr_hap2_"+filenames_repli[i]]),
+            c=color_dict_repli[filenames_repli[i]],linestyle="--",lw=1.3) ## -- line style is haplotype 2
+
+    ax.plot(hap1[hap1["arm"]=="q"]["start"],
+                smooth_vector(hap1[hap1["arm"]=="q"]["start"],hap1[hap1["arm"]=="q"]["logr_hap1_"+filenames_repli[i]]),
+            c=color_dict_repli[filenames_repli[i]],lw=1.2)
+    ax.plot(hap2[hap2["arm"]=="q"]["start"],
+            smooth_vector(hap2[hap2["arm"]=="q"]["start"],hap2[hap2["arm"]=="q"]["logr_hap2_"+filenames_repli[i]]),
+            c=color_dict_repli[filenames_repli[i]],linestyle="--",lw=1.3) ## -- line style is haplotype 2
+
+    #### highlighting allele variant regions
+    for index3,row3 in repli_df[(repli_df["chrom"]=="X") & (repli_df["std_dev"]>=threshold)].iterrows():
+        rect=Rectangle((row3["start"]-250000, -5), width=row3["stop"]-row3["start"]+500000, height=10,
+                 facecolor="lightgray",alpha=1,fill=True)
+        ax_peaks.add_patch(rect)
+    for index3,row3 in repli_df[(repli_df["chrom"]=='X') & (repli_df["std_dev"]>=threshold)].iterrows():
+        rect=Rectangle((row3["start"]-250000, -5), width=row3["stop"]-row3["start"]+500000, height=10,
+                 facecolor="lightgray",alpha=1,fill=True)
+        ax_peaks.add_patch(rect)
+    ######
+    for index3,row3 in repli_df[(repli_df["chrom"]=="X") & (repli_df["std_dev_hap1"]>=threshold1)].iterrows():
+        rect=Rectangle((row3["start"]-250000, -5), width=row3["stop"]-row3["start"]+500000, height=10,
+                 facecolor="lightgray",alpha=1,fill=True)
+        ax_peaks2.add_patch(rect)
+    for index3,row3 in repli_df[(repli_df["chrom"]=='X') & (repli_df["std_dev_hap1"]>=threshold1)].iterrows():
+        rect=Rectangle((row3["start"]-250000, -5), width=row3["stop"]-row3["start"]+500000, height=10,
+                 facecolor="lightgray",alpha=1,fill=True)
+        ax_peaks2.add_patch(rect)
+    #####
+    for index3,row3 in repli_df[(repli_df["chrom"]=="X") & (repli_df["std_dev_hap2"]>=threshold2)].iterrows():
+        rect=Rectangle((row3["start"]-250000, -5), width=row3["stop"]-row3["start"]+500000, height=10,
+                 facecolor="lightgray",alpha=1,fill=True)
+        ax_peaks3.add_patch(rect)
+    for index3,row3 in repli_df[(repli_df["chrom"]=='X') & (repli_df["std_dev_hap2"]>=threshold2)].iterrows():
+        rect=Rectangle((row3["start"]-250000, -5), width=row3["stop"]-row3["start"]+500000, height=10,
+                 facecolor="lightgray",alpha=1,fill=True)
+        ax_peaks3.add_patch(rect)
+    #####
+    ax_peaks.plot(repli_df[(repli_df["chrom"]=="X") & (repli_df["arm"]=="p")]["start"],
+                repli_df[(repli_df["chrom"]=="X") & (repli_df["arm"]=="p")]["std_dev"],
+                c="black",
+                lw=0.7)
+    ax_peaks.plot(repli_df[(repli_df["chrom"]=="X") & (repli_df["arm"]=="q")]["start"],
+                repli_df[(repli_df["chrom"]=="X") & (repli_df["arm"]=="q")]["std_dev"],
+                c="black",
+                lw=0.7)
+
+    ax_peaks2.plot(hap1[hap1["arm"]=="p"]["start"],
+                hap1[hap1["arm"]=="p"]["std_dev_hap1"],
+                c="black",
+                lw=0.7)
+    ax_peaks2.plot(hap1[hap1["arm"]=="q"]["start"],
+                hap1[hap1["arm"]=="q"]["std_dev_hap1"],
+                c="black",
+                lw=0.7)
+
+    ax_peaks3.plot(hap2[hap2["arm"]=="p"]["start"],
+                hap2[hap2["arm"]=="p"]["std_dev_hap2"],
+                c="black",
+                linestyle="--",
+                lw=0.7)
+    ax_peaks3.plot(hap2[hap2["arm"]=="q"]["start"],
+                hap2[hap2["arm"]=="q"]["std_dev_hap2"],
+                c="black",
+                linestyle="--",
+                lw=0.7)
+    ax_peaks.set_ylim([0,2.3])
+    ax_peaks.set_yticks([0,1,2])
+    ax_peaks.set_xlim([0,chromosome_length["X"]])
+    ax_peaks.set_xticks([]) 
+
+    ax_peaks2.set_ylim([0,2])
+    ax_peaks2.set_yticks([0,1,2])
+    ax_peaks2.set_xlim([0,chromosome_length["X"]])
+    ax_peaks2.set_xticks([]) 
+
+    ax_peaks3.set_ylim([0,2])
+    ax_peaks3.set_yticks([0,1,2])
+    ax_peaks3.set_xlim([0,chromosome_length["X"]])
+    ax_peaks3.set_xticks(np.linspace(0,chromosome_length["X"],16)) 
+
+    ax.set_ylim([-3.7,3.5])
+    ax.set_yticks([-3,-2,-1,0,1,2,3])
+    ax.set_xlim([0,chromosome_length["X"]])
+    ax.set_xticks([])
+plt.savefig("bouha.all.clones.x.alleles.png",
+    dpi=400,transparent=True, bbox_inches='tight', pad_inches = 0)
+plt.close()
+
+
+exit()
+### do on
+
+# X on top of each other for whole chrom
+f,ax = plt.subplots(figsize=(10,1.5))
+for i in range(len(filenames_repli)):
+    hap1 = repli_df[(repli_df["chrom"]=="X")].set_index(["chrom","start","stop","arm"]).filter(like="hap1",axis=1).reset_index()
+    hap2 = repli_df[(repli_df["chrom"]=="X")].set_index(["chrom","start","stop","arm"]).filter(like="hap2",axis=1).reset_index()
+    ax.axhline(y=0,linestyle="--",lw=0.5,c="black")
+    ax.plot(hap1[hap1["arm"]=="p"]["start"],
+                smooth_vector(hap1[hap1["arm"]=="p"]["start"],hap1[hap1["arm"]=="p"]["logr_hap1_"+filenames_repli[i]]),
+            c=color_dict_repli[filenames_repli[i]],lw=1.2)
+    ax.plot(hap2[hap2["arm"]=="p"]["start"],
+            smooth_vector(hap2[hap2["arm"]=="p"]["start"],hap2[hap2["arm"]=="p"]["logr_hap2_"+filenames_repli[i]]),
+            c=color_dict_repli[filenames_repli[i]],linestyle="--",lw=1.3) ## -- line style is haplotype 2
+
+    ax.plot(hap1[hap1["arm"]=="q"]["start"],
+                smooth_vector(hap1[hap1["arm"]=="q"]["start"],hap1[hap1["arm"]=="q"]["logr_hap1_"+filenames_repli[i]]),
+            c=color_dict_repli[filenames_repli[i]],lw=1.2)
+    ax.plot(hap2[hap2["arm"]=="q"]["start"],
+            smooth_vector(hap2[hap2["arm"]=="q"]["start"],hap2[hap2["arm"]=="q"]["logr_hap2_"+filenames_repli[i]]),
+            c=color_dict_repli[filenames_repli[i]],linestyle="--",lw=1.3) ## -- line style is haplotype 2
+
+
+    for index3,row3 in tmp_merged[tmp_merged["chrom"]=="X"].iterrows():
+        rect=Rectangle((row3["start"]-250000, -5), width=row3["stop"]-row3["start"]+500000, height=10,
+                 facecolor="lightgray",alpha=1,fill=True)
+        ax.add_patch(rect)
+    ax.set_ylim([-3.7,3.5])
+    ax.set_yticks([-3,-2,-1,0,1,2,3])
+    ax.set_xlim([0,chromosome_length["X"]])
+    ax.set_xticks(np.linspace(0,chromosome_length["X"],16))
+plt.savefig("bouha.all.clones.x.png",
+    dpi=400,transparent=True, bbox_inches='tight', pad_inches = 0)
+plt.close()
+### do one sample at a time, but also show all TLs with opacity
+
+xact_locus = repli_df[(repli_df["chrom"]=="X") & (repli_df["start"]>=109000000) & (repli_df["stop"]<=116500000)]
+
+for i in range(len(filenames_repli)):
+    f,ax = plt.subplots(figsize=(10,1.5))
+    hap1 = repli_df[(repli_df["chrom"]=="X")].set_index(["chrom","start","stop","arm"]).filter(like="hap1",axis=1).reset_index()
+    hap2 = repli_df[(repli_df["chrom"]=="X")].set_index(["chrom","start","stop","arm"]).filter(like="hap2",axis=1).reset_index()
+
+
     ax.axhline(y=0,linestyle="--",lw=0.5,c="black")
     ax.plot(hap1[hap1["arm"]=="p"]["start"],
                 smooth_vector(hap1[hap1["arm"]=="p"]["start"],hap1[hap1["arm"]=="p"]["logr_hap1_"+filenames_repli[i]]),
@@ -459,34 +898,36 @@ for i in range(len(filenames_repli)):
     ax.plot(hap2[hap2["arm"]=="q"]["start"],
             smooth_vector(hap2[hap2["arm"]=="q"]["start"],hap2[hap2["arm"]=="q"]["logr_hap2_"+filenames_repli[i]]),
             c=color_dict_repli[filenames_repli[i]],linestyle="--",lw=1.2) ## -- line style is haplotype 2
-    for index3,row3 in tmp_merged[tmp_merged["chrom"]=="X"].iterrows():
-        rect=Rectangle((row3["start"]-250000, -5), width=row3["stop"]-row3["start"]+500000, height=10,
-                 facecolor="lightgray",alpha=1,fill=True)
-        ax.add_patch(rect)
+
+    ### comment in or out for the background gray highlights.
+    # for index3,row3 in tmp_merged[tmp_merged["chrom"]=="X"].iterrows():
+    #     rect=Rectangle((row3["start"]-250000, -5), width=row3["stop"]-row3["start"]+500000, height=10,
+    #              facecolor="lightgray",alpha=1,fill=True)
+    #     ax.add_patch(rect)
 
     # df is lncs
     ax_lnc = ax.twinx()
     for index2, row2 in df[(df["chrom"]=="X") & (df["significant_deviation"]==True) & (df["sample"]==vlinc_samples[i])].iterrows():
-        rect=Rectangle((row2["start"], row2["skew"]-.0125), width=row2["stop"]-row2["start"], height=0.025,
+        rect=Rectangle((row2["start"], row2["skew"]-0.025), width=row2["stop"]-row2["start"], height=0.05,
                      facecolor=row2["color"], edgecolor="black",fill=True,lw=.4)
         # shadow = Shadow(rect, 10000,-0.0015 )                             
         # ax_lnc.add_patch(shadow)
         ax_lnc.add_patch(rect)
     for index2, row2 in df[(df["chrom"]=="X") & (df["significant_deviation"]==False) & (df["sample"]==vlinc_samples[i])].iterrows():
-        rect=Rectangle((row2["start"], row2["skew"]-.0125), width=row2["stop"]-row2["start"], height=0.025,
+        rect=Rectangle((row2["start"], row2["skew"]-0.025), width=row2["stop"]-row2["start"], height=0.05,
                  facecolor=row2["color"], edgecolor="black",fill=True,lw=.4,alpha=0.3)
         # shadow = Shadow(rect, 10000,-0.0015 )                             
         # ax_lnc.add_patch(shadow)
         ax_lnc.add_patch(rect)
     # df coding is coding genes
     for index5, row5 in df_coding[(df_coding["chrom"]=="X") & (df_coding["significant_deviation"]==True) & (df_coding["sample"]==coding_files[i][0:9])].iterrows():
-        rect=Rectangle((row5["start"], row5["skew"]-.0125), width=row5["stop"]-row5["start"], height=0.025,
+        rect=Rectangle((row5["start"], row5["skew"]-0.025), width=row5["stop"]-row5["start"], height=0.05,
                      facecolor=row5["color"], edgecolor="black",fill=True,lw=.6,linestyle="dotted")
         # shadow = Shadow(rect, 10000,-0.0015 )                                   
         # ax_lnc.add_patch(shadow)
         ax_lnc.add_patch(rect)
     for index5, row5 in df_coding[(df_coding["chrom"]=="X") & (df_coding["significant_deviation"]==False)& (df_coding["sample"]==coding_files[i][0:9] )].iterrows():
-        rect=Rectangle((row5["start"], row5["skew"]-.0125), width=row5["stop"]-row5["start"], height=0.025,
+        rect=Rectangle((row5["start"], row5["skew"]-0.025), width=row5["stop"]-row5["start"], height=0.05,
                      facecolor=row5["color"], edgecolor="black",fill=True,lw=.6,alpha=0.3,linestyle="dotted")
         # shadow = Shadow(rect, 10000,-0.0015 )                                   
         # ax_lnc.add_patch(shadow)
@@ -498,7 +939,12 @@ for i in range(len(filenames_repli)):
     ax_lnc.set_xlim([0,chromosome_length["X"]])
     ax_lnc.set_ylim([-0.52,0.52])
     ax_lnc.set_yticks([-0.5,-.25,0,.25,.5])
-    plt.show()
+    plt.savefig("bouha."+str(filenames_repli[i])+".x.png",
+    dpi=400,transparent=True, bbox_inches='tight', pad_inches = 0)
     plt.close()
+
+
+
+
 
 

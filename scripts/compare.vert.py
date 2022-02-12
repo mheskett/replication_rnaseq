@@ -238,8 +238,8 @@ bouha_gm12878_shared_vert_loci = pybedtools.BedTool.from_dataframe(bouha_gm12878
 
 bouha_gm12878_shared_vert_loci.to_csv("bouha_gm12878_shared_vert_loci.txt",sep="\t",index=False,header=True)
 
-
-
+exit()
+### i dont think this plotting function works goodly......
 for index,row in bouha_gm12878_shared_vert_loci.iterrows():
     f, (ax,ax_map) = plt.subplots(3,1,figsize=(2.3,16),gridspec_kw={'height_ratios': [3, 3, 1]},sharex=True)
     plt.rc('xtick', labelsize=3) 
