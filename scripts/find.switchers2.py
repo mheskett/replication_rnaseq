@@ -112,6 +112,7 @@ df["significant_deviation"] = df.apply(lambda x: True if abs(x["hap1_counts"] - 
 df_significant_rows = df[(df["significant_deviation"]==True) & (df["fdr_pval"]<=0.01)]
 df_nonsignificant_rows = df[(df["significant_deviation"]==False) | (df["fdr_pval"]>=0.01)]
 
+print("num dae tls: ",len(df[df["significant_deviation"]==True].drop_duplicates(["chrom","start","stop"])))
 ### switchers algorithm
 for i in range(len(unique_genes)):
 	samples = df_significant_rows[df_significant_rows["name"]==unique_genes[i]]

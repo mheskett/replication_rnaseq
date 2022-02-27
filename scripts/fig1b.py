@@ -6,10 +6,10 @@ import pandas as pd
 import argparse
 import re
 import seaborn as sns
+from scipy import stats
 import scipy.stats
 import matplotlib.pyplot as plt
 import pybedtools
-import scipy.stats
 import glob
 import pickle
 import matplotlib.patches as mpatches
@@ -93,7 +93,57 @@ def helper_func(x):
     else:
         return -x["hap2_counts"]  / x["total_reads"] + 0.5
     return
+def helper_func_rna(x):
+    if x["total_reads_rna"]==0: # try this for filtering
+        return 0
+    elif x["hap1_counts_rna"] >= x["hap2_counts_rna"]:
+        return x["hap1_counts_rna"]  / x["total_reads_rna"] - 0.5
+    else:
+        return -x["hap2_counts_rna"]  / x["total_reads_rna"] + 0.5
+    return
+####
+histone_files = ["gm12878.rep1.H2AFZ-human.bed", 
+"gm12878.rep1.H3K27me3-human.bed",   
+"gm12878.rep1.H3K4me1-human.bed",   
+"gm12878.rep1.H3K4me3-human.bed",  
+"gm12878.rep1.H3K9ac-human.bed",    
+"gm12878.rep1.h3k9me3-human.bed",
+"gm12878.rep1.H3K27ac-human.bed",   
+"gm12878.rep1.H3K36me3-human.bed",   
+"gm12878.rep1.H3K4me2-human.bed",    
+"gm12878.rep1.H3K79me2-human.bed",  
+"gm12878.rep1.H4K20me1-human.bed",]
+histone_dfs = []
+for i in range(len(histone_files)):
+    df_histone = pd.read_csv(histone_files[i],sep="\t",
+                            names= ["chrom","start","stop","name","rpkm","strand","l1_density","hap1_counts_rna","hap2_counts_rna","hap1_counts","hap2_counts"],
+                            dtype = {"chrom":str,"start":int,"stop":int,"hap1_counts":int,"hap2_counts":int})
+    df_histone["total_reads"] = df_histone["hap1_counts"] + df_histone["hap2_counts"]
+    df_histone["total_reads_rna"] = df_histone["hap1_counts_rna"] + df_histone["hap2_counts_rna"]
+    df_histone["skew"] = df_histone.apply(helper_func, axis = 1)
+    df_histone["skew_rna"] = df_histone.apply(helper_func_rna, axis = 1)
+    df_histone["sample"] = os.path.basename(histone_files[i])[0:25]
+    add_binom_pval(df_histone)
+    histone_dfs += [df_histone]
+df_histone = pd.concat(histone_dfs)
+df_histone = df_histone[df_histone["total_reads"]>=10]
+df_histone = df_histone[df_histone["total_reads_rna"]>=20]
 
+print(df_histone[df_histone["fdr_pval"]<=0.01])
+
+for i in range(len(histone_files)):
+    sns.kdeplot(abs(df_histone[(df_histone["sample"]==histone_files[i][0:25]) & (df_histone["chrom"]!="X")]["skew"]), cut=0,color="blue")
+    sns.kdeplot(abs(df_histone[(df_histone["sample"]==histone_files[i][0:25]) & (df_histone["chrom"]=="X")]["skew"]), cut=0,color="red")
+    plt.suptitle(histone_files[i])
+    plt.savefig(histone_files[i][0:25]+".png",
+            dpi=400,transparent=True, bbox_inches='tight', pad_inches = 0)
+    plt.close()
+for i in range(len(histone_files)):
+    # print("autosomal correlation: ",histone_files[i][0:25],abs(df_histone[(df_histone["sample"]==histone_files[i][0:25]) & (df_histone["chrom"]!="X")]["skew"])\
+    # .corr(abs(df_histone[(df_histone["sample"]==histone_files[i][0:25]) & (df_histone["chrom"]!="X")]["skew_rna"]),method="spearman"))
+    print("x correlation: ",histone_files[i][11:25],
+            stats.spearmanr(abs(df_histone[(df_histone["sample"]==histone_files[i][0:25]) & (df_histone["chrom"]=="X")]["skew"]),
+                            abs(df_histone[(df_histone["sample"]==histone_files[i][0:25]) & (df_histone["chrom"]=="X")]["skew_rna"]) ))
 ###
 model = pickle.load(open("eb.variance.coding.model.sav", 'rb'))
 arm_dict = get_arms(cytoband)
@@ -133,7 +183,7 @@ ax.set_ylim([0,0.5])
 plt.savefig("fig1.scatter.png",
             dpi=400,transparent=True, bbox_inches='tight', pad_inches = 0)
 plt.close()
-print(" num autosomal TLs with normal Z method: ",len(df_auto[df_auto["significant_deviation"]==True]))
+print(" num autosomal TLs DAE: ",len(df_auto[df_auto["significant_deviation"]==True]))
 print("bases tLE with moraml Z method: ", sum_bases(df_auto[df_auto["significant_deviation"]==True]))
 print("number DAE TLs per megabase ", len(df_auto[df_auto["significant_deviation"]==True])/3000)
 print("number DAE TLs on X chromosome: ", len(df[(df["chrom"]=="X") & df["significant_deviation"]==True]))
@@ -142,6 +192,78 @@ print("number dae tls on 1 chromosome: ", len(df[(df["chrom"]=="1") & df["signif
 # df_auto[df_auto["significant_deviation"]==True]["chrom"].value_counts().plot(kind="bar")
 # plt.show()
 ##################
+dae_genes_with_dae_histones = intersect_tables(df[df["significant_deviation"]==True],
+    df_histone[df_histone["fdr_pval"]<=0.01])
+
+# print(dae_genes_with_dae_histones)
+for i in range(len(histone_files)):
+    # print("autosomal correlation: ",histone_files[i][0:25],abs(df_histone[(df_histone["sample"]==histone_files[i][0:25]) & (df_histone["chrom"]!="X")]["skew"])\
+    # .corr(abs(df_histone[(df_histone["sample"]==histone_files[i][0:25]) & (df_histone["chrom"]!="X")]["skew_rna"]),method="spearman"))
+    # print(dae_genes_with_dae_histones[dae_genes_with_dae_histones["sample1"]==histone_files[i][0:25]])
+    print("correlation: ",histone_files[i][11:25],
+        stats.spearmanr(abs(dae_genes_with_dae_histones[dae_genes_with_dae_histones["sample1"]==histone_files[i][0:25]]["skew1"]),
+                        abs(dae_genes_with_dae_histones[dae_genes_with_dae_histones["sample1"]==histone_files[i][0:25]]["skew_rna1"])))
+    print("autosome only correlation: ",histone_files[i][11:25],
+        stats.spearmanr(abs(dae_genes_with_dae_histones[(dae_genes_with_dae_histones["sample1"]==histone_files[i][0:25]) & (dae_genes_with_dae_histones["chrom"]=="X")]["skew1"]),
+                        abs(dae_genes_with_dae_histones[(dae_genes_with_dae_histones["sample1"]==histone_files[i][0:25]) & (dae_genes_with_dae_histones["chrom"]=="X")]["skew_rna1"])))
+
+
+
+for name in dae_genes_with_dae_histones.drop_duplicates(["name"])["name"].values:
+    print("name", name)
+    plt.rc('xtick', labelsize=6) 
+    plt.rc('ytick', labelsize=6)
+
+    f, ax = plt.subplots(12,1,figsize=(0.5,4),sharex=False,
+                         gridspec_kw={'height_ratios': [2,1,1,1,1,
+                                        1,1,1,1,1,1,1]})
+    tmp_df = df[df["name"]==name]
+    start=tmp_df["start"].values[0]
+    stop=tmp_df["stop"].values[0]
+    chrom=str(tmp_df["chrom"].values[0])
+    plt.suptitle(chrom)
+
+    #plot genes on ax 0
+    for index2, row2 in df[(df["chrom"]==chrom) & (df["start"]>=start-2000000) & (df["stop"]<=stop+2000000) 
+                            & (df["significant_deviation"]==True) ].iterrows():
+        rect=Rectangle((row2["start"], row2["skew"]-.0125), width=row2["stop"]-row2["start"], height=0.025,
+                     facecolor="mediumblue", edgecolor="black",fill=True,lw=.4)
+        ax[0].add_patch(rect)
+        ax[0].set_ylim([-.52,.52])
+        ax[0].set_yticks([-.5,0,.5])
+        ax[0].set_xlim([start-100000,stop+100000])
+        ax[0].set_xticks([])
+        ax[0].axhline(y=0,linestyle="--",lw=0.5,c="black")
+
+    for i in range(len(ax)-1):
+        ax[i+1].axhline(y=0,linestyle="--",lw=0.5,c="black")
+        ax[i+1].set_ylim([-.52,.52])
+        ax[i+1].set_yticks([-.5,0,.5])
+        ax[i+1].set_xlim([start-100000,stop+100000])
+        ax[i+1].set_xticks([])
+        histone=histone_files[i][0:25]
+        ax[i+1].set_ylabel(histone, rotation=0, fontsize=3, labelpad=20)
+
+
+        # tmp1 = df_histone[(df_histone["start"]==start) & (df_histone["chrom"]==chrom) &(df_histone["stop"]==stop) & (df_histone["sample"]==histone)]
+        tmp1 = df_histone[(df_histone["name"]==name) & (df_histone["sample"]==histone)]
+
+        if len(tmp1)==0:
+            continue
+        rect=Rectangle((tmp1["start"].values[0], tmp1["skew"].values[0]-.025), width=tmp1["stop"].values[0]-tmp1["start"].values[0], height=0.05,
+                     facecolor="red", edgecolor="black",fill=True,lw=.4)
+        ax[i+1].add_patch(rect)
+
+    plt.savefig(name+"gm12878.histone.chips.png",
+        dpi=400,transparent=True, bbox_inches='tight', pad_inches = 0)
+    plt.close()
+
+
+
+
+
+
+#######
 df[df["significant_deviation"]==True].to_csv("gm12878.rep1.vlincs.dae.list.bed",sep="\t",header=None,index=False)
 
 for i in range(len(chromosomes)):
@@ -213,6 +335,11 @@ df_coding = df_coding[df_coding["chrom"]!="X"]
 df_coding["significant_deviation"] = df_coding.apply(lambda x: True if abs(x["hap1_counts"] - x["total_reads"]/2) >= model.predict(np.array([x["total_reads"]])\
     .reshape(1,-1))*2.5 else False,
     axis=1)
+df_coding["significant_deviation"] = (df_coding["significant_deviation"]==True) & (df_coding["fdr_pval"]<=0.01)
+
+print("unique coding genes, found DAE in gm12878 parent cell line : ",
+        len(df_coding[(df_coding["significant_deviation"]==True) & (df_coding["chrom"]!="X")].drop_duplicates(subset=["name"])))
+
 for i in range(len(chromosomes)):
     f,ax = plt.subplots(1,1,figsize=(10,2),sharex=False)
     plt.suptitle(chromosomes[i])
