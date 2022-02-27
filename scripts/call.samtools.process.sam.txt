@@ -1,0 +1,10 @@
+## bouhassira cell lines
+
+sbatch slurm.samtools.process.sam.sh ../bouhassira.repliseq.nov.21/bouha.3e.sam ./
+sbatch slurm.samtools.process.sam.sh ../bouhassira.repliseq.nov.21/bouha.3l.sam ./
+sbatch slurm.samtools.process.sam.sh ../bouhassira.repliseq.nov.21/bouha.4e.sam ./
+sbatch slurm.samtools.process.sam.sh ../bouhassira.repliseq.nov.21/bouha.4l.sam ./
+sbatch slurm.samtools.process.sam.sh ../bouhassira.repliseq.nov.21/bouha.13e.sam ./
+sbatch slurm.samtools.process.sam.sh ../bouhassira.repliseq.nov.21/bouha.13l.sam ./
+sbatch slurm.samtools.process.sam.sh ../bouhassira.repliseq.nov.21/bouha.15e.sam ./
+sbatch slurm.samtools.process.sam.sh ../bouhassira.repliseq.nov.21/bouha.15l.sam ./

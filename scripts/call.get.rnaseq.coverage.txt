@@ -1,0 +1,12 @@
+## bouha files aligned to STAR genome from 10X directory
+srun  -A SpellmanLab --mem 30000 -t 2:0:0 bedtools coverage -counts -b bouha.trim.4Aligned.out.samtool.rmdup.bam -a star.genome.10kb.windows.bed -sorted > bouha.trim.4Aligned.out.samtool.rmdup.10kb.counts.bed &
+srun  -A SpellmanLab --mem 30000 -t 2:0:0 bedtools coverage -counts -b bouha.trim.3Aligned.out.samtool.rmdup.bam -a star.genome.10kb.windows.bed -sorted > bouha.trim.3Aligned.out.samtool.rmdup.10kb.counts.bed &
+srun  -A SpellmanLab --mem 30000 -t 2:0:0 bedtools coverage -counts -b bouha.trim.2Aligned.out.samtool.rmdup.bam -a star.genome.10kb.windows.bed -sorted > bouha.trim.2Aligned.out.samtool.rmdup.10kb.counts.bed &
+srun  -A SpellmanLab --mem 30000 -t 2:0:0 bedtools coverage -counts -b bouha.trim.10Aligned.out.samtool.rmdup.bam -a star.genome.10kb.windows.bed -sorted > bouha.trim.10Aligned.out.samtool.rmdup.10kb.counts.bed &
+srun  -A SpellmanLab --mem 30000 -t 2:0:0 bedtools coverage -counts -b bouha.trim.13Aligned.out.samtool.rmdup.bam -a star.genome.10kb.windows.bed -sorted > bouha.trim.13Aligned.out.samtool.rmdup.10kb.counts.bed &
+srun  -A SpellmanLab --mem 30000 -t 2:0:0 bedtools coverage -counts -b bouha.trim.15Aligned.out.samtool.rmdup.bam -a star.genome.10kb.windows.bed -sorted > bouha.trim.15Aligned.out.samtool.rmdup.10kb.counts.bed &
+
+## gm12878 files aligned to myron ref
+srun  -A SpellmanLab --mem 30000 -t 2:0:0 bedtools coverage -counts -b gm12878.4x.hg19Aligned.out.samtool.rmdup.bam -a human_g1k_v37.10kb.windows.bed -sorted > gm12878.4x.hg19Aligned.out.samtool.rmdup.10kb.counts.bed &
+srun  -A SpellmanLab --mem 30000 -t 2:0:0 bedtools coverage -counts -b gm12878.5x.hg19Aligned.out.samtool.rmdup.bam -a human_g1k_v37.10kb.windows.bed -sorted > gm12878.5x.hg19Aligned.out.samtool.rmdup.10kb.counts.bed &
+srun  -A SpellmanLab --mem 30000 -t 2:0:0 bedtools coverage -counts -b gm12878.rep1.hg19Aligned.out.samtool.rmdup.bam -a human_g1k_v37.10kb.windows.bed -sorted > gm12878.rep1.hg19Aligned.out.samtool.rmdup.10kb.counts.bed &

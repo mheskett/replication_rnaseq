@@ -1,0 +1,42 @@
+sbatch slurm.process.bams.sh gm12878.4xAligned.out.bam ./
+sbatch slurm.process.bams.sh gm12878.4x.hg19Aligned.out.bam ./
+sbatch slurm.process.bams.sh gm12878.5xAligned.out.bam ./
+sbatch slurm.process.bams.sh gm12878.5x.hg19Aligned.out.bam ./
+sbatch slurm.process.bams.sh gm12878.rep1Aligned.out.bam ./
+sbatch slurm.process.bams.sh gm12878.rep1.hg19Aligned.out.bam ./
+sbatch slurm.process.bams.sh gm12878.rep2Aligned.out.bam ./
+sbatch slurm.process.bams.sh gm12878.rep2.hg19Aligned.out.bam ./
+sbatch slurm.process.bams.sh p175.xAligned.out.bam ./
+sbatch slurm.process.bams.sh p175.x.hg19Aligned.out.bam ./
+
+## p175 not hap resolved
+sbatch /home/groups/Spellmandata/heskett/replication.rnaseq/old.scripts/slurm.process.bams.gatk3.general.hg19.sh /home/groups/Spellmandata/heskett/replication.rnaseq/results/p175.x.hg19Aligned.out.plus.bam /home/groups/Spellmandata/heskett/replication.rnaseq/results/
+sbatch /home/groups/Spellmandata/heskett/replication.rnaseq/old.scripts/slurm.process.bams.gatk3.general.hg19.sh /home/groups/Spellmandata/heskett/replication.rnaseq/results/p175.x.hg19Aligned.out.minus.bam /home/groups/Spellmandata/heskett/replication.rnaseq/results/
+
+## gm12878 hap resolved
+sbatch /home/groups/Spellmandata/heskett/replication.rnaseq/old.scripts/slurm.process.bams.gatk3.hg19.sh /home/groups/Spellmandata/heskett/replication.rnaseq/results/gm12878.4x.hg19Aligned.out.plus.bam /home/groups/Spellmandata/heskett/replication.rnaseq/results/
+sbatch /home/groups/Spellmandata/heskett/replication.rnaseq/old.scripts/slurm.process.bams.gatk3.hg19.sh /home/groups/Spellmandata/heskett/replication.rnaseq/results/gm12878.4x.hg19Aligned.out.minus.bam /home/groups/Spellmandata/heskett/replication.rnaseq/results/
+sbatch /home/groups/Spellmandata/heskett/replication.rnaseq/old.scripts/slurm.process.bams.gatk3.hg19.sh /home/groups/Spellmandata/heskett/replication.rnaseq/results/gm12878.5x.hg19Aligned.out.plus.bam /home/groups/Spellmandata/heskett/replication.rnaseq/results/
+sbatch /home/groups/Spellmandata/heskett/replication.rnaseq/old.scripts/slurm.process.bams.gatk3.hg19.sh /home/groups/Spellmandata/heskett/replication.rnaseq/results/gm12878.5x.hg19Aligned.out.minus.bam /home/groups/Spellmandata/heskett/replication.rnaseq/results/
+
+
+### old encoding
+sbatch /home/groups/Spellmandata/heskett/replication.rnaseq/old.scripts/slurm.process.encode.gm12878.bams.hg19.sh /home/groups/Spellmandata/heskett/replication.rnaseq/results/gm12878.rep1.hg19Aligned.out.plus.bam /home/groups/Spellmandata/heskett/replication.rnaseq/results/
+sbatch /home/groups/Spellmandata/heskett/replication.rnaseq/old.scripts/slurm.process.encode.gm12878.bams.hg19.sh /home/groups/Spellmandata/heskett/replication.rnaseq/results/gm12878.rep1.hg19Aligned.out.minus.bam /home/groups/Spellmandata/heskett/replication.rnaseq/results/
+sbatch /home/groups/Spellmandata/heskett/replication.rnaseq/old.scripts/slurm.process.encode.gm12878.bams.hg19.sh /home/groups/Spellmandata/heskett/replication.rnaseq/results/gm12878.rep2.hg19Aligned.out.plus.bam /home/groups/Spellmandata/heskett/replication.rnaseq/results/
+sbatch /home/groups/Spellmandata/heskett/replication.rnaseq/old.scripts/slurm.process.encode.gm12878.bams.hg19.sh /home/groups/Spellmandata/heskett/replication.rnaseq/results/gm12878.rep2.hg19Aligned.out.minus.bam /home/groups/Spellmandata/heskett/replication.rnaseq/results/
+
+## old encoding, cytosol samples
+sbatch /home/groups/Spellmandata/heskett/replication.rnaseq/old.scripts/slurm.process.encode.gm12878.bams.hg19.sh gm12878.cytosol.rep1.hg19Aligned.out.plus.bam /home/groups/Spellmandata/heskett/replication.rnaseq/results/
+sbatch /home/groups/Spellmandata/heskett/replication.rnaseq/old.scripts/slurm.process.encode.gm12878.bams.hg19.sh gm12878.cytosol.rep1.hg19Aligned.out.minus.bam /home/groups/Spellmandata/heskett/replication.rnaseq/results/
+sbatch /home/groups/Spellmandata/heskett/replication.rnaseq/old.scripts/slurm.process.encode.gm12878.bams.hg19.sh gm12878.cytosol.rep2.hg19Aligned.out.plus.bam /home/groups/Spellmandata/heskett/replication.rnaseq/results/
+sbatch /home/groups/Spellmandata/heskett/replication.rnaseq/old.scripts/slurm.process.encode.gm12878.bams.hg19.sh gm12878.cytosol.rep2.hg19Aligned.out.minus.bam /home/groups/Spellmandata/heskett/replication.rnaseq/results/
+
+
+### samtools process bams
+sbatch /home/groups/Spellmandata/heskett/replication.rnaseq/scripts/samtools.process.bam.sh /home/groups/Spellmandata/heskett/replication.rnaseq/scripts/gm12878.4x.hg19Aligned.out.bam /home/groups/Spellmandata/heskett/replication.rnaseq/results/
+sbatch /home/groups/Spellmandata/heskett/replication.rnaseq/scripts/samtools.process.bam.sh /home/groups/Spellmandata/heskett/replication.rnaseq/scripts/gm12878.5x.hg19Aligned.out.bam /home/groups/Spellmandata/heskett/replication.rnaseq/results/
+sbatch /home/groups/Spellmandata/heskett/replication.rnaseq/scripts/samtools.process.bam.sh /home/groups/Spellmandata/heskett/replication.rnaseq/scripts/p175.x.hg19Aligned.out.bam /home/groups/Spellmandata/heskett/replication.rnaseq/results/
+## just processing on map quality here so base encoding doesnt matter
+sbatch /home/groups/Spellmandata/heskett/replication.rnaseq/scripts/samtools.process.bam.sh /home/groups/Spellmandata/heskett/replication.rnaseq/scripts/gm12878.rep1.hg19Aligned.out.bam /home/groups/Spellmandata/heskett/replication.rnaseq/results/
+sbatch /home/groups/Spellmandata/heskett/replication.rnaseq/scripts/samtools.process.bam.sh /home/groups/Spellmandata/heskett/replication.rnaseq/scripts/gm12878.rep2.hg19Aligned.out.bam /home/groups/Spellmandata/heskett/replication.rnaseq/results/

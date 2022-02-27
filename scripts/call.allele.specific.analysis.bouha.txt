@@ -1,0 +1,10 @@
+## process bam files for early and late repliseq
+
+sbatch slurm.allele.specific.analysis.bouha.sh bouha.3e.sorted.markdup.bam ./
+sbatch slurm.allele.specific.analysis.bouha.sh bouha.3l.sorted.markdup.bam ./
+sbatch slurm.allele.specific.analysis.bouha.sh bouha.4e.sorted.markdup.bam ./
+sbatch slurm.allele.specific.analysis.bouha.sh bouha.4l.sorted.markdup.bam ./
+sbatch slurm.allele.specific.analysis.bouha.sh bouha.13e.sorted.markdup.bam ./
+sbatch slurm.allele.specific.analysis.bouha.sh bouha.13l.sorted.markdup.bam ./
+sbatch slurm.allele.specific.analysis.bouha.sh bouha.15e.sorted.markdup.bam ./
+sbatch slurm.allele.specific.analysis.bouha.sh bouha.15l.sorted.markdup.bam ./
