@@ -14,13 +14,12 @@ import seaborn as sns
 import statsmodels.api as sm
 
 
-## list of imprinted genes
+# ## list of imprinted genes
 # df_imprinted = pd.read_table("/Users/heskett/replication_rnaseq/scripts/imprinted.genes.fixed.bed",
 # 	sep="\t", names=["chrom","start","stop","gene_name"],dtype={"chrom":str},
 # 	header=None,index_col=None)
 # print(df_imprinted)
 
-## list of chromosome names
 ## list of chromosome names
 chromosomes = ["1","2","3","4","5","6","7","8","9","10","11","12",
 				"13","14","15","16","17","18","19","20","21","22","X"]
@@ -166,20 +165,22 @@ arm_dict = get_arms(cytoband)
 
 ## plot 50kb windows early vs late, and lncRNA expression
 
-df_windows = pd.read_csv("5e.100kb.haplotype.counts.bed",sep="\t",header=None,index_col=None,
+df_windows = pd.read_csv("/Users/mike/replication_rnaseq/bouhassira_data/repliseq.dec.20/bouha.2e.100kb.repliseq.haplotype.counts.bed",
+						sep="\t",header=None,index_col=None,
 						names=["chrom","start","stop","hap1_counts","hap2_counts"],
 						dtype = {"chrom":str,"start":int,"stop":int,"hap1_counts":int,"hap2_counts":int})
-df2_windows = pd.read_csv("5l.100kb.haplotype.counts.bed",sep="\t",header=None,index_col=None,
+print(df_windows)
+df2_windows = pd.read_csv("/Users/mike/replication_rnaseq/bouhassira_data/repliseq.dec.20/bouha.2l.100kb.repliseq.haplotype.counts.bed",sep="\t",header=None,index_col=None,
 						names=["chrom","start","stop","hap1_counts","hap2_counts"],
 						dtype = {"chrom":str,"start":int,"stop":int,"hap1_counts":int,"hap2_counts":int})
 
-df_tiling_expression = pd.read_csv("gm12878.5x.hg19Aligned.out.tiling.all.bed",sep="\t",
+df_tiling_expression = pd.read_csv("/Users/mike/replication_rnaseq/bouhassira_data/bouha.expression/bouha.trim.2Aligned.samtool.rmdup.plus.all.chrom.allele.counts.haplotype.resolved.counts.bed.tiling.all.bed",sep="\t",
 						names=["chrom","start","stop","hap1_counts","hap2_counts","strand","pval","qval","reject","total_reads","skew"])
-
-df = pd.read_csv("gm12878.5x.hg19Aligned.outsignificant.skewed.vlincs.bed",sep="\t",
+print(df_tiling_expression)
+df = pd.read_csv("/Users/mike/replication_rnaseq/bouhassira_data/bouha.expression/bouha.trim.2Aligned.samtool.rmdup.plus.all.chrom.allele.counts.haplotype.resolved.counts.bedbouha.trim.2Aligned.out.samtool.rmdup.intergenic.1000.10000.50000.vlinc.discovery.skewed.bed",sep="\t",
 					names= ["chrom","start","stop","name","rpkm","strand", "l1_fraction","hap1_counts","hap2_counts","pval","qval","reject","total_reads","skew"],
 					dtype = {"chrom":str,"start":int,"stop":int,"rpkm":float,"strand":str,"l1_fraction":float,"hap1_counts":int,"hap2_counts":int})
-
+print(df)
 df_windows = df_windows[df_windows["hap1_counts"] + df_windows["hap2_counts"] >= 15]
 df2_windows = df2_windows[df2_windows["hap1_counts"] + df2_windows["hap2_counts"] >= 15]
 
@@ -244,15 +245,14 @@ for i in range(len(chromosomes)):
 	ax.axhline(y=0,linestyle="--",c="black")
 	# smoothed repliseq middle
 	ax3 = ax.twinx()
-	if len(df_windows[(df_windows["chrom"]==chromosomes[i]) & (df_windows["arm"]=="p")] >= 10):
-		ax3.plot(df_windows[(df_windows["chrom"]==chromosomes[i]) & (df_windows["arm"]=="p")]["start"],smoothed_early_p,c="red",zorder=1,label="early log(hap1/hap2)",lw=1)
-		ax3.plot(df2_windows[(df2_windows["chrom"]==chromosomes[i]) & (df2_windows["arm"]=="p")]["start"],smoothed_late_p,c="green",zorder=1,label="late log(hap1/hap2",lw=1)
-	ax3.plot(df_windows[(df_windows["chrom"]==chromosomes[i]) & (df_windows["arm"]=="q")]["start"],smoothed_early_q,c="red",zorder=1,label="early log(hap1/hap2)",lw=1)
-	ax3.plot(df2_windows[(df2_windows["chrom"]==chromosomes[i]) & (df2_windows["arm"]=="q")]["start"],smoothed_late_q,c="green",zorder=1,label="late log(hap1/hap2",lw=1)
+	if len(df_windows[(df_windows["chrom"]==chromosomes[i]) & (df_windows["arm"]=="p")]) >= 10:
+		ax3.plot(df_windows[(df_windows["chrom"]==chromosomes[i]) & (df_windows["arm"]=="p")]["start"],smoothed_early_p,c="red",zorder=1,label="early log(hap1/hap2)",lw=0.6)
+		ax3.plot(df2_windows[(df2_windows["chrom"]==chromosomes[i]) & (df2_windows["arm"]=="p")]["start"],smoothed_late_p,c="green",zorder=1,label="late log(hap1/hap2",lw=0.6)
+	ax3.plot(df_windows[(df_windows["chrom"]==chromosomes[i]) & (df_windows["arm"]=="q")]["start"],smoothed_early_q,c="red",zorder=1,label="early log(hap1/hap2)",lw=0.6)
+	ax3.plot(df2_windows[(df2_windows["chrom"]==chromosomes[i]) & (df2_windows["arm"]=="q")]["start"],smoothed_late_q,c="green",zorder=1,label="late log(hap1/hap2",lw=0.6)
 
 
 	significant_repliseq = df_windows[(df_windows["chrom"] == chromosomes[i]) & ((df_windows["logR"] >= 0.91) | (df_windows["logR"] <= -0.8))]
-	print(significant_repliseq)
 
 	ax3.axvline()
 	if chromosomes[i]=="X":
@@ -290,9 +290,16 @@ for i in range(len(chromosomes)):
 	# plt.suptitle("chromosome " + chromosomes[i])	# plt.show()
 	# plt.show()
 
-
-	plt.savefig("5x_repli"+chromosomes[i]+".png", dpi=400, transparent=True, bbox_inches='tight', pad_inches = 0)
+	plt.show()
+	plt.savefig("bouha.2.repli."+chromosomes[i]+".png", dpi=400, transparent=True, bbox_inches='tight', pad_inches = 0)
 	plt.close()
+
+
+"""
+now just make the classic log2r plots
+"""
+
+
 
 # ### plots 
 # f,ax = plt.subplots()
