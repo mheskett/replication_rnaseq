@@ -18,7 +18,7 @@ out_dir=$3
 ## then just simply take the log2 ratio of early/late
 
 bedtools makewindows -w 50000 -s 50000 -g /home/groups/Spellmandata/heskett/myron_refs/human_g1k_v37.fasta.fai > $out_dir'human.g1k.v37.50kb.windows.bed'
-bedtools genomecov -bg -ibam $early | bedtools map -a $out_dir'human.g1k.v37.50kb.windows.bed' -b stdin -c 4 -o sum > $out_dir$early_name.counts.bed 
-bedtools genomecov -bg -ibam $late | bedtools map -a $out_dir'human.g1k.v37.50kb.windows.bed' -b stdin -c 4 -o sum > $out_dir$late_name.counts.bed
+bedtools coverage -sorted -g /home/groups/Spellmandata/heskett/myron_refs/human_g1k_v37.fasta.fai -a $out_dir'human.g1k.v37.50kb.windows.bed' -b $early -counts -F 0.51 > $out_dir$early_name.counts.bed 
+bedtools coverage -sorted -g /home/groups/Spellmandata/heskett/myron_refs/human_g1k_v37.fasta.fai -a $out_dir'human.g1k.v37.50kb.windows.bed' -b $late -counts -F 0.51 > $out_dir$late_name.counts.bed
 
 # use python for plotting

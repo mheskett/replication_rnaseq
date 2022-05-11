@@ -1,0 +1,24 @@
+#!/bin/bash
+srun --mem 6000 --time 200 samtools view -bh $1 1 > $1.1.bam &
+srun --mem 6000 --time 200 samtools view -bh $1 2 > $1.2.bam &
+srun --mem 6000 --time 200 samtools view -bh $1 3 > $1.3.bam &
+srun --mem 6000 --time 200 samtools view -bh $1 4 > $1.4.bam &
+srun --mem 6000 --time 200 samtools view -bh $1 5 > $1.5.bam &
+srun --mem 6000 --time 200 samtools view -bh $1 6 > $1.6.bam &
+srun --mem 6000 --time 200 samtools view -bh $1 7 > $1.7.bam &
+srun --mem 6000 --time 200 samtools view -bh $1 8 > $1.8.bam &
+srun --mem 6000 --time 200 samtools view -bh $1 9 > $1.9.bam &
+srun --mem 6000 --time 200 samtools view -bh $1 10 > $1.10.bam &
+srun --mem 6000 --time 200 samtools view -bh $1 11 > $1.11.bam &
+srun --mem 6000 --time 200 samtools view -bh $1 12 > $1.12.bam &
+srun --mem 6000 --time 200 samtools view -bh $1 13 > $1.13.bam &
+srun --mem 6000 --time 200 samtools view -bh $1 14 > $1.14.bam &
+srun --mem 6000 --time 200 samtools view -bh $1 15 > $1.15.bam &
+srun --mem 6000 --time 200 samtools view -bh $1 16 > $1.16.bam &
+srun --mem 6000 --time 200 samtools view -bh $1 17 > $1.17.bam &
+srun --mem 6000 --time 200 samtools view -bh $1 18 > $1.18.bam &
+srun --mem 6000 --time 200 samtools view -bh $1 19 > $1.19.bam &
+srun --mem 6000 --time 200 samtools view -bh $1 20 > $1.20.bam &
+srun --mem 6000 --time 200 samtools view -bh $1 21 > $1.21.bam &
+srun --mem 6000 --time 200 samtools view -bh $1 22 > $1.22.bam &
+srun --mem 30000 --time 200 samtools view -bh $1 X > $1.X.bam &

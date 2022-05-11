@@ -54,8 +54,8 @@ bedtools subtract -a $out_dir$filename.plus.cov.bed -b /home/groups/Spellmandata
 bedtools subtract -a $out_dir$filename.minus.cov.bed -b /home/groups/Spellmandata/heskett/replication.rnaseq/annotation.files/encode.blacklist.nochr.hg38.bed \
   | bedtools subtract -a stdin -b /home/groups/Spellmandata/heskett/replication.rnaseq/annotation.files/whole.gene.ucsc.hg38.cds.minus.bed > $out_dir$filename.minus.subtract.whole.gene.bed
 
-awk 'OFS="\t"{print "chr"$1,$2,$3,"contig_"NR,0,"+"}' $out_dir$filename.plus.subtract.whole.gene.bed | grep -v chrGL | grep -v chrKI > $out_dir$filename.vlinc.all.reads.browser.bed
-awk 'OFS="\t"{print "chr"$1,$2,$3,"contig_"NR,0,"-"}' $out_dir$filename.minus.subtract.whole.gene.bed | grep -v chrGL | grep -v chrKI >> $out_dir$filename.vlinc.all.reads.browser.bed
+awk 'OFS="\t"{print "chr"$1,$2,$3,"contig_"NR,0,"+"}' $out_dir$filename.plus.subtract.whole.gene.bed | grep -v chrGL | grep -v chrKI > $out_dir$filename.vlinc.all.reads.plus.browser.bed
+awk 'OFS="\t"{print "chr"$1,$2,$3,"contig_"NR,0,"-"}' $out_dir$filename.minus.subtract.whole.gene.bed | grep -v chrGL | grep -v chrKI > $out_dir$filename.vlinc.all.reads.minus.browser.bed
 
 
 

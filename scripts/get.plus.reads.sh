@@ -17,5 +17,5 @@ samtools index $out_dir$filename.fwd2.bam
 samtools merge -f $out_dir$filename.plus.bam $out_dir$filename.fwd1.bam $out_dir$filename.fwd2.bam
 samtools index $out_dir$filename.plus.bam
 
-rm $out_dir$filename.fwd1.bam
-rm $out_dir$filename.fwd2.bam
+rm $out_dir$filename.fwd1.bam*
+rm $out_dir$filename.fwd2.bam*

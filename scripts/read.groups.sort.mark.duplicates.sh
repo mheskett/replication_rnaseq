@@ -21,12 +21,12 @@ gatk MarkDuplicates --java-options "-Xmx30G" -I=$out_dir/$filename.rg.sorted.fix
 gatk SplitNCigarReads --java-options "-Xmx30G" -I $out_dir/$filename.rg.sorted.markdup.bam -O $out_dir/$filename.rg.sorted.markdup.splitn.bam \
   -R /home/groups/Spellmandata/heskett/refs/hg38.10x.nochr.fa 
 
-gatk BaseRecalibrator --java-options "-Xmx30G" --known-sites /home/groups/Spellmandata/heskett/refs/dbsnp.146.hg38.nochr.sorted.vcf -R /home/groups/Spellmandata/heskett/refs/hg38.10x.nochr.fa \
-  -I $out_dir/$filename.rg.sorted.markdup.splitn.bam -O $out_dir/$filename.recal.table
+#gatk BaseRecalibrator --java-options "-Xmx30G" --known-sites /home/groups/Spellmandata/heskett/refs/dbsnp.146.hg38.nochr.sorted.vcf -R /home/groups/Spellmandata/heskett/refs/hg38.10x.nochr.fa \
+#  -I $out_dir/$filename.rg.sorted.markdup.splitn.bam -O $out_dir/$filename.recal.table
 
-gatk ApplyBQSR --java-options "-Xmx30G" -bqsr-recal-file $out_dir/$filename.recal.table -I $out_dir/$filename.rg.sorted.markdup.splitn.bam -O $out_dir/$filename.final.bam
+#gatk ApplyBQSR --java-options "-Xmx30G" -bqsr-recal-file $out_dir/$filename.recal.table -I $out_dir/$filename.rg.sorted.markdup.splitn.bam -O $out_dir/$filename.final.bam
 
-gatk HaplotypeCaller --java-options "-Xmx30G" -I $out_dir/$filename.final.bam -O $out_dir/$filename.snps.vcf -R /home/groups/Spellmandata/heskett/refs/hg38.10x.nochr.fa -stand-call-conf 20 \
+gatk HaplotypeCaller --java-options "-Xmx30G" -I $out_dir/$filename.rg.sorted.markdup.splitn.bam -O $out_dir/$filename.snps.vcf -R /home/groups/Spellmandata/heskett/refs/hg38.10x.nochr.fa -stand-call-conf 20 \
   --dbsnp /home/groups/Spellmandata/heskett/refs/dbsnp.146.hg38.nochr.sorted.vcf
 
 ###
@@ -35,10 +35,14 @@ now filter and variants to table
 
 bcftools view -i 'MIN(FMT/DP)>5' $out_dir/$filename.snps.vcf > $out_dir/$filename.filtered.snps.vcf
 
+# needs to be index again..
+
+java -Xmx30G -jar /home/groups/Spellmandata/heskett/packages/share/igvtools-2.3.93-0/igvtools.jar index $out_dir/$filename.filtered.snps.vcf
+
 gatk VariantsToTable --java-options "-Xmx30G" -V $out_dir/$filename.filtered.snps.vcf \
   -F CHROM -F POS -F REF -F ALT -GF GT -GF AD -O $out_dir/$filename.filtered.snps.txt
 
-grep -v NA $out_dir/$filename.filtered.snps.txt > $out_dir/$filename.filtered1.snps.txt
+grep -v NA $out_dir/$filename.filtered.snps.txt > $out_dir/$filename.filtered.final.snps.txt
 
 
 # make sure VCF and bam are sorted in the same way with matching contigs etc
@@ -49,5 +53,5 @@ rm $out_dir/$filename.rg.sorted.bam
 rm $out_dir/$filename.rg.sorted.markdup.bam
 rm $out_dir/$filename.rg.sorted.fix.bam
 rm $out_dir/$filename.rg.sorted.markdup.splitn.bam
-rm $out_dir/$filename.snps.vcf
+#rm $out_dir/$filename.snps.vcf
 rm $out_dir/$filename.filtered.snps.txt
