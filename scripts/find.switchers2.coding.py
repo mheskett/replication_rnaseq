@@ -97,7 +97,7 @@ for i in range(len(coding_files)):
     add_binom_pval(coding_df)
     coding_dfs += [coding_df]
 df_coding = pd.concat(coding_dfs)
-df_coding = df_coding[df_coding["total_reads"]>=20]
+df_coding = df_coding[df_coding["total_reads"]>=30]
 df_coding = df_coding[df_coding["chrom"]!="X"]
 df_coding["reads_per_kb"] = df_coding["total_reads"] / ((df_coding["stop"] - df_coding["start"]) / 1000 )
 df_coding  = df_coding[df_coding["reads_per_kb"]>=1]
@@ -108,7 +108,7 @@ df_coding["significant_deviation"] = df_coding.apply(lambda x: True if abs(x["ha
 # df["reads_per_kb"] = df["total_reads"] / ((df["stop"]-df["start"])/1000)
 # sns.kdeplot(df["reads_per_kb"],cut=0,clip=(0,10))
 # plt.show()
-df_coding=df_coding[df_coding["total_reads"]>=20]
+df_coding=df_coding[df_coding["total_reads"]>=30]
 print("number of Bouhassira coding genes that pass minimum read filter ")
 print(len(df_coding.loc[:,["chrom","start","stop"]].drop_duplicates()))
 ######
