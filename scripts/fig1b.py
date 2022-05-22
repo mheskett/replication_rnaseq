@@ -20,6 +20,7 @@ from matplotlib.lines import Line2D
 import statsmodels.stats.multitest as mt
 import pybedtools
 import statistics
+import math
 
 def intersect_tables(df1,df2):
     ### return all df1 rows that intersect df2 by >0bs
@@ -167,6 +168,8 @@ print("number TLs in gm12878",len(df))
 df["significant_deviation"] = df.apply(lambda x: True if abs(x["hap1_counts"] - x["total_reads"]/2) >= model.predict(np.array([x["total_reads"]]).reshape(1,-1))*2.5 else False,
     axis=1)
 df["significant_deviation"] = (df["significant_deviation"]==True) & (df["fdr_pval"]<=0.01)
+
+# df[df["significant_deviation"]].to_csv("gm12878.tls.txt",sep="\t",header=True,index=False)
 df_auto = df[df["chrom"]!="X"] 
 df_auto["color"] = [(0,0,1,1) if x==True else (0,0,1,0.1) for x in df_auto["significant_deviation"]]
 df["color"] = [(1,0,0,1) if x==True else (1,0,0,0.1) for x in df["significant_deviation"]]
@@ -183,11 +186,29 @@ ax.set_ylim([0,0.5])
 plt.savefig("fig1.scatter.png",
             dpi=400,transparent=True, bbox_inches='tight', pad_inches = 0)
 plt.close()
+
+### add the unique TL names
+df_unique_name = df.drop_duplicates(["name"])
+df_unique_name["tl_name"] = ["GM12878:"+row["chrom"] +"-"+ str(round(row["start"]/10**6,1)) for index,row in df_unique_name.iterrows()]
+df_unique_name["tl_name"] = df_unique_name.tl_name.str.cat(
+    df_unique_name.groupby(['tl_name']).cumcount().add(1).astype(str),
+    sep='_')
+test_dict = {row["name"]:row["tl_name"] for (index,row) in df_unique_name.iterrows()}
+df["tl_name"] = [test_dict[row["name"]] for index,row in df.iterrows()]
+
+####
+
 print(" num autosomal TLs DAE: ",len(df_auto[df_auto["significant_deviation"]==True]))
 print("bases tLE with moraml Z method: ", sum_bases(df_auto[df_auto["significant_deviation"]==True]))
 print("number DAE TLs per megabase ", len(df_auto[df_auto["significant_deviation"]==True])/3000)
 print("number DAE TLs on X chromosome: ", len(df[(df["chrom"]=="X") & df["significant_deviation"]==True]))
 print("number dae tls on 1 chromosome: ", len(df[(df["chrom"]=="1") & df["significant_deviation"]==True]))
+print("number TLs on X chromosome: ",len(df[(df["chrom"]=="X")]))
+print("fraction of TLs on X chromosome that are DAE: ", len(df[(df["chrom"]=="X") & df["significant_deviation"]==True]) / (len(df[(df["chrom"]=="X")])))
+df[["chrom","start","stop","tl_name","rpkm",
+        "strand","rpkm","l1_density",
+        "hap1_counts","hap2_counts","skew","sample","binom_pval",
+        "fdr_pval","fdr_reject","significant_deviation"]].to_csv("gm12878.tls.txt",sep="\t",header=True,index=False)
 
 # df_auto[df_auto["significant_deviation"]==True]["chrom"].value_counts().plot(kind="bar")
 # plt.show()
@@ -260,12 +281,7 @@ for name in dae_genes_with_dae_histones.drop_duplicates(["name"])["name"].values
 
 
 
-
-
-
 #######
-df[df["significant_deviation"]==True].to_csv("gm12878.rep1.vlincs.dae.list.bed",sep="\t",header=None,index=False)
-
 for i in range(len(chromosomes)):
     f,ax = plt.subplots(1,1,figsize=(10,2),sharex=False)
     plt.suptitle(chromosomes[i])
@@ -328,8 +344,8 @@ for i in range(len(coding_files)):
 df_coding = pd.concat(coding_dfs)
 
 #######
-df_coding = df_coding[df_coding["total_reads"]>=10]
-df_coding = df_coding[df_coding["chrom"]!="X"]
+df_coding = df_coding[df_coding["total_reads"]>=20]
+df_coding = df_coding[df_coding["chrom"]!="X"] #3 comment out to include X chromosome....
 #### figure that shows coding gene and lncrnas together
 ####
 df_coding["significant_deviation"] = df_coding.apply(lambda x: True if abs(x["hap1_counts"] - x["total_reads"]/2) >= model.predict(np.array([x["total_reads"]])\
@@ -337,9 +353,13 @@ df_coding["significant_deviation"] = df_coding.apply(lambda x: True if abs(x["ha
     axis=1)
 df_coding["significant_deviation"] = (df_coding["significant_deviation"]==True) & (df_coding["fdr_pval"]<=0.01)
 
+df_coding.loc[:,["chrom","start","stop","name","strand",
+                "hap1_counts","hap2_counts","skew","sample","binom_pval",
+                "fdr_pval","fdr_reject","significant_deviation"]].to_csv("gm12878.coding.txt",sep="\t",header=True,index=False)
+
 print("unique coding genes, found DAE in gm12878 parent cell line : ",
         len(df_coding[(df_coding["significant_deviation"]==True) & (df_coding["chrom"]!="X")].drop_duplicates(subset=["name"])))
-
+exit()
 for i in range(len(chromosomes)):
     f,ax = plt.subplots(1,1,figsize=(10,2),sharex=False)
     plt.suptitle(chromosomes[i])

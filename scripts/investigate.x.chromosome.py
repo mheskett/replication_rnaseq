@@ -237,6 +237,9 @@ df_significant_rows = df[df["significant_deviation"]==True]
 df_nonsignificant_rows = df[df["significant_deviation"]==False]
 df=df[df["total_reads"]>=20]
 
+
+df[df["chrom"]=="X"].to_csv("eb3_2.vlincs.x.chromosome.txt",sep="\t",index=False,header=True)
+exit()
 print("XACT")
 print( df[(df["chrom"]=="X") & (df["start"]>=110000000) & (df["stop"]<=114000000)] )
 
@@ -412,7 +415,6 @@ plt.xticks([0,1,2,3])
 plt.axvline(x=threshold,linestyle="--",lw=0.5,c="black")
 plt.savefig("auto.vs.x.rt.std.png",
 dpi=400,transparent=True, bbox_inches='tight', pad_inches = 0)
-
 
 
 fig=plt.figure(figsize=(1.5,1.5))

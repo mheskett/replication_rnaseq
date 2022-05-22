@@ -197,6 +197,11 @@ df_coding["significant_deviation"] = (df_coding["significant_deviation"]==True) 
 print("unique genes, found DAE in any gm12878 subclones: ",
         len(df_coding[(df_coding["significant_deviation"]==True) & (df_coding["chrom"]!="X")].drop_duplicates(subset=["name"])))
 
+
+df_coding.loc[:,["chrom","start","stop","name","strand",
+                "hap1_counts","hap2_counts","skew","sample","binom_pval","fdr_pval","fdr_reject","significant_deviation"]]\
+        .to_csv("gm12878_subclones.coding.txt",
+        sep="\t",index=False,header=True)
 ##### check on FHIT gene for matt
 # print("check fhit gene")
 # df_coding[(df_coding["chrom"]=="3")& (df_coding["start"]>=56000000) & (df_coding["stop"]<=63000000)].to_csv("fhit.expression.txt",sep="\t")
@@ -233,13 +238,33 @@ df = pd.concat(dfs)
 model = pickle.load(open("eb.variance.coding.model.sav", 'rb'))
 df["significant_deviation"] = df.apply(lambda x: True if abs(x["hap1_counts"] - x["total_reads"]/2) >= model.predict(np.array([x["total_reads"]]).reshape(1,-1))*2.5 else False,
     axis=1)
-df["significant_deviation"] = (df["significant_deviation"]==True) & (df["fdr_pval"]<=0.01) & (df["chrom"]!="X")
+df["significant_deviation"] = (df["significant_deviation"]==True) & (df["fdr_pval"]<=0.01) #& (df["chrom"]!="X")
 df=df[df["total_reads"]>=20]
 
 print("number TLs in gm12878 6 clones: ",len(df.drop_duplicates(["name"])))
 print("num autosomal DAE TL loci in 6 clones :",len(
                                     df[(df["significant_deviation"]==True) & (df["chrom"]!="X") ]
                                     .drop_duplicates(["name"])))
+
+df_unique_name = df.drop_duplicates(["name"])
+df_unique_name["tl_name"] = ["gm12878_subclones_TL:"+row["chrom"] +"-"+ str(round(row["start"]/10**6,1)) for index,row in df_unique_name.iterrows()]
+df_unique_name["tl_name"] = df_unique_name.tl_name.str.cat(
+    df_unique_name.groupby(['tl_name']).cumcount().add(1).astype(str),
+    sep='_')
+test_dict = {row["name"]:row["tl_name"] for (index,row) in df_unique_name.iterrows()}
+df["tl_name"] = [test_dict[row["name"]] for index,row in df.iterrows()]
+## drop the duplicates
+## use the groupby thing
+## make the dict
+## fill it in
+
+df[["chrom","start","stop","tl_name","rpkm","strand","rpkm","l1_fraction",
+                                                            "hap1_counts","hap2_counts","skew","sample","binom_pval",
+                                                            "fdr_pval","fdr_reject","significant_deviation"]]\
+                                                            .to_csv("gm12878_subclones.tls.txt",sep="\t",header=True,index=False)
+
+
+
 # plt.scatter(df["rpkm"],df["l1_fraction"])
 # plt.xlim([0,1800])
 # plt.show()
@@ -385,7 +410,7 @@ repli_df_non_normalized = repli_df.reset_index()
 # plt.show()
 
 repli_df = quantile_normalize(repli_df.dropna(how="any",axis=0)).reset_index()
-repli_df= repli_df[repli_df["chrom"]!="X"]
+# repli_df= repli_df[repli_df["chrom"]!="X"]
 
 repli_df = remove_blacklisted(repli_df)
 # for i in range(len(all_files_repli)):
@@ -422,11 +447,20 @@ print("threshold all haps: ",threshold)
 mean_std_dev1 = repli_df[repli_df["chrom"]!="X"]["std_dev_hap1"].mean()
 std_std_dev1 = repli_df[repli_df["chrom"]!="X"]["std_dev_hap1"].std()
 threshold1 = mean_std_dev1 + 2.5*std_std_dev1
+print("threshold all hap1s: ",threshold1)
 
 ###hap2
 mean_std_dev2 = repli_df[repli_df["chrom"]!="X"]["std_dev_hap2"].mean()
 std_std_dev2 = repli_df[repli_df["chrom"]!="X"]["std_dev_hap2"].std()
 threshold2 = mean_std_dev2 + 2.5*std_std_dev2
+
+print("threshold all hap2s: ",threshold2)
+
+#### export
+###
+
+repli_df[repli_df["std_dev"]>=threshold].loc[:,["chrom","start","stop","std_dev"]].to_csv("gm12878_subclones.vert.txt",sep="\t",index=False,header=True)
+
 
 
 tmp = repli_df[repli_df["std_dev"]>=threshold]
@@ -436,7 +470,8 @@ tmp_merged["chrom"] = tmp_merged["chrom"].astype(str)
 print("number of merged windows with >2.5 std dev both haps",len(tmp_merged))
 print("len tl switchers: ",len(switchers.drop_duplicates(["chrom","start","stop"])))
 print("len coding switchers: ",len(coding_switchers.drop_duplicates(["name"])))
-print("number of bases with >2.5 std dev RT ", sum_bases(tmp_merged) )
+print(coding_switchers)
+print("number of m,e33 with >2.5 std dev RT ", sum_bases(tmp_merged) )
 tmp=tmp.dropna(how="any",axis="index")
 ####
 print("switchers intersect merged vert regions")
@@ -454,8 +489,9 @@ dae_coding_vert = intersect_tables(df_coding[(df_coding["significant_deviation"]
 print(len(dae_coding_vert))
 
 
+tmp_merged.to_csv("gm12878.vert.merged.txt",sep="\t",index=False,header=True)
 exit()
-tmp.to_csv("gm12878.vert.merged.txt",sep="\t",index=False,header=True)
+
 df = df.dropna(how="any",axis="index")
 df_coding = df_coding.dropna(how="any",axis="index")
 tmp_lnc = intersect_tables(df,tmp)

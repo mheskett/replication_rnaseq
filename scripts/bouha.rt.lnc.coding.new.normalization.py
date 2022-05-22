@@ -16,7 +16,7 @@ import statsmodels.api as sm
 import statsmodels.stats.multitest as mt
 from sklearn.cluster import KMeans
 from scipy.stats import ttest_ind
-
+import math
 
 def add_binom_pval(df):
     df["binom_pval"] = df.apply(lambda row: scipy.stats.binom_test(row["hap1_counts"],
@@ -186,7 +186,7 @@ for i in range(len(coding_files)):
     coding_dfs += [coding_df]
 df_coding = pd.concat(coding_dfs)
 df_coding = df_coding[df_coding["total_reads"]>=30]
-df_coding = df_coding[df_coding["chrom"]!="X"]
+# df_coding = df_coding[df_coding["chrom"]!="X"]
 df_coding["reads_per_kb"] = df_coding["total_reads"] / ((df_coding["stop"] - df_coding["start"]) / 1000 )
 df_coding  = df_coding[df_coding["reads_per_kb"]>=1]
 df_coding["significant_deviation"] = df_coding.apply(lambda x: True if abs(x["hap1_counts"] - x["total_reads"]/2) >= model.predict(np.array([x["total_reads"]])\
@@ -194,8 +194,16 @@ df_coding["significant_deviation"] = df_coding.apply(lambda x: True if abs(x["ha
     axis=1)
 df_coding["significant_deviation"] = (df_coding["significant_deviation"]==True) & (df_coding["fdr_pval"]<=0.01)
 
-print("unique genes, found DAE in any bouha subclones: ",
+print("unique autosoml coding genes, found DAE in any eb3_2 subclones: ",
         len(df_coding[(df_coding["significant_deviation"]==True) & (df_coding["chrom"]!="X")].drop_duplicates(subset=["name"])))
+
+df_coding.loc[:,["chrom","start","stop","name","strand",
+                "hap1_counts","hap2_counts","skew","sample","binom_pval","fdr_pval","fdr_reject","significant_deviation"]]\
+        .to_csv("eb3_2.coding.txt",
+        sep="\t",index=False,header=True)
+
+print("unique x-inked genes, found DAE in any eb3_2 subclones: ",
+        len(df_coding[(df_coding["significant_deviation"]==True) & (df_coding["chrom"]=="X")].drop_duplicates(subset=["name"])))
 
 ##### check on FHIT gene for matt
 # print("check fhit gene")
@@ -233,13 +241,44 @@ df = pd.concat(dfs)
 model = pickle.load(open("eb.variance.coding.model.sav", 'rb'))
 df["significant_deviation"] = df.apply(lambda x: True if abs(x["hap1_counts"] - x["total_reads"]/2) >= model.predict(np.array([x["total_reads"]]).reshape(1,-1))*2.5 else False,
     axis=1)
-df["significant_deviation"] = (df["significant_deviation"]==True) & (df["fdr_pval"]<=0.01) & (df["chrom"]!="X")
+# df["significant_deviation"] = (df["significant_deviation"]==True) & (df["fdr_pval"]<=0.01) & (df["chrom"]!="X") remove X linked here....
+df["significant_deviation"] = (df["significant_deviation"]==True) & (df["fdr_pval"]<=0.01) 
 df=df[df["total_reads"]>=20]
+
+###########
+########
+### adds unique names to each TL
+df_unique_name = df.drop_duplicates(["name"])
+df_unique_name["tl_name"] = ["EB3_2_TL:"+row["chrom"] +"-"+ str(round(row["start"]/10**6,1)) for index,row in df_unique_name.iterrows()]
+df_unique_name["tl_name"] = df_unique_name.tl_name.str.cat(
+    df_unique_name.groupby(['tl_name']).cumcount().add(1).astype(str),
+    sep='_')
+test_dict = {row["name"]:row["tl_name"] for (index,row) in df_unique_name.iterrows()}
+df["tl_name"] = [test_dict[row["name"]] for index,row in df.iterrows()]
+## drop the duplicates
+## use the groupby thing
+## make the dict
+## fill it in
+
+df[["chrom","start","stop","tl_name","rpkm","strand","rpkm","l1_fraction",
+                                                            "hap1_counts","hap2_counts","skew","sample","binom_pval",
+                                                            "fdr_pval","fdr_reject","significant_deviation"]]\
+                                                            .to_csv("eb3_2.tls.txt",sep="\t",header=True,index=False)
+
 
 print("number TLs in bouha 6 clones: ",len(df.drop_duplicates(["name"])))
 print("num autosomal DAE TL loci in 6 clones :",len(
                                     df[(df["significant_deviation"]==True) & (df["chrom"]!="X") ]
                                     .drop_duplicates(["name"])))
+
+print("num x-linked DAE TL loci in 6 clones :",len(
+                                    df[(df["significant_deviation"]==True) & (df["chrom"]=="X") ]
+                                    .drop_duplicates(["name"])))
+
+print("num x-linked total TL loci in 6 clones :",len(
+                                    df[(df["chrom"]=="X")]
+                                    .drop_duplicates(["name"])))
+df[(df["chrom"]=="X")].to_csv("eb3_2.x.only.txt",sep="\t",index=False,header=True)
 # plt.scatter(df["rpkm"],df["l1_fraction"])
 # plt.xlim([0,1800])
 # plt.show()
@@ -385,7 +424,7 @@ repli_df_non_normalized = repli_df.reset_index()
 # plt.show()
 
 repli_df = quantile_normalize(repli_df.dropna(how="any",axis=0)).reset_index()
-repli_df= repli_df[repli_df["chrom"]!="X"]
+# repli_df= repli_df[repli_df["chrom"]!="X"] #toggle this on and off 
 
 repli_df = remove_blacklisted(repli_df)
 # for i in range(len(all_files_repli)):
@@ -410,8 +449,6 @@ repli_df["std_dev_hap2"] = repli_df.filter(like="logr_hap2_",axis=1).std(axis="c
 logr_diff_abs_mean = repli_df.filter(like="logr_diff_abs").mean()
 logr_diff_abs_std_dev = repli_df.filter(like="logr_diff_abs").std()
 
-print(logr_diff_abs_mean)
-print(logr_diff_abs_std_dev)
 
 ## all haps
 mean_std_dev = repli_df[repli_df["chrom"]!="X"]["std_dev"].mean()
@@ -422,11 +459,16 @@ print("threshold all haps: ",threshold)
 mean_std_dev1 = repli_df[repli_df["chrom"]!="X"]["std_dev_hap1"].mean()
 std_std_dev1 = repli_df[repli_df["chrom"]!="X"]["std_dev_hap1"].std()
 threshold1 = mean_std_dev1 + 2.5*std_std_dev1
+print("threshold all hap1s: ",threshold1)
 
 ###hap2
 mean_std_dev2 = repli_df[repli_df["chrom"]!="X"]["std_dev_hap2"].mean()
 std_std_dev2 = repli_df[repli_df["chrom"]!="X"]["std_dev_hap2"].std()
 threshold2 = mean_std_dev2 + 2.5*std_std_dev2
+print("threshold all hap2s: ",threshold2)
+
+repli_df[repli_df["std_dev"]>=threshold].loc[:,["chrom","start","stop","std_dev"]].to_csv("eb3_2.vert.txt",sep="\t",index=False,header=True)
+
 
 
 tmp = repli_df[repli_df["std_dev"]>=threshold]
@@ -436,7 +478,8 @@ tmp_merged["chrom"] = tmp_merged["chrom"].astype(str)
 print("number of merged windows with >2.5 std dev both haps",len(tmp_merged))
 print("len switchers: ",len(switchers.drop_duplicates(["name"])))
 print(tmp_merged)
-print("number of bases with >2.5 std dev RT ", sum_bases(tmp_merged) )
+print(switchers)
+print("number of bases with >2.5 std dev RT across all the subclones", sum_bases(tmp_merged) )
 tmp=tmp.dropna(how="any",axis="index")
 ####
 print("switchers intersect merged vert regions")
@@ -453,9 +496,7 @@ print("dae coding within merged vert regions")
 dae_coding_vert = intersect_tables(df_coding[(df_coding["significant_deviation"]==True) & (df_coding["chrom"]!="X")].drop_duplicates(["chrom","start","stop"]),tmp_merged)
 print(len(dae_coding_vert))
 
-
-exit()
-tmp.to_csv("bouha.vert.merged.txt",sep="\t",index=False,header=True)
+tmp_merged.to_csv("eb3_2.vert.merged.txt",sep="\t",index=False,header=True)
 df = df.dropna(how="any",axis="index")
 df_coding = df_coding.dropna(how="any",axis="index")
 tmp_lnc = intersect_tables(df,tmp)
@@ -466,6 +507,9 @@ tmp_coding = intersect_tables(df_coding,tmp) ## could add more slop here
 #                         names=["chrom","start","stop"],
 #                         dtype={"chrom":str,"start":int,"stop":int})
 tmp_coding[tmp_coding["significant_deviation"]==True]["name"].drop_duplicates().to_csv("coding.genes.in.vert.regions.bouha.txt",sep="\t",index=False,header=False)
+
+
+exit()
 
 color_dict = {"bouha.4.a":"green",
 "bouha.15.":"royalblue",
@@ -555,7 +599,6 @@ for chrom in chromosomes:
     plt.savefig("bouha.all.clones.asrt."+str(chrom)+".alleles.png",
         dpi=400,transparent=True, bbox_inches='tight', pad_inches = 0)
     plt.close()
-exit()
 ## whole view. RT only.
 
 for chrom in chromosomes:
