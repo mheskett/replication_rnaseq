@@ -22,3 +22,14 @@ srun --mem 50000 -c 8 --time 1000 samtools.process.bam.sh bouha.trim.15Aligned.o
 srun --mem 50000 -c 8 --time 1000 samtools.process.bam.sh bouha.trim.2Aligned.out.bam ./ &
 srun --mem 50000 -c 8 --time 1000 samtools.process.bam.sh bouha.trim.3Aligned.out.bam ./ &
 srun --mem 50000 -c 8 --time 1000 samtools.process.bam.sh bouha.trim.4Aligned.out.bam ./ &
+
+
+## ACP samples
+srun --mem 50000 -c 8 --time 1000 samtools.process.bam.sh acp1Aligned.out.bam ./ &
+srun --mem 50000 -c 8 --time 1000 samtools.process.bam.sh acp2Aligned.out.bam ./ &  
+srun --mem 50000 -c 8 --time 1000 samtools.process.bam.sh acp3Aligned.out.bam ./ &  
+srun --mem 50000 -c 8 --time 1000 samtools.process.bam.sh acp4Aligned.out.bam ./ &  
+srun --mem 50000 -c 8 --time 1000 samtools.process.bam.sh acp5Aligned.out.bam ./ &  
+srun --mem 50000 -c 8 --time 1000 samtools.process.bam.sh acp6Aligned.out.bam ./ &  
+srun --mem 50000 -c 8 --time 1000 samtools.process.bam.sh acp7Aligned.out.bam ./ &  
+srun --mem 50000 -c 8 --time 1000 samtools.process.bam.sh acp8Aligned.out.bam ./ &
