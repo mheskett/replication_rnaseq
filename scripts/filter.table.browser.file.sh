@@ -21,4 +21,4 @@ sed 's/chr//g' $1 | \
 	grep -v "^8_gl" | \
 	grep -v "^9_gl" | \
 	grep -v "^Un_" | \
-	bedtools sort -i stdin -g  /Users/heskett/replication_rnaseq/annotation.files/human_g1k_v37.fasta.fai > $2
+	bedtools sort -i stdin -g  human_g1k_v37.fasta.fai > $2
