@@ -17,8 +17,21 @@ sed 's/chr//g' $1 | \
 	grep -v "^6_mcf_hap5" | \
 	grep -v "^6_qbl_hap6" | \
 	grep -v "^6_ssto_hap7" | \
+        grep -v "^2_gl" | \
+        grep -v "^3_gl" | \
+        grep -v "^5_gl" | \
 	grep -v "^7_gl" | \
 	grep -v "^8_gl" | \
 	grep -v "^9_gl" | \
+	grep -v "^10_gl" | \
+        grep -v "^3_jh" | \
+	grep -v "^11_jh" | \
+	grep -v "^12_gl" | \
+	grep -v "^15_gl" | \
+        grep -v "^16_gl" | \
+        grep -v "^17_jh" | \
+        grep -v "^18_gl" | \
+        grep -v "^22_gl" | \
+        grep -v "^22_kb" | \
 	grep -v "^Un_" | \
 	bedtools sort -i stdin -g  human_g1k_v37.fasta.fai > $2

@@ -5,6 +5,7 @@ import pandas as pd
 import seaborn as sns
 import matplotlib.pyplot as plt
 import pybedtools
+# pybedtools.set_bedtools_path("/Users/michaelheskett/miniconda3/envs/for_bedtools/bin/bedtools/")
 import matplotlib.patheffects as path_effects
 import scipy.stats
 import statsmodels.api as sm
@@ -63,12 +64,12 @@ def get_arms_nochr(cytoband):
 
 ### REMOVIONG 15 for BAD DATA!!!!
 chromosomes = ["chr1","chr2","chr3","chr4","chr5","chr6","chr7","chr8","chr9","chr10","chr11","chr12",
-                "chr13","chr14","chr15","chr16","chr17","chr18","chr19","chr20","chr21","chr22","chrX"]
+                "chr13","chr14","chr15","chr16","chr17","chr18","chr19","chr20","chr21","chr22"]
 autosomes = ["chr1","chr2","chr3","chr4","chr5","chr6","chr7","chr8","chr9","chr10","chr11","chr12",
                 "chr13","chr14","chr15","chr16","chr17","chr18","chr19","chr20","chr21","chr22"]
 
 chromosomes_nochr = ["1","2","3","4","5","6","7","8","9","10","11","12",
-                "13","14","15","16","17","18","19","20","21","22","X"]
+                "13","14","15","16","17","18","19","20","21","22",]
 
 arms = ["p","q"]
 #### for arm level data to skip over centromeres                
@@ -138,23 +139,30 @@ chromosome_length_nochr = {"1":249250621,
 ## 
 ## 
 
-acp6_samples = glob.glob("acp6*counts.bed")
+acp6_samples = glob.glob("../acp6_12_2024/*acp6*counts.windows.bed")
 dfs={}
 dfs=[]
 for x in acp6_samples:
-    tmp=pd.read_csv(x,sep="\t",names=["chrom" ,"start", "stop", x[0:11]+"_paternal_counts", x[0:11]+"_maternal_counts"])
+
+    samp = "_".join([x.split("_")[6],x.split("_")[5],x.split("_")[3],x.split("_")[7]])
+    tmp=pd.read_csv(x,sep="\t",names=["chrom" ,"start", "stop", samp+"_p_counts", samp+"_m_counts"])
     tmp=tmp[tmp["chrom"]!="chrX"]###removing chrom x
     tmp=tmp[tmp["chrom"]!="chrY"]###removing chrom x 
 
     tmp=tmp.set_index(["chrom","start","stop"])
-    tmp[x[0:11]+"_cpm_paternal_counts"] = (tmp[x[0:11]+"_paternal_counts"] / tmp[x[0:11]+"_paternal_counts"].sum(axis="rows"))*10**6
-    tmp[x[0:11]+"_cpm_maternal_counts"] = (tmp[x[0:11]+"_maternal_counts"] / tmp[x[0:11]+"_maternal_counts"].sum(axis="rows"))*10**6
+    tmp[samp+"_cpm_p_counts"] = (tmp[samp+"_p_counts"] / tmp[samp+"_p_counts"].sum(axis="rows"))*10**6
+    tmp[samp+"_cpm_m_counts"] = (tmp[samp+"_m_counts"] / tmp[samp+"_m_counts"].sum(axis="rows"))*10**6
     dfs+=[tmp]
 df_acp6 = pd.concat(dfs,axis=1).sort_values(["chrom","start"])
-samples=list(set([x[0:7] for x in acp6_samples]))
+samples=list(set([ "_".join([x.split("_")[6],x.split("_")[5]]) for x in acp6_samples]))
+print(df_acp6)
 for sample in samples:
-    df_acp6[sample+"_paternal_logrt"] = np.log2((df_acp6[sample+"_p_e_paternal_counts"]+1) / (df_acp6[sample+"_p_l_paternal_counts"]+1 ))
-    df_acp6[sample+"_maternal_logrt"] = np.log2((df_acp6[sample+"_m_e_maternal_counts"]+1) / (df_acp6[sample+"_m_l_maternal_counts"]+1 ))
+    df_acp6[sample+"_rep1_paternal_logrt"] = np.log2((df_acp6[sample+"_e1_paternal_cpm_p_counts"]+1) / (df_acp6[sample+"_l1_paternal_cpm_p_counts"]+1 ))
+    df_acp6[sample+"_rep1_maternal_logrt"] = np.log2((df_acp6[sample+"_e1_maternal_cpm_m_counts"]+1) / (df_acp6[sample+"_l1_maternal_cpm_m_counts"]+1 ))
+    df_acp6[sample+"_rep2_paternal_logrt"] = np.log2((df_acp6[sample+"_e2_paternal_cpm_p_counts"]+1) / (df_acp6[sample+"_l2_paternal_cpm_p_counts"]+1 ))
+    df_acp6[sample+"_rep2_maternal_logrt"] = np.log2((df_acp6[sample+"_e2_maternal_cpm_m_counts"]+1) / (df_acp6[sample+"_l2_maternal_cpm_m_counts"]+1 ))
+
+print(df_acp6)
 
 df_acp6_qn = quantile_normalize(df_acp6.filter(regex="logrt"))
 df_acp6_qn["acp6_std_dev_both_haps"] = df_acp6_qn.filter(like="acp6",axis=1).std(axis="columns")
@@ -167,13 +175,19 @@ df_acp6_qn["acp6_vert"] =  df_acp6_qn.apply(lambda x:True if x["acp6_std_dev_bot
 df_acp6_qn = df_acp6_qn.reset_index()
 df_acp6_qn["arm"] = df_acp6_qn.apply(lambda x: "q" if (x["stop"] > arm_dict[x["chrom"]][0]) & (x["stop"] <= arm_dict[x["chrom"]][1]) else "p", axis=1)
 
-color_dict_acp6 = {"acp6_c1":"red", 
-"acp6_c2":"cyan",  
-"acp6_c5":"yellow",  
-"acp6_c6":"green"}
+color_dict_acp6 = {
+"acp6_c1_rep1":"red", 
+"acp6_c2_rep1":"cyan",  
+"acp6_c5_rep1":"yellow",  
+"acp6_c6_rep1":"green",
+"acp6_c1_rep2":"red", 
+"acp6_c2_rep2":"cyan",  
+"acp6_c5_rep2":"yellow",  
+"acp6_c6_rep2":"green"}
 #####
 df_acp6_qn = df_acp6_qn.sort_values(["chrom","start"])
-
+samples = ["acp6_c1_rep1","acp6_c2_rep1","acp6_c5_rep1","acp6_c6_rep1",
+            "acp6_c1_rep2","acp6_c2_rep2","acp6_c5_rep2","acp6_c6_rep2"]
 for chrom in chromosomes:
     plt.rc('xtick', labelsize=5) 
     plt.rc('ytick', labelsize=3) 
@@ -225,6 +239,9 @@ for chrom in chromosomes:
     plt.close()
 
 
+
+
+exit()
 ######
 ######
 ######
@@ -418,11 +435,15 @@ color_dict_eb = {'eb3_2_clone15':"red",
 'eb3_2_clone2':"blue", 
 'eb3_2_clone3':"purple",}
 
-print(df_eb_qn)
+df_eb_qn.to_csv("eb32.rt.vert.txt",sep="\t")
+df_eb_qn.to_csv("eb32.rt.vert.bed",sep="\t",header=None,index=None)
+os.system("sort -k1,1 -k2,2n eb32.rt.vert.bed > eb32.rt.vert.sorted.bed")
+os.system("bedtools map -a eb32.rt.vert.sorted.bed -b ucsc.known.gene.hg19.txn.start.stop.bed.cds.only.first.isoform.nochr.sorted.bed -o distinct -c 4 > eb32.rt.vert.intersect.coding.bed ")
+
 ###
 for chrom in chromosomes_nochr:
     plt.rc('xtick', labelsize=5) 
-    plt.rc('ytick', labelsize=3) 
+    plt.rc('ytick', labelsize=5) 
     f, ax = plt.subplots(2,1,figsize=(30,3),sharex=False,
                          gridspec_kw={'height_ratios': [6,1]})
 
@@ -434,6 +455,7 @@ for chrom in chromosomes_nochr:
 
         for j in ["p","q"]:
 
+            #unsmoothed
             ax[0].plot(paternal[paternal["arm"]==j]["start"],
                     paternal[paternal["arm"]==j][eb_samples[i]+"_hap1_logrt"],
                     c=color_dict_eb[eb_samples[i]],lw=0.3) ## -- line style is haplotype 2
@@ -442,6 +464,16 @@ for chrom in chromosomes_nochr:
                     maternal[maternal["arm"]==j][eb_samples[i]+"_hap2_logrt"],
                     c=color_dict_eb[eb_samples[i]],linestyle="--",lw=0.3) ## -- line style is haplotype 2
 
+            # ## smoothed testing
+            # ax[0].plot(paternal[paternal["arm"]==j]["start"],
+            #         smooth_vector(paternal[paternal["arm"]==j]["start"],
+            #             paternal[paternal["arm"]==j][eb_samples[i]+"_hap1_logrt"]),
+            #         c=color_dict_eb[eb_samples[i]],lw=0.3) ## -- line style is haplotype 2
+
+            # ax[0].plot(maternal[maternal["arm"]==j]["start"],
+            #         smooth_vector(maternal[maternal["arm"]==j]["start"],
+            #             maternal[maternal["arm"]==j][eb_samples[i]+"_hap2_logrt"]),
+            #         c=color_dict_eb[eb_samples[i]],linestyle="--",lw=0.3) ## -- line style is haplotype 2
         ax[0].set_ylim([-4.2,4.2])
         ax[0].set_yticks([-4,-3,-2,-1,0,1,2,3,4])
         ax[0].set_xlim([0,chromosome_length_nochr[chrom]])
@@ -463,14 +495,98 @@ for chrom in chromosomes_nochr:
         ax[1].set_ylim([0,2])
         ax[1].set_yticks([0,2])
         ax[1].set_xlim([0,chromosome_length_nochr[chrom]])
-        ax[1].set_xticks([]) 
+        ax[1].set_xticks(np.linspace(0,chromosome_length_nochr[chrom],25)) 
     plt.savefig("eb.rt."+chrom+".png",
         dpi=400,transparent=False, bbox_inches='tight', pad_inches = 0)
     plt.close()
+#### Now do zooms
+#####
+##### zooms zooms zooms zoosm zooms zoosms zooms zooms zooms 
+#####
+####
+regions = df_eb_qn[df_eb_qn["eb_vert"]==True]
+a = pybedtools.BedTool.from_dataframe(regions)
+regions = a.merge(d=250001).to_dataframe().reset_index()
+regions = regions.drop("index",axis="columns")
+regions.columns = ["chrom","start","stop"]
+regions["chrom"] = regions["chrom"].astype(str)
+
+for index,row in regions.iterrows():
+    plt.rc('xtick', labelsize=5) 
+    plt.rc('ytick', labelsize=5) 
+    f, ax = plt.subplots(2,1,figsize=(2,4),sharex=False,
+                         gridspec_kw={'height_ratios': [6,1]})
+
+    for i in range(len(eb_samples)):
+        # print("ordering in plots top to bottom:",i,clones[i])
+        paternal = df_eb_qn[(df_eb_qn["chrom"]==row["chrom"])].set_index(["chrom","start","stop","arm"]).filter(like=eb_samples[i]+"_hap1_logrt").reset_index()
+        maternal = df_eb_qn[(df_eb_qn["chrom"]==row["chrom"])].set_index(["chrom","start","stop","arm"]).filter(like=eb_samples[i]+"_hap2_logrt").reset_index()
+
+        paternal = paternal[(paternal["chrom"]==row["chrom"]) & (paternal["start"]>=row["start"]-3000000) & (paternal["stop"]<=row["stop"]+3000000)]
+        maternal = maternal[(maternal["chrom"]==row["chrom"]) & (maternal["start"]>=row["start"]-3000000) & (maternal["stop"]<=row["stop"]+3000000)]
+
+        ax[0].axhline(y=0, linestyle="--" ,lw=0.5, c="black")
+
+        for j in ["p","q"]:
+            ## unsmoothed
+            ax[0].plot(paternal[paternal["arm"]==j]["start"],
+                    paternal[paternal["arm"]==j][eb_samples[i]+"_hap1_logrt"],
+                    c=color_dict_eb[eb_samples[i]],lw=0.3) ## -- line style is haplotype 2
+
+            ax[0].plot(maternal[maternal["arm"]==j]["start"],
+                    maternal[maternal["arm"]==j][eb_samples[i]+"_hap2_logrt"],
+                    c=color_dict_eb[eb_samples[i]],linestyle="--",lw=0.3) ## -- line style is haplotype 2
+
+
+            # #smoothed 
+            # ax[0].plot(paternal[paternal["arm"]==j]["start"],
+            #         smooth_vector(paternal[paternal["arm"]==j]["start"],
+            #             paternal[paternal["arm"]==j][eb_samples[i]+"_hap1_logrt"]),
+            #         c=color_dict_eb[eb_samples[i]],lw=0.3) ## -- line style is haplotype 2
+
+            # ax[0].plot(maternal[maternal["arm"]==j]["start"],
+            #         smooth_vector(maternal[maternal["arm"]==j]["start"],
+            #             maternal[maternal["arm"]==j][eb_samples[i]+"_hap2_logrt"]),
+            #         c=color_dict_eb[eb_samples[i]],linestyle="--",lw=0.3) ## -- line style is haplotype 2
+
+
+        ax[0].set_ylim([-4.2,4.2])
+        ax[0].set_yticks([-4,-3,-2,-1,0,1,2,3,4])
+        ax[0].set_xlim([row["start"]-3000000,row["stop"]+3000000])
+        ax[0].set_xticks([])
+
+        #### highlighting allele variant regions
+        for index3,row3 in df_eb_qn[(df_eb_qn["chrom"]==row["chrom"]) & 
+                            (df_eb_qn["eb_std_dev_both_haps"]>= threshold)].iterrows():
+            rect=Rectangle((row3["start"]-250000, -5), width=row3["stop"]-row3["start"]+500000, height=10,
+                     facecolor="gray",alpha=1,fill=True) ## red if hap1 early, blue if hap2 early
+            ax[1].add_patch(rect)
+
+        for k in ["p","q"]:
+
+            ax[1].plot(df_eb_qn[(df_eb_qn["chrom"]==row["chrom"]) & (df_eb_qn["arm"]==k)]["start"],
+                        df_eb_qn[(df_eb_qn["chrom"]==row["chrom"]) & (df_eb_qn["arm"]==k)]["eb_std_dev_both_haps"],
+                        c="black",
+                        lw=0.7)
+        ax[1].set_ylim([0,1.8])
+        ax[1].set_yticks([0,1.8])
+        ax[1].set_xlim([row["start"]-3000000,row["stop"]+3000000])
+        ax[1].set_xticks(np.linspace(row["start"]-3000000,row["stop"]+3000000,5)) 
+    plt.savefig("eb.rt."+str(row["chrom"])+"-"+str(row["start"])+".png",
+        dpi=400,transparent=False)
+    plt.close()
+
+### intersect VERTs with coding genes
 
 
 
 
+
+
+#####
+#####
+#####
+#####
 ################################
 #################################
 ## GM samples
@@ -512,13 +628,21 @@ df_gm_qn = df_gm_qn.sort_values(["chrom","start"])
 df_gm_qn = df_gm_qn.reset_index()
 df_gm_qn["arm"] = df_gm_qn.apply(lambda x: "q" if (x["stop"] > arm_dict_nochr[x["chrom"]][0]) & (x["stop"] <= arm_dict_nochr[x["chrom"]][1]) else "p", axis=1)
 
+
+df_gm_qn.to_csv("gm.rt.vert.txt",sep="\t")
+df_gm_qn.to_csv("gm.rt.vert.bed",sep="\t",header=None,index=None)
+os.system("sort -k1,1 -k2,2n gm.rt.vert.bed > gm.rt.vert.sorted.bed")
+os.system("bedtools map -a gm.rt.vert.sorted.bed -b ucsc.known.gene.hg19.txn.start.stop.bed.cds.only.first.isoform.nochr.sorted.bed -o distinct -c 4 > gm.rt.vert.intersect.coding.bed ")
+
+
+
 color_dict_gm = {'gm12878_clone5':"red", 
  'gm12878_clone4' :"blue"}
 
 ###
 for chrom in chromosomes_nochr:
     plt.rc('xtick', labelsize=5) 
-    plt.rc('ytick', labelsize=3) 
+    plt.rc('ytick', labelsize=5) 
     f, ax = plt.subplots(2,1,figsize=(30,3),sharex=False,
                          gridspec_kw={'height_ratios': [6,1]})
 
@@ -556,18 +680,89 @@ for chrom in chromosomes_nochr:
                         df_gm_qn[(df_gm_qn["chrom"]==chrom) & (df_gm_qn["arm"]==k)]["gm_std_dev_both_haps"],
                         c="black",
                         lw=0.7)
-        ax[1].set_ylim([0,2])
-        ax[1].set_yticks([0,2])
-        ax[1].set_xlim([0,chromosome_length_nochr[chrom]])
-        ax[1].set_xticks([]) 
+        ax[1].set_ylim([0,1.8])
+        ax[1].set_yticks([0,1.8])
+        ax[1].set_xlim([0, chromosome_length_nochr[chrom]])
+        ax[1].set_xticks(np.linspace(0, chromosome_length_nochr[chrom], 25))
     plt.savefig("gm.rt."+chrom+".png",
-        dpi=400,transparent=False, bbox_inches='tight', pad_inches = 0)
+        dpi=400,transparent=False)
     plt.close()
 
+#### Now do zooms
+#####
+##### zooms zooms zooms zoosm zooms zoosms zooms zooms zooms 
+#####
+####
+regions = df_gm_qn[df_gm_qn["gm_vert"]==True]
+a = pybedtools.BedTool.from_dataframe(regions)
+regions = a.merge(d=250001).to_dataframe().reset_index()
+regions = regions.drop("index",axis="columns")
+regions.columns = ["chrom","start","stop"]
+regions["chrom"] = regions["chrom"].astype(str)
+
+for index,row in regions.iterrows():
+    plt.rc('xtick', labelsize=5) 
+    plt.rc('ytick', labelsize=5) 
+    f, ax = plt.subplots(2,1,figsize=(2,4),sharex=False,
+                         gridspec_kw={'height_ratios': [6,1]})
+
+    for i in range(len(gm_samples)):
+        # print("ordering in plots top to bottom:",i,clones[i])
+        paternal = df_gm_qn[(df_gm_qn["chrom"]==row["chrom"])].set_index(["chrom","start","stop","arm"]).filter(like=gm_samples[i]+"_hap1_logrt").reset_index()
+        maternal = df_gm_qn[(df_gm_qn["chrom"]==row["chrom"])].set_index(["chrom","start","stop","arm"]).filter(like=gm_samples[i]+"_hap2_logrt").reset_index()
+
+        paternal = paternal[(paternal["chrom"]==row["chrom"]) & (paternal["start"]>=row["start"]-3000000) & (paternal["stop"]<=row["stop"]+3000000)]
+        maternal = maternal[(maternal["chrom"]==row["chrom"]) & (maternal["start"]>=row["start"]-3000000) & (maternal["stop"]<=row["stop"]+3000000)]
+
+        ax[0].axhline(y=0, linestyle="--" ,lw=0.5, c="black")
+
+        for j in ["p","q"]:
+            ## unsmoothed
+            ax[0].plot(paternal[paternal["arm"]==j]["start"],
+                    paternal[paternal["arm"]==j][gm_samples[i]+"_hap1_logrt"],
+                    c=color_dict_eb[eb_samples[i]],lw=0.3) ## -- line style is haplotype 2
+
+            ax[0].plot(maternal[maternal["arm"]==j]["start"],
+                    maternal[maternal["arm"]==j][gm_samples[i]+"_hap2_logrt"],
+                    c=color_dict_gm[gm_samples[i]],linestyle="--",lw=0.3) ## -- line style is haplotype 2
 
 
+            # #smoothed 
+            # ax[0].plot(paternal[paternal["arm"]==j]["start"],
+            #         smooth_vector(paternal[paternal["arm"]==j]["start"],
+            #             paternal[paternal["arm"]==j][gm_samples[i]+"_hap1_logrt"]),
+            #         c=color_dict_gm[gm_samples[i]],lw=0.3) ## -- line style is haplotype 2
 
+            # ax[0].plot(maternal[maternal["arm"]==j]["start"],
+            #         smooth_vector(maternal[maternal["arm"]==j]["start"],
+            #             maternal[maternal["arm"]==j][gm_samples[i]+"_hap2_logrt"]),
+            #         c=color_dict_gm[gm_samples[i]],linestyle="--",lw=0.3) ## -- line style is haplotype 2
 
+        ax[0].set_ylim([-4.2,4.2])
+        ax[0].set_yticks([-4,-3,-2,-1,0,1,2,3,4])
+        ax[0].set_xlim([row["start"]-3000000,row["stop"]+3000000])
+        ax[0].set_xticks([])
+
+        #### highlighting allele variant regions
+        for index3,row3 in df_gm_qn[(df_gm_qn["chrom"]==row["chrom"]) & 
+                            (df_gm_qn["gm_std_dev_both_haps"]>= threshold)].iterrows():
+            rect=Rectangle((row3["start"]-250000, -5), width=row3["stop"]-row3["start"]+500000, height=10,
+                     facecolor="gray",alpha=1,fill=True) ## red if hap1 early, blue if hap2 early
+            ax[1].add_patch(rect)
+
+        for k in ["p","q"]:
+
+            ax[1].plot(df_gm_qn[(df_gm_qn["chrom"]==row["chrom"]) & (df_gm_qn["arm"]==k)]["start"],
+                        df_gm_qn[(df_gm_qn["chrom"]==row["chrom"]) & (df_gm_qn["arm"]==k)]["gm_std_dev_both_haps"],
+                        c="black",
+                        lw=0.7)
+        ax[1].set_ylim([0,1.8])
+        ax[1].set_yticks([0,1.8])
+        ax[1].set_xlim([row["start"]-3000000,row["stop"]+3000000])
+        ax[1].set_xticks(np.linspace(row["start"]-3000000,row["stop"]+3000000,5)) 
+    plt.savefig("gm.rt."+str(row["chrom"])+"-"+str(row["start"])+".png",
+        dpi=400,transparent=False)
+    plt.close()
 
 exit()
 
