@@ -246,8 +246,7 @@ for chrom in chromosomes:
         dpi=400,transparent=True, bbox_inches='tight', pad_inches = 0)
     plt.close()
 
-
-
+repli_df.to_csv("mouse.israeli.processed.data.clones.txt",sep="\t")
 
 
 

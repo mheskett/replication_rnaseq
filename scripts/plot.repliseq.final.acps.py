@@ -219,13 +219,13 @@ for chrom in chromosomes:
             smooth_vector(paternal[paternal["arm"]=="q"]["start"],paternal[paternal["arm"]=="q"]["log2rt"]),
             c="red",lw=1) ## -- line style is haplotype 2
 
-    ax.set_ylim([-2.2,2.2])
-    ax.set_yticks([-2,-1,0,1,2])
+    ax.set_ylim([-4,4])
+    ax.set_yticks([-4,-3,-2,-1,0,1,2,3,4])
     ax.set_xlim([0,chromosome_length[chrom]])
     ax.set_xticks(np.linspace(0,chromosome_length[chrom],10))
-    plt.suptitle(arguments.maternal_rt.removesuffix(".bedgraph")+"_"+arguments.paternal_rt.removesuffix(".bedgraph")+"_"+chrom)
+    plt.suptitle(arguments.maternal_rt.removesuffix(".bed")+"_"+arguments.paternal_rt.removesuffix(".bed")+"_"+chrom)
 
-    plt.savefig(arguments.maternal_rt.removesuffix(".bedgraph")+"_"+arguments.paternal_rt.removesuffix(".bedgraph")+"_"+chrom+".png",
+    plt.savefig(arguments.maternal_rt.removesuffix(".bed")+"_"+arguments.paternal_rt.removesuffix(".bed")+"_"+chrom+".png",
         dpi=400,transparent=True, bbox_inches='tight', pad_inches = 0)    
 
 

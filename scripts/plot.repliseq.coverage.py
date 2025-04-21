@@ -99,7 +99,7 @@ for name in df.columns:
 plt.show()
 plt.close()
 
-df = df.apply(lambda x: x/x.sum() * 10**6, axis=0 ) ### library size normalization
+df = df.apply(lambda x: x/x.sum() * 10**6, axis=0 )### library size normalization
 df_logr = []
 sample_names = []
 for i in range(0,len(filenames),2):

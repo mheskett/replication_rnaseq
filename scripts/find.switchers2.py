@@ -18,7 +18,7 @@ chromosomes = ["1","2","3","4","5","6","7","8","9","10","11","12",
 				"13","14","15","16","17","18","19","20","21","22","X"]
 arms = ["p","q"]
 #### for arm level data to skip over centromeres				
-cytoband = pd.read_table("/Users/mike/replication_rnaseq/scripts/cytoband.nochr.hg19.bed",sep="\t",
+cytoband = pd.read_table("/Users/heskett/replication_rnaseq/scripts/cytoband.nochr.hg19.bed",sep="\t",
 							names =["chrom","start","stop","arm","band"])
 chromosome_length = {"1":249250621,
 "2":243199373,
@@ -75,12 +75,7 @@ def helper_func(x):
 
 arm_dict = get_arms(cytoband)
 
-vlinc_files=["/Users/mike/replication_rnaseq/all.final.data/bouha.2.all.bouha.vlinc.calls.bed",
-"/Users/mike/replication_rnaseq/all.final.data/bouha.3.all.bouha.vlinc.calls.bed",
-"/Users/mike/replication_rnaseq/all.final.data/bouha.4.all.bouha.vlinc.calls.bed",
-"/Users/mike/replication_rnaseq/all.final.data/bouha.10.all.bouha.vlinc.calls.bed",
-"/Users/mike/replication_rnaseq/all.final.data/bouha.13.all.bouha.vlinc.calls.bed",
-"/Users/mike/replication_rnaseq/all.final.data/bouha.15.all.bouha.vlinc.calls.bed"]
+vlinc_files=["acp5.vlincs.acp5678.all.bed","acp6.vlincs.acp5678.all.bed","acp7.vlincs.acp5678.all.bed","acp8.vlincs.acp5678.all.bed"]
 dfs = []
 for i in range(len(vlinc_files)):
 	df = pd.read_csv(vlinc_files[i],sep="\t",
@@ -88,17 +83,12 @@ for i in range(len(vlinc_files)):
 							dtype = {"chrom":str,"start":int,"stop":int,"hap1_counts":int,"hap2_counts":int})
 	df["total_reads"] = df["hap1_counts"] + df["hap2_counts"]
 	df["skew"] = df.apply(helper_func, axis = 1)
-	df["sample"] = os.path.basename(vlinc_files[i])[0:9]
+	df["sample"] = os.path.basename(vlinc_files[i])[0:4]
 	add_binom_pval(df)
 	dfs += [df]
 df = pd.concat(dfs)
-
-# df["reads_per_kb"] = df["total_reads"] / ((df["stop"]-df["start"])/1000)
-# sns.kdeplot(df["reads_per_kb"],cut=0,clip=(0,10))
-# plt.show()
 df=df[df["total_reads"]>=20]
-print("number of Bouhassira tl lncrnas that pass minimum read filter ")
-print(len(df.loc[:,["chrom","start","stop"]].drop_duplicates()))
+
 ######
 #######
 unique_genes = list(df["name"].drop_duplicates())
@@ -154,16 +144,12 @@ genes = [x.split(",")[0] for x in genes ]
 #####
 
 
-color_dict = {"bouha.4.a":"green",
-"bouha.15.":"royalblue",
-"bouha.10.":"red",
-"bouha.3.a":"yellow",
-"bouha.2.a":"cyan",
-"bouha.13.":"plum",
-"gm12878.4":"red",
- "gm12878.5":"blue"}
-hatch_ditct = {"bouha.4.a":"//","bouha.15.":"||","bouha.10.":"\\\\","bouha.3.a":"--",
-"bouha.2.a":"oo","bouha.13.":".."}
+color_dict = {"acp5":"green",
+"acp6":"royalblue",
+"acp7":"red",
+"acp8":"yellow",
+}
+hatch_ditct = {"acp5":"//","acp6":"||","acp7":"\\\\","acp8":"--"}
 switchers["color"]= [color_dict[x] for x in switchers["sample"]]
 nonswitchers["color"]= [color_dict[x] for x in nonswitchers["sample"]]
 switchers["hatch"] = [hatch_ditct[x] for x in switchers["sample"]]
@@ -180,7 +166,7 @@ ax.margins(x=.015,y=0)
 ax.set_ylim([-0.52,.52])
 ax.axhline(y=0,linestyle="--",lw=0.4,c="black")
 ax.set_yticks([-0.5,-.25,0,.25,.5])
-plt.savefig("bouha.vlinc.switchers.all.png",
+plt.savefig("acp.vlinc.switchers.all.png",
 		dpi=400,transparent=True, bbox_inches='tight', pad_inches = 0)
 plt.close()
 
@@ -198,7 +184,7 @@ ax.margins(x=.015,y=0)
 ax.set_ylim([-0.52,.52])
 ax.axhline(y=0,linestyle="--",lw=0.4,c="black")
 ax.set_yticks([-0.5,-.25,0,.25,.5])
-plt.savefig("bouha.vlinc.switchers.all.test.alpha.png",
+plt.savefig("acp.vlinc.switchers.all.test.alpha.png",
 		dpi=400,transparent=True, bbox_inches='tight', pad_inches = 0)
 plt.close()
 
@@ -226,7 +212,7 @@ ax.margins(x=.015,y=0)
 ax.set_ylim([-0.52,.52])
 ax.axhline(y=0,linestyle="--",lw=0.4,c="black")
 ax.set_yticks([-0.5,-.25,0,.25,.5])
-plt.savefig("bouha.vlinc.biallelic.all.test.alpha.png",
+plt.savefig("acp.vlinc.biallelic.all.test.alpha.png",
 		dpi=400,transparent=True, bbox_inches='tight', pad_inches = 0)
 plt.close()
 
@@ -255,10 +241,10 @@ for i in range(len(chromosomes)):
 	ax.set_xlim([0, chromosome_length[chromosomes[i]]])
 	ax.set_ylim([-0.6,0.6])
 	ax.set_xticks(np.linspace(0, chromosome_length[chromosomes[i]], 16))
-	plt.savefig("bouha.vlinc.switchers.region."+str(chromosomes[i])+ ".png",
+	plt.savefig("acp.vlinc.switchers.region."+str(chromosomes[i])+ ".png",
 		dpi=400,transparent=True, bbox_inches='tight', pad_inches = 0)
 	plt.close()
-switchers.to_csv("bouha.vlinc.switchers.bed",sep="\t",index=False,header=False)
+switchers.to_csv("acp.vlinc.switchers.bed",sep="\t",index=False,header=False)
 
 ###### nonswitchers
 for i in range(len(chromosomes)):
@@ -273,10 +259,10 @@ for i in range(len(chromosomes)):
 	ax.axhline(y=0,linestyle="--",lw=0.4,c="black")
 	ax.set_xlim([0, chromosome_length[chromosomes[i]]])
 	ax.set_xticks(np.linspace(0, chromosome_length[chromosomes[i]], 16))
-	plt.savefig("bouha.vlinc.nonswitchers.region."+str(chromosomes[i])+".png",
+	plt.savefig("acp.vlinc.nonswitchers.region."+str(chromosomes[i])+".png",
 		dpi=400,transparent=True, bbox_inches='tight', pad_inches = 0)
 	plt.close()
-nonswitchers.to_csv("bouha.vlinc.nonswitchers.bed",sep="\t",index=False,header=False)
+nonswitchers.to_csv("acp.vlinc.nonswitchers.bed",sep="\t",index=False,header=False)
 ##############
 ##############
 ##############
@@ -298,28 +284,28 @@ test = test[test["position"].isin(switching_loci)].drop("position",axis=1)#.set_
 # 	col_cluster=False,row_cluster=False,figsize=(12,3),vmin=-.25,vmax=.25,col_colors = colors)
 # plt.show()
 ##############
-regions = [
-	["1",186900000,187800000],
-	["1",238000000,239000000],
-	["2",80400000,81100000], 
-	["2",227300000,228500000],
-	["2",154400000,154900000],
-	["5",72000000,75000000],
-	["5",96000000,98000000],
-	['5',8300000,9700000],
-	["5",84400000,85000000],
-	["5",157500000,158700000],
-	["6",21000000,23000000],
-	["6",75000000,76000000],
-	["6",26000000,36000000], ## this is the IG locus
-	["8",62000000,64000000],
-	["8",119000000,120500000],
-	["14",106052774,107288051], # IGH
-	["2",89156874,90274235], #IGK
-	["22",22380474,23265085], #IGL
-	["21",17400000,18200000],
-	["21",29600000,31000000],
-	]
+# regions = [
+# 	["1",186900000,187800000],
+# 	["1",238000000,239000000],
+# 	["2",80400000,81100000], 
+# 	["2",227300000,228500000],
+# 	["2",154400000,154900000],
+# 	["5",72000000,75000000],
+# 	["5",96000000,98000000],
+# 	['5',8300000,9700000],
+# 	["5",84400000,85000000],
+# 	["5",157500000,158700000],
+# 	["6",21000000,23000000],
+# 	["6",75000000,76000000],
+# 	["6",26000000,36000000], ## this is the IG locus
+# 	["8",62000000,64000000],
+# 	["8",119000000,120500000],
+# 	["14",106052774,107288051], # IGH
+# 	["2",89156874,90274235], #IGK
+# 	["22",22380474,23265085], #IGL
+# 	["21",17400000,18200000],
+# 	["21",29600000,31000000],
+# 	]
 
 # ### for zooming in on regions
 # for i in range(len(regions)):
@@ -372,7 +358,7 @@ for index,row in unique_locations.iterrows():
 		rect=Rectangle((row["start"], row["skew"]-.025), width=row["stop"]-row["start"], height=0.05,
                      facecolor=row["color"], edgecolor="black",alpha=1,fill=True,lw=0.5) #
 		ax.add_patch(rect)
-	plt.savefig("bouha.vlinc.switchers.region."+str(chrom)+"."+str(start)+".png",
+	plt.savefig("acp.vlinc.switchers.region."+str(chrom)+"."+str(start)+".png",
 		dpi=400,transparent=True, bbox_inches='tight', pad_inches = 0)
 	plt.close()
 ###
@@ -396,7 +382,7 @@ for index,row in unique_locations.iterrows():
 		rect=Rectangle((row["start"], row["skew"]-.025), width=row["stop"]-row["start"], height=0.05,
                      facecolor=row["color"], edgecolor="black",alpha=1 if row["significant_deviation"]==True else 0.1,fill=True,lw=0.5) #
 		ax.add_patch(rect)
-	plt.savefig("bouha.vlinc.switchers.region.test.alpha."+str(chrom)+"."+str(start)+".png",
+	plt.savefig("acp.vlinc.switchers.region.test.alpha."+str(chrom)+"."+str(start)+".png",
 		dpi=400,transparent=True, bbox_inches='tight', pad_inches = 0)
 	plt.close()
 
@@ -421,7 +407,7 @@ for index,row in unique_locations_nonswitchers.iterrows():
 		rect=Rectangle((row["start"], row["skew"]-.025), width=row["stop"]-row["start"], height=0.05,
                      facecolor=row["color"], edgecolor="black",alpha=1 if row["significant_deviation"]==True else 0.1,fill=True,lw=0.5) #
 		ax.add_patch(rect)
-	plt.savefig("bouha.vlinc.nonswitchers.region.test.alpha."+str(chrom)+"."+str(start)+".png",
+	plt.savefig("acp.vlinc.nonswitchers.region.test.alpha."+str(chrom)+"."+str(start)+".png",
 		dpi=400,transparent=True, bbox_inches='tight', pad_inches = 0)
 	plt.close()
 
