@@ -103,36 +103,63 @@ ratios = {"chr1":    248956422/248956422,
 ## RT
 
 ### RNA coding genes
-df_gm_genes = pd.read_csv("gm.as.gene.counts.txt",sep="\t")
+df_eb_genes = pd.read_csv("eb.as.gene.counts.hg38.lifted.txt",sep="\t")
 
 ## TLs
-df_gm_tls = pd.read_csv("gm.as.tl.counts.all.txt",sep="\t")
+df_eb_tls = pd.read_csv("eb.as.tl.counts.all.hg38.lifted.txt",sep="\t")
 
 ## repli
-df_gm_rt = pd.read_csv("../combined.rt.data.set/gm.rt.txt",sep='\t')
-regions = df_gm_rt[(df_gm_rt["gm_vert"]==True) & (df_gm_rt["chrom"]!="chrX")]
+df_eb_rt = pd.read_csv("../combined.rt.data.set/eb.rt.hg38.lifted.txt",sep='\t')
+regions = df_eb_rt[(df_eb_rt["eb_vert"]==True) & (df_eb_rt["chrom"]!="chrX")]
 a = pybedtools.BedTool.from_dataframe(regions)
 regions = a.merge(d=250001).filter(lambda x: len(x) > 250000).saveas().to_dataframe().reset_index()
 regions = regions.drop("index",axis="columns")
 regions.columns = ["chrom","start","stop"]
 regions["chrom"] = regions["chrom"].astype(str)
 
-color_dict_gm = {
-"gm12878_clone4":"red", 
-"gm12878_clone5":"blue"}
+print(df_eb_genes)
+color_dict_eb = {
+"eb3_2_clone2":"purple",
+"eb3_2_clone3":"green",
+"eb3_2_clone4":"yellow",
+"eb3_2_clone10":"red",
+"eb3_2_clone13":"teal",
+"eb3_2_clone15":"blue"
+}
 
-color_dict_gm_rna = {
-"gm12878_clone4_rnaAligned":"red", 
-"gm12878_clone5_rnaAligned":"blue"}
+color_dict_eb_rna = {
+"eb3_2_clone2Aligned":"purple",
+"eb3_2_clone3Aligned":"green",
+"eb3_2_clone4Aligned":"yellow",
+"eb3_2_clone10Aligned":"red",
+"eb3_2_clone13Aligned":"teal",
+"eb3_2_clone15Aligned":"blue"
+}
 
-color_dict_gm_tls = {
-"gm_clone4":"red", 
-"gm_clone5":"blue"}
+color_dict_eb_tls = {
+"eb32_clone2":"purple",
+"eb32_clone3":"green",
+"eb32_clone4":"yellow",
+"eb32_clone10":"red",
+"eb32_clone13":"teal",
+"eb32_clone15":"blue"
+}
 
+rt_samples= ["eb3_2_clone2",
+"eb3_2_clone3",
+"eb3_2_clone4",
+"eb3_2_clone10",
+"eb3_2_clone13",
+"eb3_2_clone15"]
 
-rt_samples= ["gm12878_clone4","gm12878_clone5"]
-rna_samples = ["gm12878_clone4_rnaAligned","gm12878_clone5_rnaAligned"]
-
+rna_samples = [
+"eb3_2_clone2Aligned",
+"eb3_2_clone3Aligned",
+"eb3_2_clone4Aligned",
+"eb3_2_clone10Aligned",
+"eb3_2_clone13Aligned",
+"eb3_2_clone15Aligned"
+]
 
 
 for index,row in regions.iterrows():
@@ -144,23 +171,22 @@ for index,row in regions.iterrows():
     ax.add_patch(rect)
     for i in range(len(rt_samples)):
 
-        paternal = df_gm_rt[(df_gm_rt["chrom"]==row["chrom"])].set_index(["chrom","start","stop","arm"]).filter(like=rt_samples[i]+"_paternal_logrt").reset_index()
-        maternal = df_gm_rt[(df_gm_rt["chrom"]==row["chrom"])].set_index(["chrom","start","stop","arm"]).filter(like=rt_samples[i]+"_maternal_logrt").reset_index()
+        paternal = df_eb_rt[(df_eb_rt["chrom"]==row["chrom"])].set_index(["chrom","start","stop","arm"]).filter(like=rt_samples[i]+"_paternal_logrt").reset_index()
+        maternal = df_eb_rt[(df_eb_rt["chrom"]==row["chrom"])].set_index(["chrom","start","stop","arm"]).filter(like=rt_samples[i]+"_maternal_logrt").reset_index()
 
         paternal = paternal[(paternal["chrom"]==row["chrom"]) & (paternal["start"]>=row["start"]-2000000) & (paternal["stop"]<=row["stop"]+2000000)]
         maternal = maternal[(maternal["chrom"]==row["chrom"]) & (maternal["start"]>=row["start"]-2000000) & (maternal["stop"]<=row["stop"]+2000000)]
 
         ax.axhline(y=0,lw=0.5, c="black",linestyle="--")
 
-        for j in ["p","q"]:
-            ## unsmoothed
-            ax.plot(paternal[paternal["arm"]==j]["start"],
-                    paternal[paternal["arm"]==j][rt_samples[i]+"_paternal_logrt"],
-                    c=color_dict_gm[rt_samples[i]],lw=0.75) ## -- line style is haplotype 2
+        ## unsmoothed
+        ax.plot(paternal["start"],
+                paternal[rt_samples[i]+"_paternal_logrt"],
+                c=color_dict_eb[rt_samples[i]],lw=0.75) ## -- line style is haplotype 2
 
-            ax.plot(maternal[maternal["arm"]==j]["start"],
-                    maternal[maternal["arm"]==j][rt_samples[i]+"_maternal_logrt"],
-                    c=color_dict_gm[rt_samples[i]],linestyle="--",lw=0.75) ## -- line style is haplotype 2
+        ax.plot(maternal["start"],
+                maternal[rt_samples[i]+"_maternal_logrt"],
+                c=color_dict_eb[rt_samples[i]],linestyle="--",lw=0.75) ## -- line style is haplotype 2
         ax.set_ylim([-4,4])
         ax.set_yticks([-4,-3,-2,-1,0,1,2,3,4])
         ax.set_xlim([row["start"]-1000000,row["stop"]+1000000]) # needs to be matched with the below xlim
@@ -170,31 +196,29 @@ for index,row in regions.iterrows():
 ### coding genes
 
         ax2 = ax.twinx()
-        rna_tmp = df_gm_genes[(df_gm_genes["chrom"]==row["chrom"]) & 
-                            (df_gm_genes["start"]>=row["start"]-300000) & 
-                            (df_gm_genes["stop"]<=row["stop"]+300000) & 
-                            (df_gm_genes["total_reads"]>=10) & 
-                            (df_gm_genes["strand_reads"].isin(["plus","minus"]))]
+        rna_tmp = df_eb_genes[(df_eb_genes["chrom"]==row["chrom"]) & 
+                            (df_eb_genes["start"]>=row["start"]-3000000) & 
+                            (df_eb_genes["stop"]<=row["stop"]+3000000) & 
+                            (df_eb_genes["total_reads"]>=10)]
 
         for index2, row2 in rna_tmp.iterrows():
             rect=Rectangle((row2["start"], row2["aei"]-.0125), 
                             width=row2["stop"]-row2["start"], height=0.025,
-                            facecolor=color_dict_gm_rna[row2["sample"]], edgecolor="black",
+                            facecolor=color_dict_eb_rna[row2["sample"]], edgecolor="black",
                             linestyle='dotted',
                             fill=True,lw=.5)
 
             ax2.add_patch(rect)
 ### TLS
-        tl_tmp = df_gm_tls[(df_gm_tls["chrom"]==row["chrom"]) & 
-                            (df_gm_tls["start"]>=row["start"]-300000) & 
-                            (df_gm_tls["stop"]<=row["stop"]+300000) & 
-                            (df_gm_tls["total_reads"]>=10) &
-                            (df_gm_tls["strand_reads"].isin(["plus","minus"]))]
+        tl_tmp = df_eb_tls[(df_eb_tls["chrom"]==row["chrom"]) & 
+                            (df_eb_tls["start"]>=row["start"]-3000000) & 
+                            (df_eb_tls["stop"]<=row["stop"]+3000000) & 
+                            (df_eb_tls["total_reads"]>=10)]
 
         for index2, row2 in tl_tmp.iterrows():
             rect=Rectangle((row2["start"], row2["aei"]-.0125), 
                             width=row2["stop"]-row2["start"], height=0.025,
-                            facecolor=color_dict_gm_tls[row2["sample"]], edgecolor="black",
+                            facecolor=color_dict_eb_tls[row2["sample"]], edgecolor="black",
                             fill=True,lw=.5)
 
             ax2.add_patch(rect)
@@ -206,13 +230,10 @@ for index,row in regions.iterrows():
         # ax.set_yticks([0,1.5])
         # ax.set_xlim([row["start"]-1200000,row["stop"]+1200000]) # needs to be matched with above xlim
         # ax.set_xticks(np.linspace(row["start"]-1200000,row["stop"]+1200000,5)) 
-    plt.savefig("gm.rt.genes.tls."+str(row["chrom"])+"-"+str(row["start"])+".png",
+    plt.savefig("eb.rt.genes.tls."+str(row["chrom"])+"-"+str(row["start"])+".png",
         dpi=400,transparent=False,bbox_inches='tight')
     # plt.show()
     plt.close()
-
-
-
 
 
 

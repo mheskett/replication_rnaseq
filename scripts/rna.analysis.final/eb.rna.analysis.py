@@ -206,6 +206,8 @@ pd.Series(switchers["name"].unique()).to_csv("eb.rna.switchers.txt",sep="\t",ind
 ##
 
 df_eb.to_csv("eb.as.gene.counts.txt",sep="\t",index=None)
+df_eb.to_csv("eb.as.gene.counts.bed",sep="\t",index=None,header=None)
+
 df_eb_with_x.to_csv("eb.with.x.as.gene.counts.txt",sep="\t",index=None)
 
 
@@ -215,6 +217,18 @@ color_dict_eb_rna = {'eb3_2_clone15Aligned':"red",
 'eb3_2_clone10Aligned':"green", 
 'eb3_2_clone2Aligned':"blue", 
 'eb3_2_clone3Aligned':"purple"}
+
+## do some lifting over to make an hg38 genes file
+os.system("awk 'OFS=\"\t\"{print \"chr\"$1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16,$17,$18,$19,$20,$21}' eb.as.gene.counts.bed > eb.as.gene.counts.hg19.chr.bed")
+
+os.system("/Users/michaelheskett/replication_rnaseq/scripts/liftover_files/liftOver eb.as.gene.counts.hg19.chr.bed /Users/michaelheskett/replication_rnaseq/scripts/liftover_files/hg19ToHg38.over.chain eb.as.gene.counts.hg38.lifted.bed eb.as.gene.counts.hg38.unmapped.bed -bedPlus=3")
+# now remove the chrom from lifted
+# os.system("sed 's/chr//g' eb.rt.hg38.lifted.bed > eb.rt.hg38.lifted.nochr.bed")
+
+df_eb_hg38 = pd.read_csv("eb.as.gene.counts.hg38.lifted.bed",sep="\t",names=df_eb.columns)
+print(df_eb_hg38)
+df_eb_hg38.to_csv("eb.as.gene.counts.hg38.lifted.txt",sep="\t",index=None)
+
 
 #### make scatter plot dots including faded dots
 tmp = df_eb[df_eb["name_strand"].isin(switchers["name_strand"])]

@@ -174,7 +174,7 @@ for x in acp6_samples:
     df = df[df["strand_reads"]!= "antisense"]
 
     df["informative_reads_per_kb"] = df["total_reads"] / ((df["stop"] - df["start"])  / 1000)
-    df = df[df["total_reads"] >= 8]
+    df = df[df["total_reads"] >= 10]
     df_with_x = df.copy()
     df = df[df["chrom"]!="chrX"]
     # filter out chrX to lower P-values on autosomes

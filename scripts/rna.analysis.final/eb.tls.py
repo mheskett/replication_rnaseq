@@ -163,3 +163,15 @@ df_eb.to_csv("eb.as.tl.counts.all.txt",sep="\t",index=None)
 df_eb.to_csv("eb.as.tl.counts.all.bed",sep="\t",index=None,header=None)
 
 
+os.system("awk 'OFS=\"\t\"{print \"chr\"$1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16,$17,$18,$19,$20,$21}' eb.as.tl.counts.all.bed > eb.as.tl.counts.all.hg19.chr.bed")
+
+os.system("/Users/michaelheskett/replication_rnaseq/scripts/liftover_files/liftOver eb.as.tl.counts.all.hg19.chr.bed /Users/michaelheskett/replication_rnaseq/scripts/liftover_files/hg19ToHg38.over.chain eb.as.tl.counts.all.hg38.lifted.bed eb.as.tl.counts.all.hg19.hg38.unmapped.bed -bedPlus=3")
+# now remove the chrom from lifted
+# os.system("sed 's/chr//g' eb.rt.hg38.lifted.bed > eb.rt.hg38.lifted.nochr.bed")
+
+df_eb_hg38 = pd.read_csv("eb.as.tl.counts.all.hg38.lifted.bed",sep="\t",names=df_eb.columns)
+print(df_eb_hg38)
+df_eb_hg38.to_csv("eb.as.tl.counts.all.hg38.lifted.txt",sep="\t",index=None)
+
+
+
