@@ -151,6 +151,9 @@ ratios = {"chr1":    248956422/248956422,
 #               bedtools map -a hg38.windows.w250.s250.bed\
 #               -b stdin -o sum,sum -c 6,7  > $filename.allele.counts.windows.s125.bed
 
+
+imprinted = pd.read_csv("hg38.imprinted.genes.txt",sep="\t",
+    names=["chrom","start","stop","name","score","strand"],header=None)
 #####
 #### Replication timing Replication timing Replication timing Replication timing Replication timing 
 gm_samples = glob.glob("./gm*hg38*counts.rmv.blck.cpms.windows.w250.s250.bed")
@@ -240,6 +243,16 @@ for chrom in chromosomes:
 			tmp[tmp["arm"]==j]["gm_std_dev_both_haps"],c=tmp[tmp["arm"]==j]["color"],
 			s=15,edgecolor="black",lw=0.2)
 
+    ### highlight imprinted regions?
+    # imprinted_tmp=imprinted[imprinted["chrom"]==chrom]
+    # for index2, row2 in imprinted_tmp.iterrows():
+    #     rect=Rectangle((row2["start"], 2), 
+    #                 width=row2["stop"]-row2["start"], height=0.08,
+    #                 facecolor="red",
+    #                 fill=True,lw=.5)
+
+    #     ax.add_patch(rect)
+
     ax.set_xlim([0,chromosome_length[chrom]])
     ax.set_xticks(np.linspace(0,chromosome_length[chrom],25)) 
 
@@ -260,9 +273,15 @@ os.system("awk '{print $12}'  gm.rt.vert.intersect.coding.bed | awk '{$1=$1} 1' 
 
 
 df_gm_qn[df_gm_qn["gm_vert"]==True].loc[:,["chrom","start","stop","gm_vert"]].to_csv("gm.rt.vert.sorted.4col.bed",sep="\t",header=False,index=None)
-os.system("bedtools merge -i gm.rt.vert.sorted.4col.bed > gm.rt.vert.sorted.4col.merged.bed")
+os.system("bedtools merge -d 250001 -i gm.rt.vert.sorted.4col.bed | awk '$3-$2>250000{print $0}' | awk 'OFS=\"\\t\"{print $1,$2,$3}' > gm.rt.vert.sorted.4col.merged.bed")
 
 exit()
+
+
+
+
+
+
 
 
 

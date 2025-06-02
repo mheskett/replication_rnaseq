@@ -201,7 +201,6 @@ for index,row in regions.iterrows():
         ax2.set_ylim([-0.52,0.52])
         ax2.set_yticks([-0.5,-0.4,-0.3,-0.2,-0.1, 0, .1, .2, .3, .4, 0.5])
 
-
         # ax.set_ylim([0,1.5])
         # ax.set_yticks([0,1.5])
         # ax.set_xlim([row["start"]-1200000,row["stop"]+1200000]) # needs to be matched with above xlim

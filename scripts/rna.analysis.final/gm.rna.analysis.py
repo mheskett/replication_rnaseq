@@ -207,7 +207,7 @@ df_gm_with_x.to_csv("gm.with.x.as.gene.counts.txt",sep="\t",index=None)
 color_dict_gm = {'gm12878_clone5_rnaAligned':"red", 'gm12878_clone4_rnaAligned' :"blue"}
 
 
-#### make scatter plot dots including faded dots
+#### LOLLIPOP PLOTS OF SWITCHERS
 tmp = df_gm[df_gm["name_strand"].isin(switchers["name_strand"])]
 tmp["color"]= [color_dict_gm[x] for x in tmp["sample"]]
 tmp["alpha"] = tmp.apply(lambda row: 1 if (row["fdr_reject"]==True) and (abs(row["aei"])>=0.2) else 0.1, axis=1)
@@ -229,7 +229,90 @@ plt.savefig("gm.rna.switchers.png",
 plt.close()
 
 
+########
+## do the scatter plot of STD-dev of AEI across clones
+aei_std_df=df_gm.groupby(["chrom","start","stop","name"])["aei"].std().reset_index()
+aei_std_df.columns = ["chrom","start","stop","name", 'aei_std']
+# mean_std_dev = aei_std_df[aei_std_df["chrom"]!="X"]["aei_std"].mean()
+# std_dev_dev = aei_std_df[aei_std_df["chrom"]!="X"]["aei_std"].std()
+# threshold = mean_std_dev + 2.25 *std_dev_dev
+threshold = np.nanpercentile(aei_std_df[aei_std_df["chrom"]!="chrX"]["aei_std"], 97.5)
+print(threshold)
+# significant = aei_std_df[aei_std_df["chrom"]!="X"]["aei_std"] > threshold
+aei_std_df["variable_aei"] =  aei_std_df.apply(lambda x: True if x["aei_std"]>=threshold else False,axis=1)
+
+#####
+
+
+
+# ##### make distribution of repliseq std dev. male sample
+# f,ax=plt.subplots(figsize=(2,2),dpi=300)
+# sns.kdeplot(np.log(aei_std_df["aei_std"]),clip=(0,5),linewidth=2)
+# # ax.axvline(x=mean_std_dev,lw=0.5,linestyle="--",c="black")
+# # ax.axvline(x=mean_std_dev + 2 * std_dev_dev,lw=0.5,linestyle="--",c="red")
+# # ax.axvline(x=mean_std_dev + 2.5 * std_dev_dev,lw=0.5,linestyle="--",c="red")
+# # ax.axvline(x=mean_std_dev + 3 * std_dev_dev,lw=0.5,linestyle="--",c="red")
+# plt.savefig("eb.aei.vert.dist.png")
+# # plt.show()
+# plt.close()
+
+
+print(aei_std_df)
+# df_gm_qn = df_gm_qn.sort_values(["chrom","start"])
+## gm should be magenta
+### AEI STD DEV PLOTS
+for chrom in chromosomes:
+    plt.rc('xtick', labelsize=5) 
+    plt.rc('ytick', labelsize=3) 
+    f, ax = plt.subplots(1,1,figsize=(15,2),dpi=300)
+    tmp=aei_std_df[aei_std_df["chrom"]==chrom]
+    tmp["color"]=["magenta" if x==True else "lightgray" for x in tmp["variable_aei"]]
+    
+    ax.scatter(tmp["start"],tmp["aei_std"],c=tmp["color"],
+            s=15,edgecolor="black",lw=0.2)
+
+    ax.set_xlim([0,chromosome_length[chrom]])
+    ax.set_xticks(np.linspace(0,chromosome_length[chrom],25)) 
+
+    ax.set_ylim([0,.5])
+    ax.set_yticks([0,.25,.5])
+    plt.savefig("gm.std.aei."+chrom+".png",
+        dpi=400,transparent=True, bbox_inches='tight', pad_inches = 0)
+    plt.close()
+
+### AEI PLOTS ALL CLONES
+for chrom in chromosomes:
+    plt.rc('xtick', labelsize=5) 
+    plt.rc('ytick', labelsize=3) 
+    f, ax = plt.subplots(1,1,figsize=(15,2),dpi=300)
+    tmp=df_gm[df_gm["chrom"]==chrom]
+    tmp["color"]= tmp.apply(lambda x: color_dict_gm[x["sample"]] if ((x["fdr_reject"]==True) and (x["70_percent_aei"]==True)) else "lightgray",axis=1)
+
+    for sample in gm_samples:
+    
+        ax.scatter(tmp["start"],abs(tmp["aei"]),c=tmp["color"],
+                s=15,edgecolor="black",lw=0.2)
+
+    ax.set_xlim([0,chromosome_length[chrom]])
+    ax.set_xticks(np.linspace(0,chromosome_length[chrom],25)) 
+
+    ax.set_ylim([0,.51])
+    ax.set_yticks([0,.25,.5])
+    plt.savefig("gm.aei."+chrom+".png",
+        dpi=400,transparent=True, bbox_inches='tight', pad_inches = 0)
+    plt.close()
+
+
+
+
+
 exit()
+
+
+
+
+
+
 
 
 

@@ -185,18 +185,18 @@ df_acp6_qn["acp6_vert"] =  df_acp6_qn.apply(lambda x:True if x["acp6_std_dev_bot
 df_acp6_qn = df_acp6_qn.reset_index()
 df_acp6_qn["arm"] = df_acp6_qn.apply(lambda x: "q" if (x["stop"] > arm_dict[x["chrom"]][0]) & (x["stop"] <= arm_dict[x["chrom"]][1]) else "p", axis=1)
 
-#### asynchronous per window PER sample
-for sample in samples:
-	df_acp6_qn[sample+"_rt_diff"] = df_acp6_qn[sample+"_paternal_logrt"] - df_acp6_qn[sample+"_maternal_logrt"]
-	df_acp6_qn[sample+"_abs_rt_diff"] = abs(df_acp6_qn[sample+"_paternal_logrt"] - df_acp6_qn[sample+"_maternal_logrt"])
+# #### asynchronous per window PER sample
+# for sample in samples:
+# 	df_acp6_qn[sample+"_rt_diff"] = df_acp6_qn[sample+"_paternal_logrt"] - df_acp6_qn[sample+"_maternal_logrt"]
+# 	df_acp6_qn[sample+"_abs_rt_diff"] = abs(df_acp6_qn[sample+"_paternal_logrt"] - df_acp6_qn[sample+"_maternal_logrt"])
 
 ### calculate threshold and significant
-for sample in samples:
-	autosomal_tmp = df_acp6_qn[df_acp6_qn["chrom"]!="chrX"]
-	mean_abs_rt_diff = autosomal_tmp[sample+"_abs_rt_diff"].mean()
-	std_dev_abs_rt_diff = autosomal_tmp[sample+"_abs_rt_diff"].std()
-	threshold_abs_rt_diff = mean_abs_rt_diff + 2 * std_dev_abs_rt_diff
-	df_acp6_qn[sample+"_asynchronous_rt"] =  df_acp6_qn.apply(lambda row:True if row[sample+"_abs_rt_diff"]>=threshold_abs_rt_diff else False,axis=1)
+# for sample in samples:
+	# autosomal_tmp = df_acp6_qn[df_acp6_qn["chrom"]!="chrX"]
+	# mean_abs_rt_diff = autosomal_tmp[sample+"_abs_rt_diff"].mean()
+	# std_dev_abs_rt_diff = autosomal_tmp[sample+"_abs_rt_diff"].std()
+	# threshold_abs_rt_diff = mean_abs_rt_diff + 2 * std_dev_abs_rt_diff
+	# df_acp6_qn[sample+"_asynchronous_rt"] =  df_acp6_qn.apply(lambda row:True if row[sample+"_abs_rt_diff"]>=threshold_abs_rt_diff else False,axis=1)
 
 
 # f,ax=plt.subplots(figsize=(2,2),dpi=300)
@@ -318,10 +318,10 @@ df_acp6_qn.to_csv("acp6.rt.bed",sep="\t",header=None,na_rep="NaN",index=False)
 ## decide whether to keep coding and noncoding or not...locsxxx, SNERPAs, lncrnas, mirnas, etc
 os.system("sort -k1,1 -k2,2n acp6.rt.bed | grep True | awk '$1!=\"chrX\"{print $0}' > acp6.rt.vert.sorted.bed")
 os.system("bedtools map -a acp6.rt.vert.sorted.bed -b ucsc.refseq.hg38.txn.whole.gene.sorted.bed -o distinct -c 4 > acp6.rt.vert.intersect.coding.bed ")
-os.system("awk '{print $16}'  acp6.rt.vert.intersect.coding.bed | awk '{$1=$1} 1' FS=, OFS='\\n'| sort | uniq | grep -v ^LOC | grep -v LINC | grep -v MIR | grep -v SNORD > acp6.vert.genes.txt")
+os.system("awk '{print $18}'  acp6.rt.vert.intersect.coding.bed | awk '{$1=$1} 1' FS=, OFS='\\n'| sort | uniq | grep -v ^LOC | grep -v LINC | grep -v MIR | grep -v SNORD > acp6.vert.genes.txt")
 ## output chrom, start, stop, acp6_vert
 df_acp6_qn[df_acp6_qn["acp6_vert"]==True].loc[:,["chrom","start","stop","acp6_vert"]].to_csv("acp6.rt.vert.sorted.4col.bed",sep="\t",header=False,index=None)
-os.system("bedtools merge -i acp6.rt.vert.sorted.4col.bed > acp6.rt.vert.sorted.4col.merged.bed")
+os.system("bedtools merge -d 250001 -i acp6.rt.vert.sorted.4col.bed | awk '$3-$2>250000{print $0}' | awk 'OFS=\"\\t\"{print $1,$2,$3}' > acp6.rt.vert.sorted.4col.merged.bed")
 
 
 

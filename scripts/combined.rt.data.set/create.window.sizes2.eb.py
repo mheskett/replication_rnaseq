@@ -215,7 +215,7 @@ color_dict_eb = {'eb3_2_clone15':"red",
 'eb3_2_clone13':"yellow", 
 'eb3_2_clone10':"green", 
 'eb3_2_clone2':"blue", 
-'eb3_2_clone3':"purple",}
+'eb3_2_clone3':"purple"}
 #####
 df_eb_qn = df_eb_qn.sort_values(["chrom","start"])
 
@@ -261,16 +261,18 @@ df_eb_qn.to_csv("eb.rt.bed",sep="\t",header=None,na_rep="NaN",index=False)
 ## get rid of X genes for female sample.
 os.system("sort -k1,1 -k2,2n eb.rt.bed | grep True | awk '$1!=\"X\"{print $0}' > eb.rt.vert.sorted.bed")
 os.system("bedtools map -a eb.rt.vert.sorted.bed -b ucsc.known.gene.hg19.txn.start.stop.bed.cds.only.first.isoform.nochr.sorted.bed -o distinct -c 4 > eb.rt.vert.intersect.coding.bed ")
-os.system("awk '{print $19}'  eb.rt.vert.intersect.coding.bed | awk '{$1=$1} 1' FS=, OFS='\\n'| sort | uniq | grep -v ^LOC | grep -v LINC | grep -v MIR | grep -v SNORD > eb.vert.genes.txt")
+os.system("awk '{print $20}'  eb.rt.vert.intersect.coding.bed | awk '{$1=$1} 1' FS=, OFS='\\n'| sort | uniq | grep -v ^LOC | grep -v LINC | grep -v MIR | grep -v SNORD > eb.vert.genes.txt")
 
 
 # do with hg38
 os.system("sort -k1,1 -k2,2n eb.rt.hg38.lifted.bed | grep True | awk '$1!=\"chrX\"{print $0}' > eb.rt.vert.hg38.lifted.sorted.bed")
 os.system("bedtools map -a eb.rt.vert.hg38.lifted.sorted.bed -b ucsc.refseq.hg38.txn.whole.gene.sorted.bed -o distinct -c 4 > eb.hg38.rt.vert.intersect.coding.bed ")
-os.system("awk '{print $20}'  eb.hg38.rt.vert.intersect.coding.bed  | awk '{$1=$1} 1' FS=, OFS='\\n'| sort | uniq | grep -v ^LOC | grep -v LINC | grep -v MIR | grep -v SNORD > eb.hg38.vert.genes.txt")
+os.system("awk '{print $19}'  eb.hg38.rt.vert.intersect.coding.bed  | awk '{$1=$1} 1' FS=, OFS='\\n'| sort | uniq | grep -v ^LOC | grep -v LINC | grep -v MIR | grep -v SNORD > eb.hg38.vert.genes.txt")
 
 df_eb_qn_hg38[df_eb_qn_hg38["eb_vert"]==True].loc[:,["chrom","start","stop","eb_vert"]].to_csv("eb.rt.vert.hg38.lifted.sorted.4col.bed",sep="\t",header=False,index=None)
-os.system("bedtools merge -i eb.rt.vert.hg38.lifted.sorted.4col.bed > eb.rt.vert.hg38.lifted.sorted.4col.merged.bed")
+os.system("bedtools merge -d 250001 -i eb.rt.vert.hg38.lifted.sorted.4col.bed | awk '$3-$2>250000{print $0}' | awk 'OFS=\"\\t\"{print $1,$2,$3}' > eb.rt.vert.hg38.lifted.sorted.4col.merged.bed")
+
+## w
 
 
 

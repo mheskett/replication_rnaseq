@@ -325,7 +325,7 @@ os.system("awk '{print $14}'  acp7.rt.vert.intersect.coding.bed | awk '{$1=$1} 1
 
 
 df_acp7_qn[df_acp7_qn["acp7_vert"]==True].loc[:,["chrom","start","stop","acp7_vert"]].to_csv("acp7.rt.vert.sorted.4col.bed",sep="\t",header=False,index=None)
-os.system("bedtools merge -i acp7.rt.vert.sorted.4col.bed > acp7.rt.vert.sorted.4col.merged.bed")
+os.system("bedtools merge -d 250001 -i acp7.rt.vert.sorted.4col.bed | awk '$3-$2>250000{print $0}' | awk 'OFS=\"\\t\"{print $1,$2,$3}' > acp7.rt.vert.sorted.4col.merged.bed")
 
 
 
@@ -340,7 +340,10 @@ regions = regions.drop("index",axis="columns")
 regions.columns = ["chrom","start","stop"]
 regions["chrom"] = regions["chrom"].astype(str)
 
-print("acp6 region length sum", sum_region_length(regions))
+regions.loc[:,["chrom","start","stop"]].to_csv("acp7.vert.regions.colons.txt",sep=":",index=None,header=None)
+os.system('sed \'s/chr//g\' acp7.vert.regions.colons.txt > acp7.vert.regions.colons.nochr.txt')
+
+print("acp7 region length sum", sum_region_length(regions))
 
 for index,row in regions.iterrows():
     plt.rc('xtick', labelsize=5) 

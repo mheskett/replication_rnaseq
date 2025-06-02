@@ -144,16 +144,16 @@ print(len(vert_rt_windows_bed))
 print("num real intersections", real_result)
 
 # shuffle vert and genes
-for i in range(5000):
-    shuffle_vert = vert_rt_windows_bed.shuffle(g="../hg38.fa.fai", incl="all_rt_windows.bed",chromFirst=True,noOverlapping=True)
-    shuffle_genes = sig_genes_bed.shuffle(g="../hg38.fa.fai", incl="all_genes.bed",chromFirst=True,noOverlapping=True)
-    sim_results += [len(shuffle_vert.intersect(shuffle_genes,wa=True,wb=True))]
-
-# ## shuffle genes only
-# for i in range(10000):
-#     shuffle_vert = vert_rt_windows_bed#.shuffle(g="../hg38.fa.fai", incl="all_rt_windows.bed",chromFirst=True)
-#     shuffle_genes = sig_genes_bed.shuffle(g="../hg38.fa.fai", incl="all_genes.bed",chromFirst=True)
+# for i in range(5000):
+#     shuffle_vert = vert_rt_windows_bed.shuffle(g="../hg38.fa.fai", incl="all_rt_windows.bed",chromFirst=True,noOverlapping=True)
+#     shuffle_genes = sig_genes_bed.shuffle(g="../hg38.fa.fai", incl="all_genes.bed",chromFirst=True,noOverlapping=True)
 #     sim_results += [len(shuffle_vert.intersect(shuffle_genes,wa=True,wb=True))]
+
+## shuffle genes only
+for i in range(10000):
+    shuffle_vert = vert_rt_windows_bed#.shuffle(g="../hg38.fa.fai", incl="all_rt_windows.bed",chromFirst=True)
+    shuffle_genes = sig_genes_bed.shuffle(g="../hg38.fa.fai", incl="all_genes.bed",chromFirst=True)
+    sim_results += [len(shuffle_vert.intersect(shuffle_genes,wa=True,wb=True))]
 
 # ## shuffle vert only
 # for i in range(10000):

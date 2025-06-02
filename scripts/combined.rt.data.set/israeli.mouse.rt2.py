@@ -189,6 +189,8 @@ repli_df["mouse_vert"] =  repli_df.apply(lambda x:True if x["mouse_std_dev_ln"]>
 ### mm9 to hg19 then lift hg19 to hg38
 ### make a liftover python function that inputs a df and outputs a df?
 repli_df.to_csv("mouse.rt.mm9.bed",sep="\t",header=None,na_rep="NaN",index=False)
+repli_df.to_csv("mouse.rt.mm9.txt",sep="\t",na_rep="NaN",index=False)
+
 ## liftover
 os.system("/Users/michaelheskett/replication_rnaseq/scripts/liftover_files/liftOver mouse.rt.mm9.bed /Users/michaelheskett/replication_rnaseq/scripts/liftover_files/mm9ToHg19.over.chain mouse.rt.hg19.lifted.bed mouse.mm9.hg19.unmapped.bed -bedPlus=3")
 os.system("/Users/michaelheskett/replication_rnaseq/scripts/liftover_files/liftOver mouse.rt.mm9.bed /Users/michaelheskett/replication_rnaseq/scripts/liftover_files/mm9ToMm39.over.chain mouse.rt.mm39.lifted.bed mouse.mm9.mm39.unmapped.bed -bedPlus=3")
@@ -200,6 +202,7 @@ repli_df_hg38_lifted[repli_df_hg38_lifted["mouse_vert"]==True].loc[:,["chrom","s
 os.system("bedtools merge -i mouse.rt.vert.sorted.4col.bed > mouse.rt.vert.sorted.4col.merged.bed")
 
 repli_df_mm39_lifted = pd.read_csv("mouse.rt.mm39.lifted.bed",sep="\t",names=repli_df.columns)
+repli_df_mm39_lifted.to_csv("mouse.rt.mm39.lifted.txt",sep="\t",index=None)
 ### get mouse genes 
 os.system("sort -k1,1 -k2,2n mouse.rt.mm9.bed | grep True | awk '$1!=\"chrX\"{print $0}' > mouse.rt.vert.sorted.bed")
 os.system("bedtools map -a mouse.rt.vert.sorted.bed -b mm9.refseq.cds.only.first.isoform.bed -o distinct -c 4 > mouse.rt.vert.intersect.coding.bed ")
@@ -207,11 +210,33 @@ os.system("awk '{print $15}'  mouse.rt.vert.intersect.coding.bed | awk '{$1=$1} 
 
 ## get mouse genes mm39
 os.system("sort -k1,1 -k2,2n mouse.rt.mm39.lifted.bed | grep True | awk '$1!=\"chrX\"{print $0}' > mouse.rt.vert.sorted.mm39.bed")
-os.system("bedtools map -a mouse.rt.vert.sorted.mm39.bed -b ucsc.refseq.mm39.txn.whole.gene.sorted.bed -o distinct -c 4 > mouse.rt.vert.intersect.coding.mm39.bed ")
+os.system("bedtools map -a mouse.rt.vert.sorted.mm39.bed -b ../ucsc.refseq.mm39.txn.whole.gene.sorted.bed -o distinct -c 4 > mouse.rt.vert.intersect.coding.mm39.bed ")
 os.system("awk '{print $15}'  mouse.rt.vert.intersect.coding.mm39.bed | awk '{$1=$1} 1' FS=, OFS='\\n'| sort | uniq | grep -v Rik | grep -v ^Gm | grep -v ^LOC | grep -v LINC | grep -v MIR | grep -v SNORD > mouse.vert.genes.mm39.txt")
 
+### plot the actual repli-seq tracks
+plot_samples=repli_df_mm39_lifted.filter(like="clone",axis=1).columns
+for chrom in chromosomes:
+
+    plt.rc('xtick', labelsize=5) 
+    plt.rc('ytick', labelsize=3) 
+    f, ax = plt.subplots(1,1,figsize=(15,2),dpi=300)
+    tmp=repli_df_mm39_lifted[repli_df_mm39_lifted["chrom"]==chrom]
+    # tmp["color"]=["red" if "cast" in x else "blue" for x in tmp["mouse_std_dev_ln"]]
+    for sample in plot_samples:
+        print(sample)
+
+        ax.plot(tmp["start"],tmp[sample],c="red" if "cast" in sample else "blue",lw=1)
+
+    ax.set_xlim([0,chromosome_length[chrom]])
+    ax.set_xticks(np.linspace(0,chromosome_length_mm39[chrom],25)) 
+
+    # ax.set_ylim([0,1.2])
+    plt.savefig("mouse.rt.mm38."+chrom+".png",
+        dpi=400,transparent=False, bbox_inches='tight', pad_inches = 0)
+    plt.close()
 
 
+exit()
 print(repli_df_mm39_lifted)
 ## plot in native mouse chromosomes
 for chrom in chromosomes:
