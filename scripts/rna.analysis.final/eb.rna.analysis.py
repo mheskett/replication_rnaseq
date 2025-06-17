@@ -178,7 +178,7 @@ for x in eb_samples:
     df = df[df["total_reads"] >= 8]
     df_with_x = df.copy()
 
-    df = df[df["chrom"]!="chrX"]
+    df = df[df["chrom"]!="X"]
     # filter out chrX to lower P-values on autosomes
     add_binom_pval(df)
     add_binom_pval(df_with_x)
@@ -198,10 +198,29 @@ df_eb["80_percent_aei"] = abs(df_eb["aei"]) >= 0.30
 df_eb["90_percent_aei"] = abs(df_eb["aei"]) >= 0.40
 df_eb["95_percent_aei"] = abs(df_eb["aei"]) >= 0.45
 
+
+
+### get aei std dev
+aei_std_dev_df = df_eb.groupby(["chrom","start","stop","name"])["aei"].std().reset_index()
+aei_std_dev_df.columns = ["chrom","start","stop","name","aei_std_dev"]
+aei_std_dev_df = aei_std_dev_df[aei_std_dev_df["aei_std_dev"]!=0]
+aei_std_dev_df["aei_std_dev_ln"] = np.log(aei_std_dev_df["aei_std_dev"])
+mean_std_dev = aei_std_dev_df["aei_std_dev_ln"].mean()
+std_dev_dev = aei_std_dev_df["aei_std_dev_ln"].std()
+threshold = mean_std_dev + 2.25 * std_dev_dev
+
+print(aei_std_dev_df)
+
+###
+f,ax=plt.subplots(figsize=(2,2),dpi=300)
+sns.kdeplot(aei_std_dev_df["aei_std_dev_ln"],clip=(-6,2))
+ax.axvline(x=threshold,lw=0.5,linestyle="--",c="black")
+# plt.show()
+plt.close()
+### switchers
 switchers=get_switchers(df_eb)
 # print(switchers["name"].unique())
 
-print(switchers)
 pd.Series(switchers["name"].unique()).to_csv("eb.rna.switchers.txt",sep="\t",index=False,header=False)
 ##
 
@@ -233,7 +252,7 @@ df_eb_hg38.to_csv("eb.as.gene.counts.hg38.lifted.txt",sep="\t",index=None)
 #### make scatter plot dots including faded dots
 tmp = df_eb[df_eb["name_strand"].isin(switchers["name_strand"])]
 tmp["color"]= [color_dict_eb_rna[x] for x in tmp["sample"]]
-tmp["alpha"] = tmp.apply(lambda row: 1 if (row["fdr_reject"]==True) and (abs(row["aei"])>=0.2) else 0.1, axis=1)
+tmp["alpha"] = tmp.apply(lambda row: 1 if (row["fdr_reject"]==True) and (abs(row["aei"])>=0.2) else 0.2, axis=1)
 tmp["unique_pos"] = [row["chrom"]+":"+row["name_strand"] for index,row in tmp.iterrows()]
 f,ax=plt.subplots(1,1,figsize=(12,2))
 ax.scatter(tmp["unique_pos"],tmp["aei"],c=tmp["color"],s=15,edgecolor="black",lw=0.1,zorder=3,alpha=tmp["alpha"])

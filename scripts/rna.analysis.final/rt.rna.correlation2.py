@@ -8,6 +8,11 @@ import pybedtools
 from matplotlib.collections import PatchCollection
 from matplotlib.patches import Rectangle
 from scipy.stats import norm
+from scipy.stats import pearsonr
+from scipy.stats import spearmanr
+from scipy.stats import mannwhitneyu
+from scipy.stats import fisher_exact
+
 
 
 def sum_region_length(df):
@@ -106,11 +111,14 @@ ratios = {"chr1":    248956422/248956422,
 df_eb_tls = pd.read_csv("eb.as.tl.counts.all.hg38.lifted.txt",sep="\t")
 
 ## repli
-df_eb_rt = pd.read_csv("../combined.rt.data.set/eb.rt.hg38.lifted.txt",sep='\t')
+df_eb_rt = pd.read_csv("../combined.rt.data.set/eb.rt.hg38.lifted.txt",sep='\t',dtype={"eb_std_dev_both_haps":float})
 vert_rt_windows = df_eb_rt[(df_eb_rt["eb_vert"]==True) & (df_eb_rt["chrom"]!="chrX")].loc[:,["chrom","start","stop"]].drop_duplicates()
 # vert_rt_windows_bed = pybedtools.BedTool.from_dataframe(vert_rt_windows).sort()#.merge()
 all_rt_windows_bed = pybedtools.BedTool.from_dataframe(df_eb_rt[df_eb_rt["chrom"]!="chrX"]).sort().merge()
 all_rt_windows_bed.to_dataframe(disable_auto_names=True, header=None).to_csv("all_rt_windows.bed",sep="\t",header=None,index=None)
+
+# make another one without merging
+all_rt_windows_bed_unmerged = pybedtools.BedTool.from_dataframe(df_eb_rt[(df_eb_rt["chrom"]!="chrX") ].loc[:,["chrom","start","stop","eb_std_dev_both_haps"]]).sort()
 
 
 a = pybedtools.BedTool.from_dataframe(vert_rt_windows)
@@ -123,10 +131,106 @@ vert_rt_windows_bed = pybedtools.BedTool.from_dataframe(vert).sort()
 
 ### regular genes
 df_eb_genes = pd.read_csv("eb.as.gene.counts.hg38.lifted.txt",sep="\t")
+aei_std_dev_df = df_eb_genes.groupby(["chrom","start","stop","name"])["aei"].std().reset_index()
+aei_std_dev_df.columns = ["chrom","start","stop","name","aei_std_dev"]
+
+aei_std_dev_df  = aei_std_dev_df.dropna(subset=["aei_std_dev"])
+aei_std_dev_df = aei_std_dev_df[aei_std_dev_df["aei_std_dev"]!=0]
+aei_std_dev_df = aei_std_dev_df[aei_std_dev_df["chrom"]!="chrX"]
+### test test
+# aei_std_dev_df_high = aei_std_dev_df[aei_std_dev_df["aei_std_dev"]>=0.25]
+
+sns.kdeplot(aei_std_dev_df["aei_std_dev"],clip=(0,1),linewidth=4)
+# plt.show()
+plt.close()
+# exit()
+
+
+
+aei_std_dev_bed = pybedtools.BedTool.from_dataframe(aei_std_dev_df).sort()
+gene_aei_intersect_all_rt_windows = aei_std_dev_bed.intersect(all_rt_windows_bed_unmerged,wa=True,wb=True)
+# print(gene_aei_intersect_rt_vert)
+gene_aei_intersect_all_rt_windows_df = gene_aei_intersect_all_rt_windows.to_dataframe(disable_auto_names=True, header=None)
+gene_aei_intersect_all_rt_windows_df.columns = ["chrom","start","stop","name","aei_std_dev",
+                                        "chrom_rt","start_rt","stop_rt","eb_std_dev_both_haps"]
+gene_aei_intersect_all_rt_windows_df["variable_aei"] = gene_aei_intersect_all_rt_windows_df['aei_std_dev'] >= np.percentile(gene_aei_intersect_all_rt_windows_df['aei_std_dev'], 97)
+gene_aei_intersect_all_rt_windows_df["variable_rt"] = gene_aei_intersect_all_rt_windows_df['eb_std_dev_both_haps'] >= np.percentile(gene_aei_intersect_all_rt_windows_df['eb_std_dev_both_haps'], 97)
+
+
+high_aei_high_rt = gene_aei_intersect_all_rt_windows_df[(gene_aei_intersect_all_rt_windows_df["variable_rt"]==True) & (gene_aei_intersect_all_rt_windows_df["variable_aei"]==True)]
+
+print(high_aei_high_rt.sort_values(["aei_std_dev"],ascending=False).drop_duplicates("name"))
+exit()
+
+
+### try a fisher exact test
+aei_high = gene_aei_intersect_rt_vert_df['aei_std_dev'] >= np.percentile(gene_aei_intersect_rt_vert_df['aei_std_dev'], 97)  # top 10%
+rt_high = gene_aei_intersect_rt_vert_df['eb_std_dev_both_haps'] >= np.percentile(gene_aei_intersect_rt_vert_df['eb_std_dev_both_haps'], 97)
+a = np.sum(aei_high & rt_high)     # both high
+print("num aei high rt high",a)
+b = np.sum(aei_high & ~rt_high)    # X high, Y low
+print("num aei high rt low",b)
+c = np.sum(~aei_high & rt_high)    # X low, Y high
+print("num aei low rt high",c)
+d = np.sum(~aei_high & ~rt_high)   # both low
+print("num aei low rt low",d)
+## 97th percentile seems highest
+oddsratio, pval = fisher_exact([[a, b], [c, d]], alternative='greater')
+print("odds ratio",oddsratio)
+print("fisher pval",pval)
+
+print(gene_aei_intersect_rt_vert_df) 
+
+# pearson
+corr, p_value = pearsonr(gene_aei_intersect_rt_vert_df["aei_std_dev"].astype(float), 
+    gene_aei_intersect_rt_vert_df["eb_std_dev_both_haps"].astype(float))
+print("pearson Correlation:", corr)
+print("P-value:", p_value)
+
+# spearman
+# corr, p_value = spearmanr(gene_aei_intersect_rt_vert_df["aei_std_dev"].astype(float), 
+#     gene_aei_intersect_rt_vert_df["eb_std_dev_both_haps"].astype(float))
+# print("Spearman Correlation:", corr)
+# print("P-value:", p_value)
+
+
+### try natty log
+# corr, p_value = pearsonr(np.log(gene_aei_intersect_rt_vert_df["aei_std_dev"].astype(float)), 
+#     np.log(gene_aei_intersect_rt_vert_df["eb_std_dev_both_haps"].astype(float)))
+# print("nautral log pearson Correlation:", corr)
+# print("P-value:", p_value)
+
+rt_vert_intersect_aei_std_dev = vert_rt_windows_bed.intersect(aei_std_dev_bed,wa=True,wb=True)
+rt_vert_intersect_aei_std_dev_df = rt_vert_intersect_aei_std_dev.to_dataframe(disable_auto_names=True, header=None)
+rt_vert_intersect_aei_std_dev_df.columns = ["chrom","start","stop","name",
+                                        "chrom_rt","start_rt","stop_rt","aei_std_dev"]
+
+non_vert_genes = aei_std_dev_bed.subtract(vert_rt_windows_bed)
+non_vert_genes_df = non_vert_genes.to_dataframe(disable_auto_names=True, header=None)
+non_vert_genes_df.columns=["chrom","start","stop","name","aei_std_dev"]
+print(non_vert_genes)
+
+
+fig,ax=plt.subplots(figsize=(6,4))
+sns.kdeplot(np.log(rt_vert_intersect_aei_std_dev_df["aei_std_dev"]),linestyle="--",c="black",linewidth=2,clip=(-6,1))
+sns.kdeplot(np.log(non_vert_genes_df["aei_std_dev"]),c="black",linewidth=2,clip=(-6,1))
+plt.show()
+
+# Mann–Whitney U test (two-sided by default)
+stat, p = mannwhitneyu(np.log(rt_vert_intersect_aei_std_dev_df["aei_std_dev"]), 
+                        np.log(non_vert_genes_df["aei_std_dev"]), alternative='two-sided')
+
+print(f"U statistic: {stat}")
+print(f"P-value: {p}")
+
+
+
+
+exit()
 all_genes_bed = pybedtools.BedTool.from_dataframe(df_eb_genes[df_eb_genes["chrom"]!="chrX"]).sort().merge()
 sig_genes_bed = pybedtools.BedTool.from_dataframe(df_eb_genes[(df_eb_genes["fdr_reject"]==True) & 
                                     (df_eb_genes["chrom"]!="chrX") &
-                                    (df_eb_genes["80_percent_aei"]==True) &
+                                    (df_eb_genes["70_percent_aei"]==True) &
                                     (df_eb_genes["fdr_pval"]<=0.001)].loc[:,["chrom","start","stop"]].drop_duplicates()).sort()#.merge()
 all_genes_bed.to_dataframe(disable_auto_names=True, header=None).to_csv("all_genes.bed",sep="\t",header=None,index=None)
 

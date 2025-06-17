@@ -163,3 +163,11 @@ df_gm.to_csv("gm.as.tl.counts.all.txt",sep="\t",index=None)
 df_gm.to_csv("gm.as.tl.counts.all.bed",sep="\t",index=None,header=None)
 
 
+### get aei std dev
+aei_std_dev_df = df_eb.groupby(["chrom","start","stop","name"])["aei"].std().reset_index()
+aei_std_dev_df.columns = ["chrom","start","stop","name","aei_std_dev"]
+aei_std_dev_df = aei_std_dev_df[aei_std_dev_df["aei_std_dev"]!=0]
+aei_std_dev_df["aei_std_dev_ln"] = np.log(aei_std_dev_df["aei_std_dev"])
+mean_std_dev = aei_std_dev_df["aei_std_dev_ln"].mean()
+std_dev_dev = aei_std_dev_df["aei_std_dev_ln"].std()
+threshold = mean_std_dev + 2.25 * std_dev_dev
