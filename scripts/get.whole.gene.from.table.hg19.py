@@ -37,7 +37,7 @@ for gene in genes:
 	# if len(chrom)>1:
 	# 	print(chrom)
 	# 	print(gene)
-	# 	continue
+	# 	continuep
 
 	# if len(strand)>1:
 	# 	print(strand)
